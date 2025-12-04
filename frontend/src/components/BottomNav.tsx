@@ -1,0 +1,42 @@
+type TabKey = 'home' | 'transactions' | 'advisor' | 'settings';
+
+interface BottomNavProps {
+  value: TabKey;
+  onChange: (value: TabKey) => void;
+}
+
+const tabs: { key: TabKey; label: string; icon: string }[] = [
+  { key: 'home', label: 'Inicio', icon: '🏠' },
+  { key: 'transactions', label: 'Movimientos', icon: '📋' },
+  { key: 'advisor', label: 'Asesor IA', icon: '🤖' },
+  { key: 'settings', label: 'Config', icon: '⚙️' },
+];
+
+export function BottomNav({ value, onChange }: BottomNavProps) {
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--card-border)] bg-[var(--card)]/95 backdrop-blur-md shadow-lg">
+      <div className="mx-auto flex max-w-3xl items-stretch justify-around px-2 py-2">
+        {tabs.map((tab) => {
+          const active = tab.key === value;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => onChange(tab.key)}
+              aria-current={active ? 'page' : undefined}
+              className={`flex w-full flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium transition ${
+                active
+                  ? 'border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+              }`}
+            >
+              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className="leading-none">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+export type { TabKey };
