@@ -6,6 +6,7 @@ import { QuickAddSheet } from './components/QuickAddSheet';
 import { TopExpensesChart } from './components/TopExpensesChart';
 import { TransactionEditModal } from './components/TransactionEditModal';
 import { TransactionFilters } from './components/TransactionFilters';
+import { ResponsiveSelect } from './components/ResponsiveSelect';
 import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
@@ -46,6 +47,7 @@ import type {
   PlanPeriod,
 } from './types';
 
+type AdminSubscriptionSource = 'manual' | 'stripe' | 'promo' | 'wompi';
 function App() {
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useThemeMode();
@@ -85,6 +87,7 @@ function App() {
   const [previousMonth, setPreviousMonth] = useState<{ expense: number; income: number } | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [advisorLoading, setAdvisorLoading] = useState(false);
 
   // Mes de referencia para la vista "Inicio" y presupuestos (no depende del filtro de la vista Movimientos)
   const currentMonth = todayIso().slice(0, 7);
@@ -197,7 +200,7 @@ function App() {
       }
     };
     loadProfile();
-  }, [user]);
+  }, [adminSearch, logout, user]);
 
   useEffect(() => {
     const loadPreviousMonth = async () => {
@@ -265,7 +268,15 @@ function App() {
       (userProfile.role === 'paid_managed' && userProfile.subscription?.status === 'active'));
 
   const mapAiError = (err: unknown) => {
-    const code = (err as any)?.code?.toString() ?? '';
+    const codeRaw = (err as { code?: unknown } | null)?.code;
+    const code =
+      typeof codeRaw === 'string'
+        ? codeRaw
+        : typeof codeRaw === 'number'
+          ? codeRaw.toString()
+          : codeRaw && typeof (codeRaw as { toString?: () => string }).toString === 'function'
+            ? (codeRaw as { toString: () => string }).toString()
+            : '';
     const totalUsed = aiQuota?.parse.used ?? 0;
     const limit = aiQuota?.parse.limit ?? 0;
     const quotaText = limit ? ` (${totalUsed}/${limit})` : '';
@@ -273,7 +284,7 @@ function App() {
       return 'Configura tu API key en Configuración o activa tu membresía para usar la IA.';
     }
     if (code.includes('resource-exhausted')) {
-      return `Alcanzaste el límite diario de IA para tu plan${quotaText}.`;
+      return `Alcanzaste el límite semanal de IA para tu plan${quotaText}.`;
     }
     return 'No pudimos consultar la IA. Inténtalo de nuevo en unos minutos.';
   };
@@ -366,6 +377,8 @@ function App() {
 
   const handleAdvisorAction = async (action: string) => {
     try {
+      setAdvisorLoading(true);
+      setAiResponse(null);
       const resp = await callAnalyzeSummary({
         mode: advisorMode,
         action,
@@ -387,6 +400,8 @@ function App() {
     } catch (err) {
       console.error(err);
       setAiResponse(mapAiError(err));
+    } finally {
+      setAdvisorLoading(false);
     }
   };
 
@@ -641,8 +656,21 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 text-slate-200">
-        Cargando sesión...
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 text-slate-100">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_80%_25%,rgba(59,130,246,0.16),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.12),transparent_40%)]" />
+        <div className="relative flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-slate-900/80 px-8 py-6 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full border-4 border-emerald-400/30 border-t-transparent animate-spin" />
+            <div className="flex flex-col">
+              <p className="text-base font-semibold text-white">Preparando tu espacio</p>
+              <p className="text-sm text-slate-300">Sincronizando datos y sesión segura...</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-emerald-200">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+            <span>IA y finanzas listas en segundos</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -949,7 +977,16 @@ function App() {
               </div>
 
               <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-100">
-                {aiResponse ? (
+                {advisorLoading ? (
+                  <div className="flex items-center gap-2 text-slate-200">
+                    <span className="text-sm font-semibold text-white">IA escribiendo</span>
+                    <span className="flex items-center gap-1">
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: '0.15s' }} />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: '0.3s' }} />
+                    </span>
+                  </div>
+                ) : aiResponse ? (
                   <div className="space-y-2">
                     <p className="font-semibold text-white">Respuesta del asesor</p>
                     <p>{aiResponse}</p>
@@ -967,21 +1004,34 @@ function App() {
 
         {activeTab === 'settings' && (
           <section className="space-y-4">
-            <div className="card flex items-center justify-between gap-3">
-              <div>
+            <div className="card flex flex-col gap-3">
+              <div className="space-y-1">
                 <p className="text-xs uppercase text-slate-400">Cuenta</p>
                 <h2 className="text-lg font-semibold text-white">ID de usuario</h2>
                 <p className="text-xs text-slate-300">Útil para soporte o auditoría.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-mono text-white">
+              <div className="flex w-full items-center gap-2">
+                <div className="max-w-full grow overflow-x-auto rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-mono text-white">
                   {user?.uid}
                 </div>
                 <button
                   onClick={handleCopyUid}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-white hover:border-primary"
+                  aria-label="Copiar ID de usuario"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white hover:border-primary"
                 >
-                  Copiar
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -1034,9 +1084,14 @@ function App() {
                     {userProfile?.openaiKeyStored ? 'Key BYOK guardada' : 'Sin key BYOK'}
                   </span>
                   {aiQuota && (
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
-                      IA hoy: {aiQuota.parse.used}/{aiQuota.parse.limit}
-                    </span>
+                    <>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
+                        Modo frase (IA): {aiQuota.parse.used}/{aiQuota.parse.limit}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
+                        Asesor IA semana: {aiQuota.analyze.used}/{aiQuota.analyze.limit}
+                      </span>
+                    </>
                   )}
                   {userProfile?.subscription?.expiresAt ? (
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
@@ -1173,21 +1228,22 @@ function App() {
                         <div className="text-lg font-semibold text-white">
                           Total {formatCurrency(price)} {formatUsdApprox(price)} {plan.currency}
                         </div>
-                        <select
+                        <ResponsiveSelect
                           value={selectedPeriod}
-                          onChange={(e) =>
+                          onChange={(val) =>
                             setPlanPeriods((prev) => ({
                               ...prev,
-                              [plan.id]: e.target.value as PlanPeriod,
+                              [plan.id]: val,
                             }))
                           }
-                          className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-white outline-none"
-                        >
-                          <option value="monthly">Mensual</option>
-                          <option value="quarterly">Trimestral (-5%)</option>
-                          <option value="semiannual">Semestral (-10%)</option>
-                          <option value="annual">Anual (-15%)</option>
-                        </select>
+                          options={[
+                            { value: 'monthly', label: 'Mensual' },
+                            { value: 'quarterly', label: 'Trimestral (-5%)' },
+                            { value: 'semiannual', label: 'Semestral (-10%)' },
+                            { value: 'annual', label: 'Anual (-15%)' },
+                          ]}
+                          title="Elige periodo"
+                        />
                         <div className="text-xs text-slate-300">
                           Incluye: {plan.id === 'plan_byok' ? 'IA con tu propia API key' : 'IA con clave gestionada'}.
                         </div>
@@ -1252,52 +1308,58 @@ function App() {
                             <tr key={u.uid} className="border-t border-white/5">
                               <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{u.uid}</td>
                               <td className="px-3 py-2">
-                                <select
+                                <ResponsiveSelect
                                   value={u.role}
-                                  onChange={(e) => handleAdminChangeRole(u.uid, e.target.value as UserRole)}
-                                  className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white"
-                                  disabled={adminLoading}
-                                >
-                                  <option value="free">free</option>
-                                  <option value="paid_byok">paid_byok</option>
-                                  <option value="paid_managed">paid_managed</option>
-                                  <option value="gifted_managed">gifted_managed</option>
-                                  <option value="admin">admin</option>
-                                </select>
+                                  onChange={(val) => handleAdminChangeRole(u.uid, val as UserRole)}
+                                  options={[
+                                    { value: 'free', label: 'free' },
+                                    { value: 'paid_byok', label: 'paid_byok' },
+                                    { value: 'paid_managed', label: 'paid_managed' },
+                                    { value: 'gifted_managed', label: 'gifted_managed' },
+                                    { value: 'admin', label: 'admin' },
+                                  ]}
+                                  title="Rol"
+                                  className="text-[11px]"
+                                  buttonClassName="text-[11px]"
+                                />
                               </td>
                               <td className="px-3 py-2 text-[11px] text-slate-200 space-y-1">
-                                <select
+                                <ResponsiveSelect
                                   value={u.subscriptionStatus || 'expired'}
-                                  onChange={(e) =>
+                                  onChange={(val) =>
                                     setAdminUsers((prev) =>
                                       prev.map((item) =>
-                                        item.uid === u.uid ? { ...item, subscriptionStatus: e.target.value } : item,
+                                        item.uid === u.uid ? { ...item, subscriptionStatus: val } : item,
                                       ),
                                     )
                                   }
-                                  className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white"
-                                  disabled={adminLoading}
-                                >
-                                  <option value="active">Activa</option>
-                                  <option value="expired">Inactiva</option>
-                                </select>
-                                <select
-                                  value={u.subscriptionSource || 'manual'}
-                                  onChange={(e) =>
+                                  options={[
+                                    { value: 'active', label: 'Activa' },
+                                    { value: 'expired', label: 'Inactiva' },
+                                  ]}
+                                  title="Estado suscripción"
+                                  className="text-[11px]"
+                                  buttonClassName="text-[11px]"
+                                />
+                                <ResponsiveSelect
+                                  value={(u.subscriptionSource as AdminSubscriptionSource) || 'manual'}
+                                  onChange={(val) =>
                                     setAdminUsers((prev) =>
                                       prev.map((item) =>
-                                        item.uid === u.uid ? { ...item, subscriptionSource: e.target.value as any } : item,
+                                        item.uid === u.uid ? { ...item, subscriptionSource: val as AdminSubscriptionSource } : item,
                                       ),
                                     )
                                   }
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white"
-                                disabled={adminLoading}
-                              >
-                                <option value="manual">Manual</option>
-                                <option value="stripe">Stripe</option>
-                                <option value="promo">Promo</option>
-                                <option value="wompi">Wompi</option>
-                              </select>
+                                  options={[
+                                    { value: 'manual', label: 'Manual' },
+                                    { value: 'stripe', label: 'Stripe' },
+                                    { value: 'promo', label: 'Promo' },
+                                    { value: 'wompi', label: 'Wompi' },
+                                  ]}
+                                  title="Fuente"
+                                  className="text-[11px]"
+                                  buttonClassName="text-[11px]"
+                                />
                               <input
                                 type="date"
                                 value={u.subscriptionExpires || ''}

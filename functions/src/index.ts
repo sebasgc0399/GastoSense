@@ -140,9 +140,11 @@ function normalizeUserProfile(data?: Partial<UserProfile>): ResolvedUserProfile 
 }
 
 interface UsageDoc {
-  date: string;
+  week: string;
   parse?: number;
   analyze?: number;
+  // Retrocompatibilidad con esquema anterior basado en dia
+  date?: string;
 }
 
 interface WompiTransaction {
@@ -383,17 +385,35 @@ async function syncAdminClaim(uid: string, makeAdmin: boolean) {
   await auth.setCustomUserClaims(uid, claims);
 }
 
-function getDailyLimit(role: UserRole, key: UsageKey): number {
-  void key; // reserved for future per-endpoint limits
-  const base: Record<UserRole, number> = {
-    free: 3,
-    paid_byok: 30,
-    paid_managed: 50,
-    gifted_managed: 50,
+function currentWeekKey(): string {
+  // Usamos lunes UTC como inicio de semana para evitar desfases de zona horaria
+  const now = new Date();
+  const day = now.getUTCDay(); // 0 = domingo
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const mondayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) +
+    diffToMonday * 86_400_000;
+  return new Date(mondayMs).toISOString().slice(0, 10);
+}
+
+function getWeeklyLimit(role: UserRole, key: UsageKey): number {
+  const baseParse: Record<UserRole, number> = {
+    free: 10,
+    paid_byok: 70,
+    paid_managed: 90,
+    gifted_managed: 90,
     admin: 400,
   };
-  const limit = base[role] ?? 5;
-  return limit;
+  const baseAnalyze: Record<UserRole, number> = {
+    free: 4,
+    paid_byok: 20,
+    paid_managed: 20,
+    gifted_managed: 20,
+    admin: 400,
+  };
+  const table = key === "parse" ? baseParse : baseAnalyze;
+  const limit = table[role];
+  if (typeof limit === "number") return limit;
+  return key === "parse" ? 10 : 4;
 }
 
 async function checkRateLimit(
@@ -401,24 +421,24 @@ async function checkRateLimit(
   key: UsageKey,
   profile: ResolvedUserProfile,
 ): Promise<void> {
-  const today = new Date().toISOString().slice(0, 10);
+  const week = currentWeekKey();
   const ref = firestore.doc(`usage/${uid}`);
-  const limit = getDailyLimit(profile.role, key);
+  const limit = getWeeklyLimit(profile.role, key);
 
   await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    let data: UsageDoc = snap.exists ? ((snap.data() as UsageDoc) ?? {}) : {date: today};
-    if (data.date !== today) {
-      data = {date: today, parse: 0, analyze: 0};
+    let data: UsageDoc = snap.exists ? ((snap.data() as UsageDoc) ?? {}) : {week};
+    if (data.week !== week) {
+      data = {week, parse: 0, analyze: 0};
     }
-    const totalUsed = (data.parse ?? 0) + (data.analyze ?? 0);
-    if (totalUsed >= limit) {
+    const usedForKey = key === 'parse' ? data.parse ?? 0 : data.analyze ?? 0;
+    if (usedForKey >= limit) {
       throw new HttpsError(
-        "resource-exhausted",
-        "Has alcanzado el l��mite diario de llamadas de IA para tu plan.",
+        'resource-exhausted',
+        'Has alcanzado el limite semanal de llamadas de IA para tu plan.',
       );
     }
-    const nextKeyValue = (key === "parse" ? data.parse ?? 0 : data.analyze ?? 0) + 1;
+    const nextKeyValue = usedForKey + 1;
     tx.set(ref, {...data, [key]: nextKeyValue});
   });
 }
@@ -822,15 +842,16 @@ export const registerUserEntry = onCall(async (request) => {
 });
 
 /**
- * Callable: devuelve uso y l��mite diario de IA (parse/analyze) para el usuario.
+ * Callable: devuelve uso y limite semanal de IA (parse/analyze) para el usuario.
  */
 export const getUsageQuota = onCall(async (request) => {
   if (!request.auth?.uid) {
     throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
   }
   const profile = await getOrCreateUserProfile(request.auth.uid);
-  const today = new Date().toISOString().slice(0, 10);
-  const limit = getDailyLimit(profile.role, "parse");
+  const week = currentWeekKey();
+  const parseLimit = getWeeklyLimit(profile.role, "parse");
+  const analyzeLimit = getWeeklyLimit(profile.role, "analyze");
 
   const ref = firestore.doc(`usage/${request.auth.uid}`);
   const snap = await ref.get();
@@ -838,18 +859,16 @@ export const getUsageQuota = onCall(async (request) => {
   let usedAnalyze = 0;
   if (snap.exists) {
     const data = snap.data() as UsageDoc;
-    if (data.date === today) {
+    if (data.week === week) {
       usedParse = data.parse ?? 0;
       usedAnalyze = data.analyze ?? 0;
     }
   }
 
-  const totalUsed = usedParse + usedAnalyze;
-
   return {
-    date: today,
-    parse: {used: totalUsed, limit},
-    analyze: {used: totalUsed, limit},
+    week,
+    parse: {used: usedParse, limit: parseLimit},
+    analyze: {used: usedAnalyze, limit: analyzeLimit},
   };
 });
 

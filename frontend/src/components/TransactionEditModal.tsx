@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { frequentCategories, paymentMethods } from '../data/frequentCategories';
+import { ResponsiveSelect } from './ResponsiveSelect';
 import type { Transaction, TransactionInput } from '../types';
 
 interface Props {
@@ -71,100 +72,91 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} />
-      <div className="absolute inset-x-0 top-[15%] mx-auto w-full max-w-md rounded-2xl bg-white p-4 shadow-2xl">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-x-0 top-[10%] mx-auto w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">Editar movimiento</h3>
-          <button className="text-sm text-slate-500" onClick={onClose}>
+          <h3 className="text-lg font-semibold text-white">Editar movimiento</h3>
+          <button className="text-sm text-slate-300 hover:text-white" onClick={onClose}>
             Cerrar
           </button>
         </div>
 
         <div className="mt-3 space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Monto</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-300">Monto</label>
             <input
               type="number"
               value={form.amount}
               onChange={(e) => handleChange('amount', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Categoría</label>
-            <select
+            <label className="mb-1 block text-xs font-semibold text-slate-300">Categoría</label>
+            <ResponsiveSelect
               value={form.category}
-              onChange={(e) => handleChange('category', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {frequentCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => handleChange('category', val)}
+              options={frequentCategories.map((cat) => ({ value: cat.id, label: cat.label }))}
+              title="Categoría"
+            />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Nota</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-300">Nota</label>
             <input
               type="text"
               value={form.note}
               onChange={(e) => handleChange('note', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none"
               placeholder="Descripción opcional"
             />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">Tipo</label>
-              <select
+              <label className="mb-1 block text-xs font-semibold text-slate-300">Tipo</label>
+              <ResponsiveSelect
                 value={form.type}
-                onChange={(e) => handleChange('type', e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              >
-                <option value="expense">Gasto</option>
-                <option value="income">Ingreso</option>
-              </select>
+                onChange={(val) => handleChange('type', val)}
+                options={[
+                  { value: 'expense', label: 'Gasto' },
+                  { value: 'income', label: 'Ingreso' },
+                ]}
+                title="Tipo"
+              />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">Método de pago</label>
-              <select
+              <label className="mb-1 block text-xs font-semibold text-slate-300">Método de pago</label>
+              <ResponsiveSelect
                 value={form.paymentMethod}
-                onChange={(e) => handleChange('paymentMethod', e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              >
-                {paymentMethods.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleChange('paymentMethod', val)}
+                options={paymentMethods.map((method) => ({ value: method, label: method }))}
+                title="Método de pago"
+              />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Fecha</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-300">Fecha</label>
             <input
               type="date"
               value={form.date}
               onChange={(e) => handleChange('date', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+              className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
             >
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+              className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-100 hover:bg-red-500/20 disabled:opacity-60"
             >
               Eliminar
             </button>

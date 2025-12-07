@@ -93,7 +93,7 @@ Estas propuestas se pueden implementar como nuevas callable functions en `functi
   - Tu pagas IA; limites moderados pero superiores a Free: parse 90/semanales; analyze 20/semanales.
   - Incluye analisis avanzados, comparativos 3 meses, recomendaciones por categoria, recordatorios inteligentes y prioridad en features nuevas.
   - Mensaje: "No configures nada; la IA trabaja por ti."
-- **Tabla sugerida para getDailyLimit(role, key)** (adaptar a esquema semanal o cambiar a getWeeklyLimit):
+- **Tabla sugerida para getWeeklyLimit(role, key)**:
   - parse (semanal): free 10, paid_byok 70, paid_managed 90, gifted_managed 90, admin 400.
   - analyze (semanal): free 4, paid_byok 20, paid_managed 20, gifted_managed 20, admin 400.
   - fallback: parse 10, analyze 4.

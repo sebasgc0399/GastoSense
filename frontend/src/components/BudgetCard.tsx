@@ -16,7 +16,11 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
   const alertLevel = progress >= 1 ? 'max' : progress >= 0.8 ? 'warn' : 'ok';
 
   useEffect(() => {
-    setValue(budget?.total ?? 0);
+    const next = budget?.total ?? 0;
+    if (next !== value) {
+      setValue(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [budget?.total]);
 
   const handleSave = async () => {

@@ -59,7 +59,7 @@ export async function registerUserEntry(): Promise<UserProfile | null> {
 }
 
 export interface UsageQuota {
-  date: string;
+  week: string;
   parse: { used: number; limit: number };
   analyze: { used: number; limit: number };
 }

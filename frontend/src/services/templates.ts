@@ -28,10 +28,10 @@ export async function fetchTemplates(userId: string): Promise<Template[]> {
 }
 
 export async function saveTemplate(name: string, payload: Partial<TransactionInput>, userId = DEFAULT_USER_ID) {
-  const data: Record<string, any> = {
+  const data: Record<string, unknown> = {
     userId,
     name: name.trim(),
-    recurring: (payload as any).recurring ?? false,
+    recurring: (payload as { recurring?: boolean })?.recurring ?? false,
     createdAt: new Date().toISOString(),
   };
   if (payload.category) data.category = payload.category;
@@ -39,7 +39,8 @@ export async function saveTemplate(name: string, payload: Partial<TransactionInp
   if (payload.note) data.note = payload.note;
   if (payload.paymentMethod) data.paymentMethod = payload.paymentMethod;
   if (payload.type) data.type = payload.type;
-  if ((payload as any).frequency) data.frequency = (payload as any).frequency;
+  const frequency = (payload as { frequency?: Template['frequency'] })?.frequency;
+  if (frequency) data.frequency = frequency;
   await addDoc(collection(db, COLLECTION), data);
 }
 
@@ -49,7 +50,7 @@ export async function updateTemplate(
   userId = DEFAULT_USER_ID,
 ) {
   const ref = doc(db, COLLECTION, id);
-  const data: Record<string, any> = { updatedAt: new Date().toISOString(), userId };
+  const data: Record<string, unknown> = { updatedAt: new Date().toISOString(), userId };
   if (payload.name) data.name = payload.name.trim();
   if (payload.category) data.category = payload.category;
   if (typeof payload.amount === 'number') data.amount = payload.amount;

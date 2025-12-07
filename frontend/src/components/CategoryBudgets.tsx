@@ -11,7 +11,14 @@ export function CategoryBudgets({ perCategory, onSave }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setValues(perCategory ?? {});
+    // Sincroniza el formulario local cuando cambia el presupuesto entrante.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setValues((prev) => {
+      const next = perCategory ?? {};
+      // evita set si es el mismo objeto por referencia o shallow igual
+      if (prev === next) return prev;
+      return next;
+    });
   }, [perCategory]);
 
   const handleSave = async () => {

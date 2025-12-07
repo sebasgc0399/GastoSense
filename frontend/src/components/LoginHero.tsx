@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import type { SVGProps } from 'react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../config/firebase'; 
-import { SenseBot } from './SenseBot'; 
+import { auth } from '../config/firebase';
+import { SenseBot } from './SenseBot';
 
-const Loader2 = (props: any) => (
+const Loader2 = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     viewBox="0 0 24 24"
@@ -19,7 +20,7 @@ const Loader2 = (props: any) => (
   </svg>
 );
 
-const ArrowRight = (props: any) => (
+const ArrowRight = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     viewBox="0 0 24 24"
@@ -95,7 +96,7 @@ export function LoginHero() {
         const stage = loadingStages[i];
         swapMessage(stage.text, stage.mood as BotMood);
         setLoadingStage(i);
-        // eslint-disable-next-line no-await-in-loop
+         
         await new Promise((resolve) => setTimeout(resolve, stage.duration));
       }
       await signInWithPopup(auth, new GoogleAuthProvider());

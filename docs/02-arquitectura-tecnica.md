@@ -32,7 +32,7 @@
   - `analyzeSummary`: genera viñetas de consejos segun modo; usa datos del mes; aplica cuota `analyze`.
 - **Perfiles y cuotas**:
   - `getUserProfile`, `registerUserEntry`: crea/obtiene perfil con rol por defecto `free`; respeta `MAX_USERS`.
-  - `getUsageQuota`: devuelve consumo y limite diario (por rol) de IA.
+  - `getUsageQuota`: devuelve consumo y limite semanal (por rol) de IA.
 - **Planes y pagos**:
   - `getPlans`: precios totales por periodo con descuentos/promo (`WOMPI_PLAN_*`).
   - `createWompiCheckout`: genera URL de pago con firma (`WOMPI_INTEGRITY_KEY`), referencia `plan:period:uid:timestamp`.
@@ -45,7 +45,7 @@
   - `setUserRole`: solo admin; cambia rol, suscripcion y preferencia; sincroniza custom claim `admin`.
   - `listUsers`: solo admin; lista hasta 200 perfiles.
 - **Rate limiting**:
-  - `checkRateLimit`: documento `usage/{uid}` suma llamadas `parse` + `analyze`; limite diario depende del rol (free=3, paid_byok=30, paid_managed/gifted=50, admin=400).
+  - `checkRateLimit`: documento `usage/{uid}` por semana (clave lunes UTC) con contadores separados `parse` y `analyze`; limite semanal depende del rol (free parse 10/analyze 4; paid_byok 70/20; paid_managed/gifted 90/20; admin 400/400).
 - **Resolucion de clave OpenAI**:
   - Si usuario tiene BYOK y la prefiere, se usa; si rol permite clave administrada y esta activa, se usa `OPENAI_API_KEY` (secreto). Roles gift/admin siempre pueden managed.
 

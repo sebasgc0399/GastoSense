@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { frequentCategories, paymentMethods } from '../data/frequentCategories';
 import { callTranscribeAudio } from '../services/functions';
+import { ResponsiveSelect } from './ResponsiveSelect';
 import type { ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
 
 type Mode = 'quick' | 'natural';
@@ -220,8 +221,6 @@ export function QuickAddSheet({
     }
     stopMediaTracks(recorder);
     clearRecordingTimers();
-    setRecording(false);
-    setRecordingDuration(0);
   };
 
   const transcribeBlob = async (blob: Blob, durationMs?: number) => {
@@ -266,7 +265,12 @@ export function QuickAddSheet({
       const recorder = new MediaRecorder(stream, preferredMime ? { mimeType: preferredMime } : undefined);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-      recordingStartedRef.current = Date.now();
+      recordingStartedRef.current = null;
+
+      recorder.onstart = () => {
+        recordingStartedRef.current = Date.now();
+        setRecording(true);
+      };
 
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -290,6 +294,10 @@ export function QuickAddSheet({
         }
         if (!blob) {
           setInterpretError('No se capturó audio, intenta de nuevo.');
+          return;
+        }
+        if (durationMs && durationMs < 1000) {
+          setInterpretError('Clip muy corto (<1s), graba 1-2s para testear.');
           return;
         }
         try {
@@ -409,11 +417,15 @@ export function QuickAddSheet({
     if (!isOpen && recording) {
       stopRecording(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, recording]);
+
+  useEffect(() => {
     return () => {
       stopRecording(true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, recording]);
+  }, []);
 
   // Aplica template preseleccionado desde recordatorios (efecto para evitar setState en render)
   useEffect(() => {
@@ -592,17 +604,12 @@ export function QuickAddSheet({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-[var(--muted)]">Método de pago</label>
-                    <select
+                    <ResponsiveSelect
                       value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value as TransactionInput['paymentMethod'])}
-                      className="w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none"
-                    >
-                      {paymentMethods.map((method) => (
-                        <option key={method} value={method}>
-                          {method}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setPaymentMethod(val as TransactionInput['paymentMethod'])}
+                      options={paymentMethods.map((method) => ({ value: method, label: method }))}
+                      title="Método de pago"
+                    />
                   </div>
 
                   <div>
@@ -627,15 +634,16 @@ export function QuickAddSheet({
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-semibold text-[var(--muted)]">Frecuencia</label>
-                        <select
+                        <ResponsiveSelect
                           value={frequency ?? 'monthly'}
-                          onChange={(e) => setFrequency(e.target.value as Template['frequency'])}
-                          className="w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none"
-                        >
-                          <option value="weekly">Semanal</option>
-                          <option value="monthly">Mensual</option>
-                          <option value="yearly">Anual</option>
-                        </select>
+                          onChange={(val) => setFrequency(val as Template['frequency'])}
+                          options={[
+                            { value: 'weekly', label: 'Semanal' },
+                            { value: 'monthly', label: 'Mensual' },
+                            { value: 'yearly', label: 'Anual' },
+                          ]}
+                          title="Frecuencia"
+                        />
                       </div>
                       <div className="sm:col-span-1 flex flex-col gap-2">
                         <label className="mb-1 block text-xs font-semibold text-[var(--muted)]">Guardar como plantilla</label>
@@ -668,14 +676,14 @@ export function QuickAddSheet({
                 <button
                   onClick={() => handleSave(true)}
                   disabled={saving}
-                  className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-emerald-800 disabled:opacity-60"
+                  className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-white/20 disabled:opacity-60"
                 >
                   {saving ? 'Guardando...' : 'Guardar'}
                 </button>
                 <button
                   onClick={() => handleSave(false)}
                   disabled={saving}
-                  className="rounded-xl border border-primary/30 bg-white px-4 py-3 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+                  className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow transition hover:bg-emerald-800 disabled:opacity-60"
                 >
                   {saving ? 'Guardando...' : 'Guardar y añadir otro'}
                 </button>
@@ -694,24 +702,46 @@ export function QuickAddSheet({
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={handleMicToggle}
                   disabled={transcribingAudio}
-                  className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border text-white transition ${
                     recording
-                      ? 'border-red-400 bg-red-50 text-red-700'
-                      : 'border-white/15 bg-white/5 text-white hover:border-primary hover:text-primary'
+                      ? 'border-red-400 bg-red-500/20 hover:bg-red-500/30'
+                      : 'border-white/15 bg-white/5 hover:border-primary hover:text-primary'
                   } disabled:opacity-60`}
-                  title="Grabar audio (max 10s)"
+                  title="Grabar audio (máx 10s)"
                 >
-                  <span className="text-lg font-semibold">{recording ? 'REC' : 'Mic'}</span>
-                  <span>{recording ? 'Detener y transcribir' : 'Grabar voz (10s)'}</span>
+                  {recording ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+                      <rect x="7" y="7" width="10" height="10" rx="2" ry="2" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+                      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v.5a7 7 0 1 1-14 0V10" />
+                      <path d="M12 21v-3" />
+                      <path d="M9 22h6" />
+                    </svg>
+                  )}
                 </button>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  {recording && <span>Grabando {recordingDuration}s / {MAX_RECORDING_SECONDS}s</span>}
-                  {transcribingAudio && <span>Transcribiendo audio...</span>}
+                <div className="flex flex-col text-xs text-slate-300">
+                  <span className="font-semibold text-white">
+                    {recording ? 'Grabando...' : 'Modo frase (voz)'}
+                  </span>
+                  <span>
+                    {recording
+                      ? `Pulsa para detener · ${recordingDuration}s / ${MAX_RECORDING_SECONDS}s`
+                      : 'Toque para grabar · Máx 10s'}
+                  </span>
+                  {recording && (
+                    <span className="flex items-center gap-2 text-red-300">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+                      Grabando
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -731,41 +761,41 @@ export function QuickAddSheet({
               </button>
 
               {parsedSuggestion && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white shadow-sm">
                   <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-800">Revisión rápida</h3>
+                    <h3 className="text-sm font-semibold">Revisión rápida</h3>
                     {parsedSuggestion.confidence !== undefined && (
-                      <span className="rounded-full bg-white px-2 py-1 text-xs text-slate-600">
+                      <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-white">
                         Confianza aprox. {(parsedSuggestion.confidence * 100).toFixed(0)}%
                       </span>
                     )}
                   </div>
-                  <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <dt className="text-slate-500">Monto</dt>
+                      <dt className="text-[var(--muted)]">Monto</dt>
                       <dd className="font-semibold">${parsedSuggestion.amount.toLocaleString()}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Tipo</dt>
-                      <dd className="font-semibold">
+                      <dt className="text-[var(--muted)]">Tipo</dt>
+                      <dd className="font-semibold text-emerald-200">
                         {parsedSuggestion.type === 'income' ? 'Ingreso' : 'Gasto'}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Categoría sugerida</dt>
+                      <dt className="text-[var(--muted)]">Categoría sugerida</dt>
                       <dd className="font-semibold capitalize">{parsedSuggestion.category}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Fecha</dt>
+                      <dt className="text-[var(--muted)]">Fecha</dt>
                       <dd className="font-semibold">{parsedSuggestion.date}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Método</dt>
+                      <dt className="text-[var(--muted)]">Método</dt>
                       <dd className="font-semibold capitalize">{parsedSuggestion.paymentMethod}</dd>
                     </div>
                   </dl>
                   {parsedSuggestion.note && (
-                    <p className="mt-2 rounded-lg bg-white px-2 py-1 text-xs text-slate-600">
+                    <p className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-xs text-slate-200">
                       Nota: {parsedSuggestion.note}
                     </p>
                   )}
@@ -780,14 +810,14 @@ export function QuickAddSheet({
                         setDate(parsedSuggestion.date);
                         setMode('quick');
                       }}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100"
+                      className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20"
                     >
                       Editar antes de guardar
                     </button>
                     <button
                       onClick={handleSaveParsed}
                       disabled={saving}
-                      className="rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-800 disabled:opacity-60"
+                      className="rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
                     >
                       {saving ? 'Guardando...' : 'Confirmar y guardar'}
                     </button>

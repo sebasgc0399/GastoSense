@@ -1,4 +1,5 @@
 import { frequentCategories } from '../data/frequentCategories';
+import { ResponsiveSelect } from './ResponsiveSelect';
 
 interface TransactionFiltersProps {
   startDate: string;
@@ -31,18 +32,15 @@ export function TransactionFilters({ startDate, endDate, category, onChange }: T
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-[var(--muted)]">Categoría</label>
-          <select
+          <ResponsiveSelect
             value={category}
-            onChange={(e) => onChange({ startDate, endDate, category: e.target.value })}
-            className="input"
-          >
-            <option value="all">Todas</option>
-            {frequentCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ startDate, endDate, category: val })}
+            options={[
+              { value: 'all', label: 'Todas' },
+              ...frequentCategories.map((cat) => ({ value: cat.id, label: cat.label })),
+            ]}
+            title="Categoría"
+          />
         </div>
       </div>
     </div>
