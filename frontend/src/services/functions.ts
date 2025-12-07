@@ -18,3 +18,4 @@ export const callRegisterUserEntry = httpsCallable(functions, 'registerUserEntry
 export const callGetUsageQuota = httpsCallable(functions, 'getUsageQuota');
 export const callGetPlans = httpsCallable(functions, 'getPlans');
 export const callCreateWompiCheckout = httpsCallable(functions, 'createWompiCheckout');
+export const callSetAdvisorMode = httpsCallable(functions, 'setAdvisorMode');

@@ -1,6 +1,6 @@
 export type TransactionType = 'expense' | 'income';
 
-export type AdvisorMode = 'amable' | 'reganon' | 'directo' | 'exigente';
+export type AdvisorMode = 'amable' | 'reganon';
 
 export type PaymentMethod = 'efectivo' | 'debito' | 'credito' | 'digital' | 'otro';
 
@@ -66,6 +66,7 @@ export interface UserProfile {
   openaiKeyStored: boolean;
   preferredKey?: KeyPreference;
   subscription: SubscriptionInfo;
+  advisorMode?: AdvisorMode;
 }
 
 export type PlanPeriod = 'monthly' | 'quarterly' | 'semiannual' | 'annual';

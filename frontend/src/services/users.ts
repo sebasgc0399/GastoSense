@@ -9,6 +9,7 @@ import {
   callGetUsageQuota,
   callGetPlans,
   callCreateWompiCheckout,
+  callSetAdvisorMode,
 } from './functions';
 import type { KeyPreference, UserProfile, UserRole, PlanInfo, PlanPeriod } from '../types';
 
@@ -56,6 +57,12 @@ export async function registerUserEntry(): Promise<UserProfile | null> {
   const resp = await callRegisterUserEntry();
   const data = resp.data as { profile?: UserProfile };
   return data?.profile ?? null;
+}
+
+export async function setUserAdvisorMode(mode: 'amable' | 'reganon'): Promise<'amable' | 'reganon'> {
+  const resp = await callSetAdvisorMode({ mode });
+  const data = resp.data as { advisorMode?: 'amable' | 'reganon' };
+  return data?.advisorMode ?? mode;
 }
 
 export interface UsageQuota {

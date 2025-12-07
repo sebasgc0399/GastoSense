@@ -53,6 +53,7 @@ interface UserProfile {
   role: UserRole;
   openaiKeyStored: boolean;
   preferredKey?: KeyPreference | null;
+  advisorMode?: AdvisorMode | null;
   subscription: {
     status: SubscriptionStatus;
     source: SubscriptionSource;
@@ -66,6 +67,7 @@ interface ResolvedUserProfile {
   role: UserRole;
   openaiKeyStored: boolean;
   preferredKey?: KeyPreference;
+  advisorMode?: AdvisorMode;
   subscription: {
     status: SubscriptionStatus;
     source: SubscriptionSource;
@@ -73,7 +75,7 @@ interface ResolvedUserProfile {
   };
 }
 
-type AdvisorMode = "amable" | "reganon" | "directo" | "exigente";
+type AdvisorMode = "amable" | "reganon";
 
 interface SpendingSummary {
   month?: string;
@@ -106,6 +108,7 @@ interface ParsedTransaction {
 const defaultUserProfile = (): UserProfile => ({
   role: "free",
   openaiKeyStored: false,
+  advisorMode: "amable",
   subscription: {status: "expired", source: "manual"},
 });
 
@@ -126,11 +129,15 @@ function normalizeUserProfile(data?: Partial<UserProfile>): ResolvedUserProfile 
   const preferredRaw = (data?.preferredKey as KeyPreference | null | undefined) ?? undefined;
   const preferred =
     preferredRaw === "byok" || preferredRaw === "managed" ? preferredRaw : undefined;
+  const advisorMode = clientSupportedMode((data?.advisorMode as string) ?? "")
+    ? ((data?.advisorMode as AdvisorMode) ?? "amable")
+    : "amable";
 
   return {
     role: (data?.role as UserRole) ?? "free",
     openaiKeyStored: data?.openaiKeyStored ?? false,
     preferredKey: preferred,
+    advisorMode,
     subscription: {
       status: (subscription.status as SubscriptionStatus) ?? "expired",
       source: (subscription.source as SubscriptionSource) ?? "manual",
@@ -525,22 +532,11 @@ function wompiSignature(amountInCents: number, currency: string, reference: stri
 
 const advisorPrompts: Record<AdvisorMode, string> = {
   "amable":
-    "Eres un asesor financiero personal amable, motivador y paciente. " +
-    "Felicita pequeños avances y da pasos accionables cortos. No repitas la " +
-    "misma respuesta si cambian los datos o la acción solicitada.",
+    "Eres un asesor financiero empatico y motivador. Habla en 2-4 frases cortas " +
+    "y propone 1 accion concreta. Usa lenguaje sencillo, positivo y cercano.",
   "reganon":
-    "Eres un asesor financiero tipo tough love: directo y firme, sin insultar. " +
-    "Señala con claridad los fallos y da acciones específicas. No culpas a la " +
-    "persona, solo a la conducta financiera. No repitas la misma respuesta si " +
-    "cambian los datos o la acción solicitada.",
-  "directo":
-    "Eres un asesor financiero directo, claro y respetuoso. Ve al grano con " +
-    "hechos y acciones puntuales. No adornes ni suavices demasiado; señala qué " +
-    "recortar y cómo.",
-  "exigente":
-    "Eres un asesor financiero exigente y disciplinado. Marca con firmeza los " +
-    "puntos débiles y exige acciones concretas con metas claras. No insultas, " +
-    "pero no toleras excusas.",
+    "Eres un asesor financiero sarcastico estilo roast. Maximo 40 palabras. " +
+    "Se directo, incisivo y un poco burla, pero siempre con una accion clara al final.",
 };
 
 const maxAudioDurationMs = 10_000;
@@ -1318,8 +1314,21 @@ export const listUsers = onCall(async (request) => {
 });
 
 function clientSupportedMode(mode: string): mode is AdvisorMode {
-  return ["amable", "reganon", "directo", "exigente"].includes(mode);
+  return ["amable", "reganon"].includes(mode);
 }
+
+export const setAdvisorMode = onCall(async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
+  }
+  const {mode} = request.data as {mode?: string};
+  if (!mode || !clientSupportedMode(mode)) {
+    throw new HttpsError("invalid-argument", "Modo no soportado.");
+  }
+  await updateUserProfile(request.auth.uid, {advisorMode: mode});
+  const profile = await getOrCreateUserProfile(request.auth.uid);
+  return {advisorMode: profile.advisorMode};
+});
 
 function deriveRelativeDate(text: string, offsetMinutes?: number): string | null {
   const lower = text.toLowerCase();

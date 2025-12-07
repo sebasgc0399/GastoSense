@@ -58,17 +58,20 @@ Estas propuestas se pueden implementar como nuevas callable functions en `functi
 - **Consideraciones**: limitar categorias a las principales; validar que el monto sugerido no sea negativo y que siga una reduccion razonable (ej. max 50% recorte sin confirmacion extra); permitir override manual antes de guardar en Firestore.
 
 ## 5) Finanzas chat y simples (feed tipo WhatsApp con IA)
-- **Que hace**: convierte la app en un feed estilo chat mezclando mensajes de IA y acciones rapidas de gasto, con personalidad seleccionable (amable/directo/exigente/regaヵon).
+- **Que hace**: convierte la app en un feed estilo chat mezclando mensajes de IA y acciones rapidas de gasto, con personalidad seleccionable (solo dos tonos: amable y regañón).
 - **Casos de uso**:
   - **Espejo diario**: balance proactivo cada noche o bajo demanda, ajustado al tono elegido. Usa totales del dia, promedio diario y categoria top del dia.
   - **Detector de gastos hormiga**: identifica compras pequenas y recurrentes (cafes, suscripciones) y sugiere recortes indoloros con ahorro estimado.
   - **Resumen semanal**: compara ultimos 7 dias vs semana anterior y resalta deltas por categoria (ej. "Gastaste $50 menos en restaurantes").
 - **Prompts base**:
-  - Espejo diario (regaヵon): system "Asesor financiero sarcastico y roast. Max 40 palabras. Se directo, humor acido." + user `Datos del dia: {total_hoy: X, promedio_diario: Y, categoria_top: "Comida Rapida"}. ¿Como lo hice hoy?`
+  - Espejo diario (regañón): system "Asesor financiero sarcastico y roast. Max 40 palabras. Se directo, humor acido." + user `Datos del dia: {total_hoy: X, promedio_diario: Y, categoria_top: "Comida Rapida"}. ¿Como lo hice hoy?`
   - Gastos hormiga (amable): system "Analista empatico. Detecta 1-2 gastos hormiga o suscripciones. Da ahorro potencial y accion concreta. Usa emojis." + user `Transacciones recurrentes: ...`
-  - Resumen semanal (tono elegido): system "Asesor <tono>. Resume ultimos 7 dias vs 7 previos. Devuelve viñetas cortas y una accion principal." + user `Semana actual: {...}; Semana previa: {...}; Categoria_top: ...`
+  - Resumen semanal (tono elegido entre amable/regañón): system "Asesor <tono>. Resume ultimos 7 dias vs 7 previos. Devuelve viñetas cortas y una accion principal." + user `Semana actual: {...}; Semana previa: {...}; Categoria_top: ...`
+- **Prompts por tono (usar como system según selección)**:
+  - Tono amable: "Eres un asesor financiero empatico y motivador. Habla en 2-4 frases cortas, propone 1 accion concreta. Mantén lenguaje sencillo, positivo y cercano."
+  - Tono regañón: "Eres un asesor financiero sarcástico estilo roast. Máx 40 palabras. Sé directo, incisivo y un poco burlón, pero siempre con una acción clara al final."
 - **Requisitos de UI**:
-  - Selector de personalidad en onboarding/Ajustes; persiste y se envia como modo al prompt.
+  - Selector de personalidad (solo amable o regañón) en onboarding/Ajustes; persiste y se envia como modo al prompt.
   - Feed cronologico tipo chat: mezcla mensajes de IA con eventos (nuevo gasto, alerta, resumen).
   - Micrograficos adjuntos (pie/barras simples) junto a la respuesta de IA cuando pida "¿En que se va mi dinero?".
   - Alertas push cuando una categoria se acerca al limite de presupuesto.

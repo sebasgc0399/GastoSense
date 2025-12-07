@@ -1,4 +1,4 @@
-Ôªøimport { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
 import { BudgetCard } from './components/BudgetCard';
 import { CategoryBudgets } from './components/CategoryBudgets';
@@ -17,7 +17,6 @@ import {
   clearUserOpenAIKey,
   fetchUserProfile,
   fetchUsersList,
-  setUserAdvisorMode,
   saveUserOpenAIKey,
   updatePreferredKey,
   registerUserEntry,
@@ -48,14 +47,7 @@ import type {
   PlanPeriod,
 } from './types';
 
-type ChatItem = {
-  id: string;
-  from: 'user' | 'ia';
-  text: string;
-  ts: number;
-  tone?: AdvisorMode;
-  kind?: 'action' | 'tx' | 'ia';
-};
+type ChatItem = { id: string; author: 'user' | 'ai'; text: string; ts: number; tone?: AdvisorMode };
 type AdminSubscriptionSource = 'manual' | 'stripe' | 'promo' | 'wompi';
 function App() {
   const { user, loading, logout } = useAuth();
@@ -63,7 +55,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [advisorMode, setAdvisorMode] = useState<AdvisorMode>('amable');
-  const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filters, setFilters] = useState({ startDate: monthStartIso(), endDate: todayIso(), category: 'all' });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
@@ -97,16 +88,10 @@ function App() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [advisorLoading, setAdvisorLoading] = useState(false);
+  const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
 
   // Mes de referencia para la vista "Inicio" y presupuestos (no depende del filtro de la vista Movimientos)
   const currentMonth = todayIso().slice(0, 7);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('advisorMode');
-    if (stored === 'amable' || stored === 'reganon') {
-      setAdvisorMode(stored);
-    }
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -154,7 +139,6 @@ function App() {
         setProfileLoading(false);
         setSettingsMessage(null);
         setAiQuota(null);
-        setChatFeed([]);
         return;
       }
       try {
@@ -163,10 +147,6 @@ function App() {
         // Reservamos entrada y creamos perfil respetando l√≠mite de capacidad
         const profile = (await registerUserEntry()) || (await fetchUserProfile());
         setUserProfile(profile);
-        if (profile?.advisorMode === 'amable' || profile?.advisorMode === 'reganon') {
-          setAdvisorMode(profile.advisorMode);
-          localStorage.setItem('advisorMode', profile.advisorMode);
-        }
         try {
           const quota = await fetchUsageQuota();
           setAiQuota(quota);
@@ -311,7 +291,7 @@ function App() {
   };
 
   const formatCurrency = (cents?: number | null) => {
-    if (!cents && cents !== 0) return '--';
+    if (!cents && cents !== 0) return '‚??';
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
       cents / 100,
     );
@@ -321,7 +301,7 @@ function App() {
     if (!cents && cents !== 0) return '';
     // Aproximaci√≥n r√°pida: 1 USD = 4000 COP; ajusta si quieres un tipo de cambio distinto.
     const usd = (cents / 100) / 4000;
-    return `(‚âà ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usd)})`;
+    return `(‚?? ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usd)})`;
   };
 
   const formatDate = (ts?: number | null) => {
@@ -367,21 +347,6 @@ function App() {
     return map;
   }, [monthTransactions]);
 
-  const advisorQuickActions = [
-    { label: 'Espejo diario', description: 'Resumen de hoy', action: 'Espejo diario' },
-    { label: 'Gastos hormiga', description: 'Qu√© recortar sin sufrir', action: 'Gastos hormiga' },
-    { label: 'Resumen semanal', description: 'Resumen de la semana', action: 'Resumen semanal' },
-  ];
-
-  const pushFeedItem = (item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => {
-    const id = item.id ?? `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const ts = item.ts ?? Date.now();
-    setChatFeed((prev) => {
-      const next = [...prev, { ...item, id, ts }];
-      return next.length > 50 ? next.slice(next.length - 50) : next;
-    });
-  };
-
   const handleSaveTransaction = async (payload: TransactionInput) => {
     if (!user) return;
     await createTransaction(payload, user.uid);
@@ -411,28 +376,18 @@ function App() {
     }
   };
 
-  const handleToneChange = async (mode: AdvisorMode) => {
-    if (mode === advisorMode) return;
-    setAdvisorMode(mode);
-    setChatFeed([]);
-    localStorage.setItem('advisorMode', mode);
-    if (user) {
-      try {
-        await setUserAdvisorMode(mode);
-      } catch (err) {
-        console.error('No pudimos guardar el tono en perfil', err);
-      }
-    }
-  };
-
   const handleAdvisorAction = async (action: string) => {
+    const now = Date.now();
+    const userBubble: ChatItem = {
+      id: `user-${now}`,
+      author: 'user',
+      text: action,
+      ts: now,
+      tone: advisorMode,
+    };
+    setChatFeed((prev) => [...prev.slice(-30), userBubble]);
     try {
       setAdvisorLoading(true);
-      pushFeedItem({
-        from: 'user',
-        text: action,
-        kind: 'action',
-      });
       const resp = await callAnalyzeSummary({
         mode: advisorMode,
         action,
@@ -448,22 +403,32 @@ function App() {
         },
       });
       const data = resp.data as { message?: string };
-      pushFeedItem({
-        from: 'ia',
-        text: data?.message ?? 'Sin respuesta de IA.',
-        tone: advisorMode,
-        kind: 'ia',
-      });
+      const message = data?.message ?? 'Sin respuesta de IA.';
+      setChatFeed((prev) => [
+        ...prev.slice(-30),
+        {
+          id: `ai-${Date.now()}`,
+          author: 'ai',
+          text: message,
+          ts: Date.now(),
+          tone: advisorMode,
+        },
+      ]);
       const quota = await fetchUsageQuota();
       if (quota) setAiQuota(quota);
     } catch (err) {
       console.error(err);
-      pushFeedItem({
-        from: 'ia',
-        text: mapAiError(err),
-        tone: advisorMode,
-        kind: 'ia',
-      });
+      const errorMessage = mapAiError(err);
+      setChatFeed((prev) => [
+        ...prev.slice(-30),
+        {
+          id: `ai-error-${Date.now()}`,
+          author: 'ai',
+          text: errorMessage,
+          ts: Date.now(),
+          tone: advisorMode,
+        },
+      ]);
     } finally {
       setAdvisorLoading(false);
     }
@@ -928,15 +893,15 @@ function App() {
                 >
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      {tx.note || tx.category} ‚Ä¢ {tx.category}
+                      {tx.note || tx.category} ‚?¢ {tx.category}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {tx.date} ‚Ä¢ {tx.paymentMethod}
+                      {tx.date} ‚?¢ {tx.paymentMethod}
                     </p>
                     {budget?.perCategory?.[tx.category] && (
                       <p className="text-[11px] text-slate-300">
                         Presupuesto cat: $
-                        {budget.perCategory[tx.category].toLocaleString()} ‚Ä¢ Gastado: $
+                        {budget.perCategory[tx.category].toLocaleString()} ‚?¢ Gastado: $
                         {(categorySpendMap[tx.category] || 0).toLocaleString()}
                       </p>
                     )}
@@ -995,100 +960,84 @@ function App() {
           </section>
         )}
 
+        
         {activeTab === 'advisor' && (
           <section className="space-y-4">
             <div className="card space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-xs uppercase text-slate-400">Asesor IA</p>
-                  <h2 className="text-lg font-semibold text-white">Finanzas chat</h2>
-                  <p className="text-xs text-slate-300">
-                    Elige el tono y lanza una acci√≥n; la respuesta aparece en el feed.
-                  </p>
+                  <h2 className="text-lg font-semibold text-white">Finanzas chat (estilo WhatsApp)</h2>
+                  <p className="text-xs text-slate-400">Elige el tono y lanza una accion; la respuesta aparece en el feed.</p>
                 </div>
                 <div className="flex gap-2">
                   {(['amable', 'reganon'] as AdvisorMode[]).map((mode) => (
                     <button
                       key={mode}
-                      onClick={() => handleToneChange(mode)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        advisorMode === mode
-                          ? 'bg-primary text-white'
-                          : 'border border-white/10 bg-white/5 text-white'
-                      }`}
+                      onClick={() => setAdvisorMode(mode)}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${advisorMode === mode ? 'bg-primary text-white' : 'border border-white/10 bg-white/5 text-white'}`}
                     >
-                      {mode === 'amable' ? 'Amable' : 'Rega√±√≥n'}
+                      {mode === 'amable' ? 'Amable' : 'RegaÒÛn'}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {advisorQuickActions.map((item) => (
+                {[
+                  { label: 'Espejo diario', action: 'Resumen de hoy' },
+                  { label: 'Gastos hormiga', action: 'Que recortar sin sufrir' },
+                  { label: 'Resumen semanal', action: 'Resumen de la semana' },
+                ].map((item) => (
                   <button
                     key={item.action}
                     onClick={() => handleAdvisorAction(item.action)}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:border-primary"
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left text-sm font-semibold text-white hover:border-primary"
                   >
-                    <p className="text-sm font-semibold text-white">{item.label}</p>
-                    <p className="text-xs text-slate-300">{item.description}</p>
+                    <span className="block text-sm font-semibold text-white">{item.label}</span>
+                    <span className="text-xs text-slate-300">{item.action}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                  <span>Feed IA</span>
-                  <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega√±√≥n'}</span>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-100">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-300">Feed IA</p>
+                  <span className="text-[11px] text-slate-400">Tono: {advisorMode === 'amable' ? 'Amable' : 'RegaÒÛn'}</span>
                 </div>
-                <div className="flex flex-col gap-3">
+                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
                   {chatFeed.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-                      A√∫n no hay mensajes. Lanza una acci√≥n arriba para ver el estilo chat.
-                    </div>
+                    <p className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-xs text-slate-300">
+                      Aun no hay mensajes. Lanza una accion arriba para ver el estilo chat.
+                    </p>
                   )}
-                  {chatFeed.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}
-                    >
-                      <div
-                        className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                          item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
-                          <span>{item.from === 'ia' ? 'IA' : 'T√∫'}</span>
-                          <span>
-                            {new Date(item.ts).toLocaleTimeString('es-CO', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
+                  {chatFeed.map((item) => {
+                    const isUser = item.author === 'user';
+                    const time = new Date(item.ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div key={item.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow ${isUser ? 'bg-primary text-white rounded-br-md' : 'bg-white/10 text-slate-100 rounded-bl-md'}`}
+                        >
+                          {!isUser && (
+                            <p className="mb-1 text-[11px] uppercase tracking-wide text-slate-300">
+                              IA: {item.tone === 'amable' ? 'Amable' : 'RegaÒÛn'}
+                            </p>
+                          )}
+                          <p className="whitespace-pre-line leading-relaxed">{item.text}</p>
+                          <p className={`mt-2 text-[10px] ${isUser ? 'text-emerald-50/80' : 'text-slate-400'}`}>{time}</p>
                         </div>
-                        <p className="whitespace-pre-line">{item.text}</p>
-                        {item.tone && item.from === 'ia' && (
-                          <p className="mt-1 text-[10px] opacity-80">
-                            Tono: {item.tone === 'amable' ? 'Amable' : 'Rega√±√≥n'}
-                          </p>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {advisorLoading && (
-                    <div className="flex items-center gap-2 text-xs text-slate-200">
-                      <span className="font-semibold text-white">IA escribiendo</span>
-                      <span className="flex items-center gap-1">
+                    <div className="flex justify-start">
+                      <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-xs text-slate-200">
                         <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
-                        <span
-                          className="h-2 w-2 animate-bounce rounded-full bg-white"
-                          style={{ animationDelay: '0.15s' }}
-                        />
-                        <span
-                          className="h-2 w-2 animate-bounce rounded-full bg-white"
-                          style={{ animationDelay: '0.3s' }}
-                        />
-                      </span>
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: '0.15s' }} />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-white" style={{ animationDelay: '0.3s' }} />
+                        <span className="pl-1">IA escribiendo...</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1097,13 +1046,13 @@ function App() {
           </section>
         )}
 
-        {activeTab === 'settings' && (
+{activeTab === 'settings' && (
           <section className="space-y-4">
             <div className="card flex flex-col gap-3">
               <div className="space-y-1">
                 <p className="text-xs uppercase text-slate-400">Cuenta</p>
                 <h2 className="text-lg font-semibold text-white">ID de usuario</h2>
-                <p className="text-xs text-slate-300">√ötil para soporte o auditor√≠a.</p>
+                <p className="text-xs text-slate-300">√?til para soporte o auditor√≠a.</p>
               </div>
               <div className="flex w-full items-center gap-2">
                 <div className="max-w-full grow overflow-x-auto rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-mono text-white">
@@ -1190,7 +1139,7 @@ function App() {
                   )}
                   {userProfile?.subscription?.expiresAt ? (
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
-                      Expira: {formatDate(userProfile.subscription.expiresAt) || '--'}
+                      Expira: {formatDate(userProfile.subscription.expiresAt) || '‚??'}
                     </span>
                   ) : null}
                 </div>
@@ -1513,7 +1462,7 @@ function App() {
         onClick={() => setShowQuickAdd(true)}
         className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
       >
-        <span className="text-lg">+</span> Registrar gasto
+        <span className="text-lg">Ôº?</span> Registrar gasto
       </button>
 
       <BottomNav value={activeTab} onChange={setActiveTab} />
@@ -1599,8 +1548,4 @@ const previousMonthRange = () => {
 };
 
 export default App;
-
-
-
-
 
