@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# Frontend – GastoSense
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite + Tailwind. Interfaz mobile‑first para registrar gastos/ingresos, gestionar presupuestos y usar el Asesor IA en modo chat (tonos Amable o Regañón).
 
-Currently, two official plugins are available:
+## Requisitos
+- Node 20.x
+- npm 9+ (usa el lock actual)
+- Variables en `.env`:
+  ```
+  VITE_FIREBASE_API_KEY=...
+  VITE_FIREBASE_AUTH_DOMAIN=...
+  VITE_FIREBASE_PROJECT_ID=...
+  VITE_FIREBASE_STORAGE_BUCKET=...
+  VITE_FIREBASE_MESSAGING_SENDER_ID=...
+  VITE_FIREBASE_APP_ID=...
+  ```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Scripts
+- `npm run dev` — servidor Vite
+- `npm run build` — build producción
+- `npm run preview` — sirviendo el build
+- `npm run lint` — ESLint (TS/React)
 
-## React Compiler
+## Estructura rápida
+- `src/main.tsx` — arranque con `AuthProvider` y `ThemeProvider`.
+- `src/App.tsx` — orquesta pestañas (Inicio, Movimientos, Asesor IA, Config), presupuestos, planes y admin.
+- `src/context/` — `AuthContext` (login/logout, UID), `ThemeContext` (tema claro/oscuro persistente).
+- `src/components/` — QuickAddSheet (modo rápido y modo frase/voz), BudgetCard, CategoryBudgets, TransactionEditModal, BottomNav, ResponsiveSelect, etc.
+- `src/services/` — llamadas a Firestore/Functions (transacciones, presupuestos, plantillas, usuarios, IA, planes/pagos).
+- `src/types/` — modelos compartidos (Transaction, Budget, Template, UserProfile, PlanInfo…).
+- `public/` — assets estáticos.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Funcionalidad clave
+- **Quick Add**: formulario rápido, plantillas recurrentes, modo frase IA y grabación voz (<=10s) para transcribir y clasificar.
+- **Presupuestos**: total mensual y por categoría, alertas visuales 80/100%, top de categorías.
+- **Movimientos**: filtros por fecha/categoría, edición/borrado inline, indicadores de cumplimiento por categoría.
+- **Asesor IA (chat)**: tonos Amable/Regañón, acciones rápidas (Espejo diario, Gastos hormiga, Resumen semanal), feed con loader “IA escribiendo…”.
+- **Planes y pagos**: selección de plan/periodo, checkout Wompi (vía callable), estado de membresía y cuotas IA.
+- **Claves**: BYOK almacenada en backend (Secret Manager); preferencia entre key propia y gestionada (según rol/plan).
+- **Tema**: claro/oscuro con persistencia local.
 
-## Expanding the ESLint configuration
+## Flujo de desarrollo
+1) `npm install`
+2) Crear `.env` (ver arriba)
+3) `npm run dev`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Notas
+- Usa Firebase Auth (Google) y Firestore; las callable functions requieren que el proyecto y secretos estén configurados.
+- Las cuotas de IA se actualizan tras cada llamada (parse/analyze) mediante `fetchUsageQuota`.
+- Componente `ResponsiveSelect` adapta selects en mobile (bottom sheet) y desktop (dropdown).
