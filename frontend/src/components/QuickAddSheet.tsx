@@ -620,6 +620,11 @@ export function QuickAddSheet({
                       onChange={(e) => setDate(e.target.value)}
                       className="w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none"
                     />
+                    {editingTemplate?.createdAt && (
+                      <p className="mt-1 text-[11px] text-[var(--muted)]">
+                        Creada: {editingTemplate.createdAt.slice(0, 10)} (la fecha aquí es para el próximo registro).
+                      </p>
+                    )}
                   </div>
 
                   {onSaveTemplate && (
@@ -639,6 +644,7 @@ export function QuickAddSheet({
                           onChange={(val) => setFrequency(val as Template['frequency'])}
                           options={[
                             { value: 'weekly', label: 'Semanal' },
+                            { value: 'biweekly', label: 'Quincenal' },
                             { value: 'monthly', label: 'Mensual' },
                             { value: 'yearly', label: 'Anual' },
                           ]}

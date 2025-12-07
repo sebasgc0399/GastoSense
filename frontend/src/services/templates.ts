@@ -21,6 +21,7 @@ export async function fetchTemplates(userId: string): Promise<Template[]> {
       userId: data.userId,
       recurring: data.recurring ?? false,
       frequency: data.frequency ?? undefined,
+      lastUsedAt: data.lastUsedAt ?? undefined,
       createdAt: data.createdAt ?? undefined,
       updatedAt: data.updatedAt ?? undefined,
     };
@@ -59,6 +60,7 @@ export async function updateTemplate(
   if (payload.type) data.type = payload.type;
   if (payload.recurring !== undefined) data.recurring = payload.recurring;
   if (payload.frequency) data.frequency = payload.frequency;
+  if ((payload as { lastUsedAt?: string }).lastUsedAt) data.lastUsedAt = (payload as { lastUsedAt?: string }).lastUsedAt;
   await updateDoc(ref, data);
 }
 

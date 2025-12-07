@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import type React from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
 import { BudgetCard } from './components/BudgetCard';
 import { CategoryBudgets } from './components/CategoryBudgets';
@@ -11,6 +12,7 @@ import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
 import { callAnalyzeSummary, callParseTransactionPhrase } from './services/functions';
+import { trackEvent } from './services/analytics';
 import { getBudget, saveBudget } from './services/budgets';
 import {
   adminSetUserRole,
@@ -56,6 +58,14 @@ type ChatItem = {
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
 };
+type SmartCard = {
+  id: string;
+  slot: 1 | 2 | 3 | 4;
+  title: string;
+  body: string;
+  primaryAction: { label: string; onClick: () => void };
+  secondaryAction?: { label: string; onClick: () => void };
+};
 type AdminSubscriptionSource = 'manual' | 'stripe' | 'promo' | 'wompi';
 function App() {
   const { user, loading, logout } = useAuth();
@@ -97,6 +107,8 @@ function App() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [advisorLoading, setAdvisorLoading] = useState(false);
+  const [smartCards, setSmartCards] = useState<SmartCard[]>([]);
+  const [smartCardIndex, setSmartCardIndex] = useState(0);
 
   // Mes de referencia para la vista "Inicio" y presupuestos (no depende del filtro de la vista Movimientos)
   const currentMonth = todayIso().slice(0, 7);
@@ -317,6 +329,13 @@ function App() {
     );
   };
 
+  const formatPesos = (value?: number | null) => {
+    if (!value && value !== 0) return '--';
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
+      value,
+    );
+  };
+
   const formatUsdApprox = (cents?: number | null) => {
     if (!cents && cents !== 0) return '';
     // Aproximación rápida: 1 USD = 4000 COP; ajusta si quieres un tipo de cambio distinto.
@@ -331,34 +350,6 @@ function App() {
     return d.toISOString().slice(0, 10);
   };
 
-  const insights = useMemo(() => {
-    const cards = [];
-    if (topExpenses[0]) {
-      cards.push({
-        title: 'Categoría top',
-        detail: `Estás gastando más en ${topExpenses[0].category} ($${topExpenses[0].amount.toLocaleString()}).`,
-        action: 'Revisa límites semanales',
-      });
-    }
-    if (budget?.total) {
-      const progress = monthlyExpense / budget.total;
-      if (progress >= 1) {
-        cards.push({
-          title: 'Presupuesto superado',
-          detail: 'Alcanzaste el 100% del presupuesto mensual.',
-          action: 'Congela gastos no esenciales',
-        });
-      } else if (progress >= 0.8) {
-        cards.push({
-          title: 'Alerta 80%',
-          detail: 'Vas por encima del 80% del presupuesto.',
-          action: 'Define un tope semanal menor',
-        });
-      }
-    }
-    return cards;
-  }, [topExpenses, budget?.total, monthlyExpense]);
-
   const categorySpendMap = useMemo(() => {
     const map: Record<string, number> = {};
     monthTransactions.forEach((tx) => {
@@ -366,6 +357,353 @@ function App() {
     });
     return map;
   }, [monthTransactions]);
+
+  const dayOfMonth = new Date().getDate();
+  const daysElapsed = dayOfMonth;
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
+  const scrollToBudgets = useCallback(
+    () => categoryBudgetsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    [],
+  );
+
+  const openBudgets = useCallback((category?: string) => {
+    setActiveTab('home');
+    trackEvent('smart_card_click', { action: 'budgets', category });
+    // Scroll al bloque de presupuestos; si ya está en pantalla, hará scroll suave
+    setTimeout(() => scrollToBudgets(), 100);
+  }, [scrollToBudgets]);
+
+  const openMovements = useCallback((category?: string) => {
+    setFilters({ startDate: monthStartIso(), endDate: todayIso(), category: category || 'all' });
+    setActiveTab('transactions');
+    trackEvent('smart_card_click', { action: 'movements', category });
+  }, []);
+
+  const openQuickAdd = useCallback((mode?: 'income' | 'expense') => {
+    setShowQuickAdd(true);
+    trackEvent('smart_card_click', { action: 'quick_add', mode });
+    if (mode === 'income') {
+      setSelectedTemplate(null);
+      // Podrías setear un estado para preseleccionar tipo ingreso si el formulario lo soporta
+    }
+  }, []);
+
+  const openAdvisor = useCallback((context?: Record<string, unknown>) => {
+    setActiveTab('advisor');
+    trackEvent('smart_card_click', { action: 'advisor', ...context });
+  }, []);
+
+  const openPlans = useCallback(() => {
+    setActiveTab('settings');
+    trackEvent('smart_card_click', { action: 'plans' });
+  }, []);
+
+  const addPeriod = useCallback((date: Date, frequency: Template['frequency']) => {
+    const next = new Date(date);
+    if (frequency === 'weekly') next.setDate(next.getDate() + 7);
+    else if (frequency === 'biweekly') next.setDate(next.getDate() + 14);
+    else if (frequency === 'monthly') {
+      const day = next.getDate();
+      next.setMonth(next.getMonth() + 1);
+      // Clamp to end of month if needed
+      if (next.getDate() < day) {
+        next.setDate(0);
+      }
+    } else if (frequency === 'yearly') next.setFullYear(next.getFullYear() + 1);
+    else next.setDate(next.getDate() + 30);
+    return next;
+  }, []);
+
+  const calcNextDue = useCallback(
+    (tpl: Template, reference: Date) => {
+      if (!tpl.recurring) return null;
+      const freq = tpl.frequency ?? 'monthly';
+      const baseIso = tpl.lastUsedAt ?? tpl.createdAt;
+      if (!baseIso) return null;
+      let next = addPeriod(new Date(baseIso), freq);
+      next.setHours(0, 0, 0, 0);
+      // avanzar hasta alcanzar hoy o futuro cercano
+      while (next < reference) {
+        next = addPeriod(next, freq);
+        next.setHours(0, 0, 0, 0);
+      }
+      return next;
+    },
+    [addPeriod],
+  );
+
+  useEffect(() => {
+    const cards: SmartCard[] = [];
+    const today = new Date();
+
+    const categoryPercents =
+      budget?.perCategory && Object.keys(budget.perCategory).length
+        ? Object.entries(budget.perCategory).map(([cat, limit]) => {
+            const spent = categorySpendMap[cat] || 0;
+            const percent = limit ? (spent / limit) * 100 : 0;
+            return { cat, spent, limit, percent };
+          })
+        : [];
+
+    // Slot 1: alerta presupuesto
+    const overCat = categoryPercents
+      .filter((c) => c.percent > 100)
+      .sort((a, b) => b.percent - a.percent)[0];
+    const nearCat = categoryPercents
+      .filter((c) => c.percent >= 80 && c.percent <= 100)
+      .sort((a, b) => b.percent - a.percent)[0];
+
+    if (overCat) {
+      cards.push({
+        id: 'budget_over_100',
+        slot: 1,
+        title: 'Presupuesto excedido',
+        body: `Te pasaste ${formatPesos(overCat.spent - overCat.limit)} en ${overCat.cat} este mes.`,
+        primaryAction: {
+          label: 'Ajustar tope',
+          onClick: () => openBudgets(overCat.cat),
+        },
+        secondaryAction: {
+          label: 'Ver movimientos',
+          onClick: () => openMovements(overCat.cat),
+        },
+      });
+    } else if (nearCat) {
+      cards.push({
+        id: 'budget_near_100',
+        slot: 1,
+        title: 'Presupuesto al límite',
+        body: `Vas en ${Math.round(nearCat.percent)}% de tu tope en ${nearCat.cat}. Te quedan ${formatPesos(
+          nearCat.limit - nearCat.spent,
+        )}.`,
+        primaryAction: {
+          label: 'Ajustar tope',
+          onClick: () => openBudgets(nearCat.cat),
+        },
+        secondaryAction: {
+          label: 'Ver movimientos',
+          onClick: () => openMovements(nearCat.cat),
+        },
+      });
+    } else if (!budget?.perCategory || Object.keys(budget.perCategory || {}).length === 0) {
+      cards.push({
+        id: 'create_budget',
+        slot: 1,
+        title: 'Crea tu primer presupuesto',
+        body: 'Elige 1–3 categorías clave y define un tope para este mes.',
+        primaryAction: {
+          label: 'Crear presupuesto',
+          onClick: () => openBudgets(),
+        },
+      });
+    }
+
+    // Slot 2: optimización presupuesto
+    const topWithoutBudget = topExpenses.find((t) => !(budget?.perCategory && budget.perCategory[t.category]));
+    if (topWithoutBudget) {
+      cards.push({
+        id: 'set_cap_top_category',
+        slot: 2,
+        title: `Fija un tope para ${topWithoutBudget.category}`,
+        body: `${topWithoutBudget.category} ya suma ${formatPesos(topWithoutBudget.amount)} este mes.`,
+        primaryAction: {
+          label: 'Ver presupuesto',
+          onClick: () => openBudgets(topWithoutBudget.category),
+        },
+      });
+    } else {
+      const surplus = categoryPercents.filter((c) => c.percent < 40).sort((a, b) => a.percent - b.percent)[0];
+      const deficit = categoryPercents.filter((c) => c.percent > 100).sort((a, b) => b.percent - a.percent)[0];
+      if (surplus && deficit) {
+        cards.push({
+          id: 'redistribute_budget',
+          slot: 2,
+          title: 'Redistribuye tu presupuesto',
+          body: `Te sobra ${formatPesos(surplus.limit - surplus.spent)} en ${surplus.cat} y falta en ${deficit.cat}.`,
+          primaryAction: {
+            label: 'Mover tope',
+            onClick: () => openBudgets(deficit.cat),
+          },
+        });
+      } else if (surplus && dayOfMonth > 15) {
+        cards.push({
+          id: 'lower_budget',
+          slot: 2,
+          title: 'Presupuesto holgado',
+          body: `En ${surplus.cat} usas menos del 40% del tope. ¿Bajamos para ahorrar más?`,
+          primaryAction: {
+            label: 'Ajustar tope',
+            onClick: () => openBudgets(surplus.cat),
+          },
+        });
+      }
+    }
+
+    // Slot 3: hábitos de registro
+    let lastTxDate: Date | null = null;
+    if (transactions.length > 0) {
+      const latest = transactions.reduce((a, b) => (a.date > b.date ? a : b));
+      lastTxDate = latest?.date ? new Date(latest.date) : null;
+    }
+    const daysSinceLast = lastTxDate ? Math.floor((today.getTime() - lastTxDate.getTime()) / 86_400_000) : Infinity;
+    if (daysSinceLast >= 3) {
+      cards.push({
+        id: 'add_recent',
+        slot: 3,
+        title: 'Registra tus últimos gastos',
+        body: `No registras nada hace ${daysSinceLast} días. Antes de que se te olviden 😉`,
+        primaryAction: {
+          label: 'Registrar ahora',
+          onClick: () => openQuickAdd(),
+        },
+      });
+    } else {
+      const monthExpenseCount = monthTransactions.filter((t) => t.type === 'expense').length;
+      const monthExpenseTotalValue = monthTransactions
+        .filter((t) => t.type === 'expense')
+        .reduce((acc, t) => acc + t.amount, 0);
+      const avgDailyExpense = daysElapsed ? monthExpenseTotalValue / daysElapsed : 0;
+      const bigIncome = monthTransactions.some(
+        (t) => t.type === 'income' && t.amount >= Math.max(2 * avgDailyExpense, 300_000),
+      );
+      if (monthExpenseCount >= 5 && !bigIncome) {
+        cards.push({
+          id: 'add_income',
+          slot: 3,
+          title: '¿Ya registraste tu ingreso?',
+          body: 'Veo varios gastos este mes pero ningún ingreso grande. Añádelo para ver el balance real.',
+          primaryAction: {
+            label: 'Registrar ingreso',
+            onClick: () => openQuickAdd('income'),
+          },
+        });
+      } else if (recurringTemplates[0]) {
+        const upcoming = recurringTemplates
+          .map((tpl) => {
+            const nextDue = calcNextDue(tpl, todayStart);
+            if (!nextDue) return null;
+            const daysUntil = Math.round((nextDue.getTime() - todayStart.getTime()) / 86_400_000);
+            return { tpl, nextDue, daysUntil };
+          })
+          .filter(Boolean)
+          .sort((a, b) => (a as { daysUntil: number }).daysUntil - (b as { daysUntil: number }).daysUntil) as {
+          tpl: Template;
+          nextDue: Date;
+          daysUntil: number;
+        }[];
+        const nextTemplate = upcoming.find((item) => item.daysUntil <= 3 && item.daysUntil >= -1) || upcoming[0];
+        if (nextTemplate) {
+          cards.push({
+            id: 'remind_recurring',
+            slot: 3,
+            title: 'Ahorra tiempo con plantillas',
+            body:
+              nextTemplate.daysUntil === 0
+                ? `Hoy suele cobrarse tu plantilla ${nextTemplate.tpl.name}. ¿Ya la registraste?`
+                : nextTemplate.daysUntil > 0
+                  ? `Pronto toca ${nextTemplate.tpl.name} (${nextTemplate.daysUntil} días).`
+                  : `Se cobró hace ${Math.abs(nextTemplate.daysUntil)} días la plantilla ${nextTemplate.tpl.name}.`,
+            primaryAction: {
+              label: 'Registrar ahora',
+              onClick: () => handleUseTemplate(nextTemplate.tpl),
+            },
+          });
+        }
+      }
+    }
+
+    // Slot 4: storytelling / IA / upsell
+    const analyzeLimitReached =
+      aiQuota?.analyze && aiQuota.analyze.limit > 0 && aiQuota.analyze.used >= aiQuota.analyze.limit;
+    if (analyzeLimitReached && (aiQuota?.analyze.used ?? 0) > 0) {
+      cards.push({
+        id: 'ia_limit',
+        slot: 4,
+        title: 'Te quedaste sin análisis IA',
+        body: `Ya usaste tus ${aiQuota?.analyze.limit ?? 0} análisis de IA de esta semana. Desbloquea más en el plan PRO.`,
+        primaryAction: {
+          label: 'Ver planes',
+          onClick: openPlans,
+        },
+      });
+    } else if (previousMonth) {
+      const diff = monthlyExpense - previousMonth.expense;
+      const absDiff = Math.abs(diff);
+      const diffText = diff === 0 ? 'igual que el mes pasado.' : diff > 0 ? `${formatPesos(absDiff)} más que el mes pasado.` : `${formatPesos(absDiff)} menos que el mes pasado.`;
+      cards.push({
+        id: 'month_summary',
+        slot: 4,
+        title: 'Cómo vas este mes',
+        body: `Llevas ${formatPesos(monthlyExpense)} en gastos, ${diffText}`,
+        primaryAction: {
+          label: 'Ver análisis',
+          onClick: () => openAdvisor({ context: 'month_summary' }),
+        },
+      });
+    } else if (topExpenses[0]) {
+      cards.push({
+        id: 'top_category_story',
+        slot: 4,
+        title: 'Categoría que marca el mes',
+        body: `${topExpenses[0].category} es tu gasto principal: ${formatPesos(topExpenses[0].amount)} este mes.`,
+        primaryAction: {
+          label: 'Pedir consejo',
+          onClick: () => openAdvisor({ category: topExpenses[0].category }),
+        },
+      });
+    }
+
+    // Ordenar por slot y mantener máximo uno por slot
+    const bySlot: Record<number, SmartCard | undefined> = {};
+    cards.forEach((c) => {
+      if (!bySlot[c.slot]) bySlot[c.slot] = c;
+    });
+    const finalCards = [1, 2, 3, 4].map((slot) => bySlot[slot]).filter(Boolean) as SmartCard[];
+    setSmartCards(finalCards);
+  }, [
+    aiQuota?.analyze,
+    budget?.perCategory,
+    categorySpendMap,
+    dayOfMonth,
+    monthTransactions,
+    monthlyExpense,
+    previousMonth,
+    recurringTemplates,
+    topExpenses,
+    transactions,
+    daysElapsed,
+    openAdvisor,
+    openBudgets,
+    openMovements,
+    openPlans,
+    openQuickAdd,
+    calcNextDue,
+    todayStart,
+  ]);
+
+  useEffect(() => {
+    setSmartCardIndex(0);
+  }, [smartCards.length]);
+  const handlePrevInsight = () => setSmartCardIndex((i) => Math.max(0, i - 1));
+  const handleNextInsight = () => setSmartCardIndex((i) => Math.min(smartCards.length - 1, i + 1));
+  const touchStartX = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 30) return;
+    if (delta < 0) handleNextInsight();
+    else handlePrevInsight();
+  };
 
   const advisorQuickActions = [
     { label: 'Espejo diario', description: 'Resumen de hoy', action: 'Espejo diario' },
@@ -792,7 +1130,7 @@ function App() {
               />
             </div>
 
-            <div className="card p-0">
+            <div className="card p-0" ref={categoryBudgetsRef}>
               <CategoryBudgets perCategory={budget?.perCategory} onSave={handleSaveCategoryBudgets} />
             </div>
 
@@ -804,24 +1142,77 @@ function App() {
                   <span className="text-xs text-slate-400">Detectadas con datos reales</span>
                 </div>
                 <div className="space-y-3">
-                  {insights.length === 0 && <p className="text-sm text-slate-300">Sin alertas por ahora.</p>}
-                  {insights.map((item) => (
-                    <div key={item.title} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-                      <p className="text-sm font-semibold text-white">{item.title}</p>
-                      <p className="text-sm text-slate-200">{item.detail}</p>
-                      <div className="mt-2 flex gap-2">
-                        <button className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white">
-                          {item.action}
-                        </button>
-                        <button
-                          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white"
-                          onClick={() => setShowQuickAdd(true)}
+                  {smartCards.length === 0 && <p className="text-sm text-slate-300">Sin alertas por ahora.</p>}
+                  {smartCards.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-300">
+                        <span>{smartCards.length > 1 ? 'Desliza para ver más' : 'Sugerencia destacada'}</span>
+                        {smartCards.length > 1 && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handlePrevInsight}
+                              className="h-7 w-7 rounded-full border border-white/15 bg-white/10 text-white hover:border-primary"
+                              aria-label="Anterior"
+                            >
+                              {'<'}
+                            </button>
+                            <button
+                              onClick={handleNextInsight}
+                              className="h-7 w-7 rounded-full border border-white/15 bg-white/10 text-white hover:border-primary"
+                              aria-label="Siguiente"
+                            >
+                              {'>'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative overflow-hidden rounded-xl">
+                        <div
+                          className="flex transition-transform duration-300 ease-out"
+                          style={{ transform: `translateX(-${smartCardIndex * 100}%)` }}
+                          onTouchStart={handleTouchStart}
+                          onTouchEnd={handleTouchEnd}
                         >
-                          Registrar ahora
-                        </button>
+                          {smartCards.map((item) => (
+                            <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
+                              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                                <p className="text-sm font-semibold text-white">{item.title}</p>
+                                <p className="text-sm text-slate-200">{item.body}</p>
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
+                                    onClick={item.primaryAction.onClick}
+                                  >
+                                    {item.primaryAction.label}
+                                  </button>
+                                  {item.secondaryAction && (
+                                    <button
+                                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white"
+                                      onClick={item.secondaryAction.onClick}
+                                    >
+                                      {item.secondaryAction.label}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {smartCards.length > 1 && (
+                          <div className="mt-2 flex justify-center gap-1">
+                            {smartCards.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setSmartCardIndex(idx)}
+                                className={`h-2 w-2 rounded-full ${idx === smartCardIndex ? 'bg-white' : 'bg-white/30'}`}
+                                aria-label={`Ir a tarjeta ${idx + 1}`}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>

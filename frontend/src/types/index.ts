@@ -47,7 +47,8 @@ export interface Template {
   type?: TransactionType;
   userId?: string;
   recurring?: boolean;
-  frequency?: 'weekly' | 'monthly' | 'yearly';
+  frequency?: 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+  lastUsedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
