@@ -351,7 +351,10 @@ function App() {
 
   const handleInterpret = async (text: string): Promise<ParsedTransactionSuggestion> => {
     try {
-      const resp = await callParseTransactionPhrase({ text });
+      const resp = await callParseTransactionPhrase({
+        text,
+        clientOffsetMinutes: new Date().getTimezoneOffset(),
+      });
       const data = resp.data as { parsed: ParsedTransactionSuggestion };
       const quota = await fetchUsageQuota();
       if (quota) setAiQuota(quota);
@@ -909,7 +912,7 @@ function App() {
                   <h2 className="text-lg font-semibold text-white">Recomendaciones rápidas</h2>
                 </div>
                 <div className="flex gap-2">
-                  {(['amable', 'directo', 'exigente', 'regañon'] as AdvisorMode[]).map((mode) => (
+                  {(['amable', 'directo', 'exigente', 'reganon'] as AdvisorMode[]).map((mode) => (
                     <button
                       key={mode}
                       onClick={() => setAdvisorMode(mode)}

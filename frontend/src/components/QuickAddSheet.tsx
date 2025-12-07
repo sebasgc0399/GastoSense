@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { frequentCategories, paymentMethods } from '../data/frequentCategories';
+import { callTranscribeAudio } from '../services/functions';
 import type { ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
 
 type Mode = 'quick' | 'natural';
@@ -18,6 +19,7 @@ interface QuickAddSheetProps {
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const MAX_RECORDING_SECONDS = 10;
 
 export function QuickAddSheet({
   open,
@@ -48,8 +50,18 @@ export function QuickAddSheet({
   const [interpreting, setInterpreting] = useState(false);
   const [parsedSuggestion, setParsedSuggestion] = useState<ParsedTransactionSuggestion | null>(null);
   const [interpretError, setInterpretError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [transcribingAudio, setTranscribingAudio] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const [templateName, setTemplateName] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordTimeoutRef = useRef<number | null>(null);
+  const recordIntervalRef = useRef<number | null>(null);
+  const recordingStartedRef = useRef<number | null>(null);
+  const skipTranscriptionRef = useRef(false);
 
   const isOpen = open;
 
@@ -133,8 +145,9 @@ export function QuickAddSheet({
     };
   };
 
-  const handleInterpret = async () => {
-    if (!rawText.trim()) {
+  const interpretText = async (text: string) => {
+    const cleaned = text.trim();
+    if (!cleaned) {
       setInterpretError('Escribe una frase para interpretar.');
       return;
     }
@@ -143,10 +156,10 @@ export function QuickAddSheet({
     setInterpreting(true);
     try {
       if (onInterpret) {
-        const parsed = await onInterpret(rawText);
+        const parsed = await onInterpret(cleaned);
         setParsedSuggestion(parsed);
       } else {
-        setParsedSuggestion(fallbackParse(rawText));
+        setParsedSuggestion(fallbackParse(cleaned));
       }
     } catch (error) {
       console.error(error);
@@ -156,13 +169,169 @@ export function QuickAddSheet({
         setParsedSuggestion(null);
         setInterpretError(message);
       } else {
-        setParsedSuggestion(fallbackParse(rawText));
+        setParsedSuggestion(fallbackParse(cleaned));
         setInterpretError('No pudimos llamar a la IA, te mostramos una sugerencia estimada.');
       }
     } finally {
       setInterpreting(false);
     }
   };
+
+  const handleInterpret = async () => {
+    await interpretText(rawText);
+  };
+
+  const blobToDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string | null;
+        if (!result) {
+          reject(new Error('No se pudo leer el audio.'));
+          return;
+        }
+        resolve(result);
+      };
+      reader.onerror = () => reject(new Error('No se pudo leer el audio.'));
+      reader.readAsDataURL(blob);
+    });
+
+  const clearRecordingTimers = () => {
+    if (recordTimeoutRef.current) {
+      window.clearTimeout(recordTimeoutRef.current);
+      recordTimeoutRef.current = null;
+    }
+    if (recordIntervalRef.current) {
+      window.clearInterval(recordIntervalRef.current);
+      recordIntervalRef.current = null;
+    }
+  };
+
+  const stopMediaTracks = (rec?: MediaRecorder | null) => {
+    const tracks = rec?.stream?.getTracks ? rec.stream.getTracks() : [];
+    tracks.forEach((track) => track.stop());
+  };
+
+  const stopRecording = (skipTranscription = false) => {
+    skipTranscriptionRef.current = skipTranscription;
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    stopMediaTracks(recorder);
+    clearRecordingTimers();
+    setRecording(false);
+    setRecordingDuration(0);
+  };
+
+  const transcribeBlob = async (blob: Blob, durationMs?: number) => {
+    setTranscribingAudio(true);
+    setInterpretError(null);
+    try {
+      const audioBase64 = await blobToDataUrl(blob);
+      const response = await callTranscribeAudio({
+        audioBase64,
+        mimeType: blob.type,
+        durationMs: durationMs ?? undefined,
+      });
+      const text = (response.data as { text?: string })?.text;
+      if (!text) {
+        throw new Error('No recibimos texto transcrito.');
+      }
+      setRawText(text);
+      await interpretText(text);
+    } catch (error) {
+      console.error(error);
+      const message = (error as Error)?.message || 'No se pudo transcribir el audio.';
+      setInterpretError(message);
+    } finally {
+      setTranscribingAudio(false);
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setInterpretError('Tu navegador no permite grabar audio.');
+      return;
+    }
+
+    setInterpretError(null);
+    setRecording(true);
+    setRecordingDuration(0);
+    skipTranscriptionRef.current = false;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferredMime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined;
+      const recorder = new MediaRecorder(stream, preferredMime ? { mimeType: preferredMime } : undefined);
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+      recordingStartedRef.current = Date.now();
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        stopMediaTracks(recorder);
+        clearRecordingTimers();
+        const durationMs = recordingStartedRef.current ? Date.now() - recordingStartedRef.current : undefined;
+        recordingStartedRef.current = null;
+        setRecording(false);
+        const blob =
+          chunksRef.current.length > 0
+            ? new Blob(chunksRef.current, { type: recorder.mimeType || preferredMime || 'audio/webm' })
+            : null;
+        chunksRef.current = [];
+        if (skipTranscriptionRef.current) {
+          return;
+        }
+        if (!blob) {
+          setInterpretError('No se capturó audio, intenta de nuevo.');
+          return;
+        }
+        try {
+          await transcribeBlob(blob, durationMs);
+        } catch (err) {
+          console.error(err);
+          setInterpretError('No se pudo procesar el audio grabado.');
+        }
+      };
+
+      recorder.start();
+      recordTimeoutRef.current = window.setTimeout(() => {
+        if (mediaRecorderRef.current?.state === 'recording') {
+          stopRecording(false);
+        }
+      }, MAX_RECORDING_SECONDS * 1000);
+      recordIntervalRef.current = window.setInterval(() => {
+        if (!recordingStartedRef.current) return;
+        const seconds = Math.min(
+          MAX_RECORDING_SECONDS,
+          Math.round((Date.now() - recordingStartedRef.current) / 1000),
+        );
+        setRecordingDuration(seconds);
+      }, 200);
+    } catch (error) {
+      console.error(error);
+      setRecording(false);
+      setInterpretError('No pudimos acceder al micrófono.');
+      stopMediaTracks(mediaRecorderRef.current);
+      clearRecordingTimers();
+    }
+  };
+
+  const handleMicToggle = () => {
+    if (transcribingAudio) return;
+    if (recording || mediaRecorderRef.current?.state === 'recording') {
+      stopRecording();
+    } else {
+      void handleStartRecording();
+    }
+  };
+
 
   const handleSaveParsed = async () => {
     if (!parsedSuggestion) return;
@@ -235,6 +404,16 @@ export function QuickAddSheet({
       setFeedback('No se pudo guardar la plantilla.');
     }
   };
+
+  useEffect(() => {
+    if (!isOpen && recording) {
+      stopRecording(true);
+    }
+    return () => {
+      stopRecording(true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, recording]);
 
   // Aplica template preseleccionado desde recordatorios (efecto para evitar setState en render)
   useEffect(() => {
@@ -515,6 +694,27 @@ export function QuickAddSheet({
                 />
               </div>
 
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleMicToggle}
+                  disabled={transcribingAudio}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                    recording
+                      ? 'border-red-400 bg-red-50 text-red-700'
+                      : 'border-white/15 bg-white/5 text-white hover:border-primary hover:text-primary'
+                  } disabled:opacity-60`}
+                  title="Grabar audio (max 10s)"
+                >
+                  <span className="text-lg font-semibold">{recording ? 'REC' : 'Mic'}</span>
+                  <span>{recording ? 'Detener y transcribir' : 'Grabar voz (10s)'}</span>
+                </button>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  {recording && <span>Grabando {recordingDuration}s / {MAX_RECORDING_SECONDS}s</span>}
+                  {transcribingAudio && <span>Transcribiendo audio...</span>}
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span className="rounded-full bg-slate-100 px-2 py-1">Detecta monto, fecha, categoría</span>
                 <span className="rounded-full bg-slate-100 px-2 py-1">Sugiere método de pago</span>
@@ -524,10 +724,10 @@ export function QuickAddSheet({
 
               <button
                 onClick={handleInterpret}
-                disabled={interpreting}
+                disabled={interpreting || transcribingAudio}
                 className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800 disabled:opacity-60"
               >
-                {interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
+                {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
               </button>
 
               {parsedSuggestion && (

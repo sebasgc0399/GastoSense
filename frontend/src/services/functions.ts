@@ -1,10 +1,13 @@
-import { getApp } from 'firebase/app';
+import { getApp, getApps } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { firebaseApp } from '../config/firebase';
 
-const functions = getFunctions(getApp(), 'us-central1');
+const app = getApps().length ? getApp() : firebaseApp;
+const functions = getFunctions(app, 'us-central1');
 
 export const callAnalyzeSummary = httpsCallable(functions, 'analyzeSummary');
 export const callParseTransactionPhrase = httpsCallable(functions, 'parseTransactionPhrase');
+export const callTranscribeAudio = httpsCallable(functions, 'transcribeAudio');
 export const callGetUserProfile = httpsCallable(functions, 'getUserProfile');
 export const callSetUserOpenAIKey = httpsCallable(functions, 'setUserOpenAIKey');
 export const callClearUserOpenAIKey = httpsCallable(functions, 'clearUserOpenAIKey');

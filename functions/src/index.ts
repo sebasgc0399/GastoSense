@@ -7,6 +7,7 @@ import {HttpsError, onCall, onRequest} from "firebase-functions/v2/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {setGlobalOptions} from "firebase-functions/v2/options";
 import OpenAI from "openai";
+import {toFile} from "openai/uploads";
 
 setGlobalOptions({region: "us-central1", maxInstances: 10});
 
@@ -72,7 +73,7 @@ interface ResolvedUserProfile {
   };
 }
 
-type AdvisorMode = "amable" | "regañon" | "directo" | "exigente";
+type AdvisorMode = "amable" | "reganon" | "directo" | "exigente";
 
 interface SpendingSummary {
   month?: string;
@@ -503,24 +504,117 @@ function wompiSignature(amountInCents: number, currency: string, reference: stri
 }
 
 const advisorPrompts: Record<AdvisorMode, string> = {
-  amable:
+  "amable":
     "Eres un asesor financiero personal amable, motivador y paciente. " +
     "Felicita pequeños avances y da pasos accionables cortos. No repitas la " +
     "misma respuesta si cambian los datos o la acción solicitada.",
-  regañon:
+  "reganon":
     "Eres un asesor financiero tipo tough love: directo y firme, sin insultar. " +
     "Señala con claridad los fallos y da acciones específicas. No culpas a la " +
     "persona, solo a la conducta financiera. No repitas la misma respuesta si " +
     "cambian los datos o la acción solicitada.",
-  directo:
+  "directo":
     "Eres un asesor financiero directo, claro y respetuoso. Ve al grano con " +
     "hechos y acciones puntuales. No adornes ni suavices demasiado; señala qué " +
     "recortar y cómo.",
-  exigente:
+  "exigente":
     "Eres un asesor financiero exigente y disciplinado. Marca con firmeza los " +
     "puntos débiles y exige acciones concretas con metas claras. No insultas, " +
     "pero no toleras excusas.",
 };
+
+const maxAudioDurationMs = 10_000;
+const maxAudioBytes = 6_000_000;
+
+function decodeBase64Audio(input: string, mimeOverride?: string): {buffer: Buffer; mimeType: string} {
+  const trimmed = input.trim();
+  const match = trimmed.match(/^data:(.+);base64,(.+)$/);
+  const base64 = match ? match[2] : trimmed;
+  const mimeType = mimeOverride || match?.[1] || "application/octet-stream";
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(base64, "base64");
+  } catch (error) {
+    console.error("[decodeBase64Audio] error", error);
+    throw new HttpsError("invalid-argument", "audioBase64 no es valido.");
+  }
+  if (!buffer.length) {
+    throw new HttpsError("invalid-argument", "El audio esta vacio.");
+  }
+  return {buffer, mimeType};
+}
+
+function textHasDateHint(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (/\d{4}-\d{2}-\d{2}/.test(lower)) return true;
+  if (/\b\d{1,2}-\d{1,2}\b/.test(lower)) return true;
+  if (/\b\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.test(lower)) return true;
+  if (/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.test(lower)) return true;
+  return false;
+}
+
+function isoDateWithOffset(daysFromNow: number, offsetMinutes?: number): string {
+  const offset = typeof offsetMinutes === "number" ? offsetMinutes : new Date().getTimezoneOffset();
+  const nowMs = Date.now();
+  const targetMs = nowMs + daysFromNow * 86_400_000;
+  return new Date(targetMs - offset * 60_000).toISOString().slice(0, 10);
+}
+
+/**
+ * Callable: transcribe audio (<=10s) a texto usando Whisper.
+ */
+export const transcribeAudio = onCall(
+  {secrets: [openAIApiKey]},
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
+    }
+    const {audioBase64, mimeType, durationMs} = request.data as {
+      audioBase64?: string;
+      mimeType?: string;
+      durationMs?: number;
+    };
+    if (!audioBase64 || typeof audioBase64 !== "string") {
+      throw new HttpsError("invalid-argument", "Envía audioBase64 en formato base64.");
+    }
+    if (durationMs && durationMs > maxAudioDurationMs + 300) {
+      throw new HttpsError("invalid-argument", "El audio debe durar maximo 10 segundos.");
+    }
+
+    const {buffer, mimeType: resolvedMime} = decodeBase64Audio(audioBase64, mimeType);
+    if (buffer.length > maxAudioBytes) {
+      throw new HttpsError(
+        "invalid-argument",
+        "El archivo de audio es muy grande. Limita la grabacion a 10 segundos (≈6 MB max).",
+      );
+    }
+
+    const {client, profile} = await resolveOpenAIClient(request.auth.uid);
+    await checkRateLimit(request.auth.uid, "parse", profile);
+
+    try {
+      const file = await toFile(buffer, "grabacion.webm", {type: resolvedMime || "audio/webm"});
+      const transcription = await client.audio.transcriptions.create({
+        file,
+        model: "whisper-1",
+        language: "es",
+      });
+      const text = transcription?.text?.trim();
+      if (!text) {
+        throw new Error("Transcription empty");
+      }
+      return {text};
+    } catch (error) {
+      const errAny = error as {response?: {data?: unknown}; message?: string};
+      console.error("[transcribeAudio] error", errAny?.response ?? errAny);
+      const detail =
+        (errAny?.response as {data?: {error?: {message?: string}}})?.data?.error?.message ||
+        errAny?.message;
+      const msg = detail ? `No se pudo transcribir el audio: ${detail}` : "No se pudo transcribir el audio.";
+      throw new HttpsError("internal", msg);
+    }
+  },
+);
 
 /**
  * Callable: interpreta frase de movimiento y devuelve objeto estructurado.
@@ -531,7 +625,10 @@ export const parseTransactionPhrase = onCall(
     if (!request.auth?.uid) {
       throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
     }
-    const {text} = request.data as {text?: string};
+    const {text, clientOffsetMinutes} = request.data as {
+      text?: string;
+      clientOffsetMinutes?: number;
+    };
     if (!text || typeof text !== "string") {
       throw new HttpsError("invalid-argument", "Debes enviar un campo 'text' con la frase.");
     }
@@ -584,7 +681,12 @@ export const parseTransactionPhrase = onCall(
 
       const raw = completion.choices?.[0]?.message?.content;
       const parsed = raw ? (JSON.parse(raw) as Partial<ParsedTransaction>) : {};
-      const relativeDate = deriveRelativeDate(text);
+      const relativeDate = deriveRelativeDate(text, clientOffsetMinutes);
+      const todayIsoStr = isoDateWithOffset(0, clientOffsetMinutes);
+      let dateCandidate = relativeDate ?? parsed.date ?? todayIsoStr;
+      if (!relativeDate && !textHasDateHint(text)) {
+        dateCandidate = todayIsoStr;
+      }
 
       const result: ParsedTransaction = {
         amount: parsed.amount ?? 0,
@@ -592,7 +694,7 @@ export const parseTransactionPhrase = onCall(
         paymentMethod:
           (parsed.paymentMethod as ParsedTransaction["paymentMethod"]) ?? "debito",
         type: (parsed.type as ParsedTransaction["type"]) ?? "expense",
-        date: relativeDate ?? parsed.date ?? new Date().toISOString().slice(0, 10),
+        date: dateCandidate,
         note: parsed.note ?? text,
         confidence: parsed.confidence ?? 0.6,
         rawText: text,
@@ -1197,31 +1299,29 @@ export const listUsers = onCall(async (request) => {
 });
 
 function clientSupportedMode(mode: string): mode is AdvisorMode {
-  return ["amable", "regañon", "directo", "exigente"].includes(mode);
+  return ["amable", "reganon", "directo", "exigente"].includes(mode);
 }
 
-function deriveRelativeDate(text: string): string | null {
-  const now = new Date();
+function deriveRelativeDate(text: string, offsetMinutes?: number): string | null {
   const lower = text.toLowerCase();
+  const offset = typeof offsetMinutes === "number" ? offsetMinutes : new Date().getTimezoneOffset();
+  const nowMs = Date.now();
+  const toIso = (ms: number) => new Date(ms - offset * 60_000).toISOString().slice(0, 10);
 
   if (lower.includes("anteayer")) {
-    now.setDate(now.getDate() - 2);
-    return now.toISOString().slice(0, 10);
+    return toIso(nowMs - 2 * 86_400_000);
   }
   if (lower.includes("ayer")) {
-    now.setDate(now.getDate() - 1);
-    return now.toISOString().slice(0, 10);
+    return toIso(nowMs - 86_400_000);
   }
   if (lower.includes("hoy") || lower.includes("ahora")) {
-    return now.toISOString().slice(0, 10);
+    return toIso(nowMs);
   }
 
   const agoMatch = lower.match(/hace\s+(\d+)\s*d[ií]as?/);
   if (agoMatch) {
     const days = Number(agoMatch[1]) || 0;
-    const temp = new Date();
-    temp.setDate(temp.getDate() - days);
-    return temp.toISOString().slice(0, 10);
+    return toIso(nowMs - days * 86_400_000);
   }
 
   const weekdayMatch = lower.match(
@@ -1241,12 +1341,12 @@ function deriveRelativeDate(text: string): string | null {
     };
     const target = map[weekdayMatch[1]];
     if (target !== undefined) {
-      const current = now.getDay();
+      const clientNow = new Date(nowMs - offset * 60_000);
+      const current = clientNow.getUTCDay();
       let diff = current - target;
       if (diff <= 0) diff += 7;
-      const temp = new Date();
-      temp.setDate(temp.getDate() - diff);
-      return temp.toISOString().slice(0, 10);
+      const targetMs = nowMs - diff * 86_400_000;
+      return toIso(targetMs);
     }
   }
 
@@ -1254,9 +1354,9 @@ function deriveRelativeDate(text: string): string | null {
   if (dayOfMonth) {
     const dayNum = Number(dayOfMonth[1]);
     if (dayNum >= 1 && dayNum <= 31) {
-      const temp = new Date();
-      temp.setDate(1);
-      temp.setDate(dayNum);
+      const temp = new Date(nowMs - offset * 60_000);
+      temp.setUTCDate(1);
+      temp.setUTCDate(dayNum);
       return temp.toISOString().slice(0, 10);
     }
   }
