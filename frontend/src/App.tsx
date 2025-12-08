@@ -122,6 +122,8 @@ function App() {
   );
   const [showLimitsHelp, setShowLimitsHelp] = useState(false);
   const plansRef = useRef<HTMLDivElement | null>(null);
+  const [txPage, setTxPage] = useState(1);
+  const txPageSize = 8;
 
   const iaQuota = useMemo(() => {
     if (aiQuota) {
@@ -172,6 +174,7 @@ function App() {
       onChange: setTransactions,
       onError: (err) => setError(err.message),
     });
+    setTxPage(1);
     return () => unsubscribe();
   }, [filters, user]);
 
@@ -297,6 +300,11 @@ function App() {
     () => transactions.filter((t) => t.date?.startsWith(currentMonth)),
     [transactions, currentMonth],
   );
+  const paginatedTransactions = useMemo(() => {
+    const start = (txPage - 1) * txPageSize;
+    return transactions.slice(start, start + txPageSize);
+  }, [transactions, txPage]);
+  const totalTxPages = Math.max(1, Math.ceil(transactions.length / txPageSize));
 
   const monthlyExpense = useMemo(
     () => monthTransactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
@@ -1517,7 +1525,7 @@ function App() {
         )}
 
         {activeTab === 'transactions' && (
-          <section className="space-y-4">
+          <section className="space-y-4 pb-5">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">Movimientos</h2>
@@ -1560,7 +1568,7 @@ function App() {
                   Aún no hay movimientos en este rango. Agrega el primero.
                 </p>
               )}
-              {transactions.map((tx) => (
+              {paginatedTransactions.map((tx) => (
                 <div
                   key={tx.id}
                   className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm"
@@ -1630,6 +1638,27 @@ function App() {
                   </div>
                 </div>
               ))}
+              {transactions.length > txPageSize && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
+                  <button
+                    className="rounded-lg border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                    onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                    disabled={txPage === 1}
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-xs text-slate-300">
+                    Página {txPage} de {totalTxPages}
+                  </span>
+                  <button
+                    className="rounded-lg border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                    onClick={() => setTxPage((p) => Math.min(totalTxPages, p + 1))}
+                    disabled={txPage >= totalTxPages}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         )}
