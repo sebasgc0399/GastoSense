@@ -53,6 +53,16 @@ export interface Template {
   updatedAt?: string;
 }
 
+export interface IaQuota {
+  role: UserRole;
+  parseUsed: number;
+  parseLimit: number;
+  analyzeUsed: number;
+  analyzeLimit: number;
+  week?: string;
+  resetAt?: string;
+}
+
 export type UserRole = 'admin' | 'free' | 'paid_byok' | 'paid_managed' | 'gifted_managed';
 export type KeyPreference = 'byok' | 'managed';
 

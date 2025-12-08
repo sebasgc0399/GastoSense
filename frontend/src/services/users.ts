@@ -69,6 +69,8 @@ export interface UsageQuota {
   week: string;
   parse: { used: number; limit: number };
   analyze: { used: number; limit: number };
+  role?: UserRole;
+  resetAt?: string;
 }
 
 export async function fetchUsageQuota(): Promise<UsageQuota | null> {

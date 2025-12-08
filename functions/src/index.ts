@@ -180,6 +180,41 @@ interface PlanConfig {
   promoEndsAt?: number | null;
 }
 
+interface MonthlyDeepInput {
+  tone: AdvisorMode;
+  currency: string;
+  userLocale: string;
+  months: string[];
+  categories: {
+    id: string;
+    name: string;
+    last3Months: number[];
+    last3Budgets?: (number | null)[];
+    isIncome?: boolean;
+  }[];
+}
+
+interface MonthlyDeepOutput {
+  summary: string;
+  globalTrend: "sube" | "baja" | "estable";
+  keySignals: {
+    type: "alto_gasto" | "bajo_gasto" | "ingreso_cae" | "ingreso_sube";
+    categoryName?: string;
+    description: string;
+  }[];
+  categoryPlans: {
+    categoryName: string;
+    lastMonthLabel: string;
+    lastMonthAmount: number;
+    avgPrev2Amount: number;
+    changePctVsAvg: number;
+    overBudgetPct?: number | null;
+    priority: "alta" | "media" | "baja";
+    advice: string;
+  }[];
+  top3Actions: string[];
+}
+
 async function ensureUserCapacity() {
   if (!maxUsers || Number.isNaN(maxUsers)) return;
   const countSnap = await firestore.collection("users").count().get();
@@ -1328,6 +1363,102 @@ export const setAdvisorMode = onCall(async (request) => {
   await updateUserProfile(request.auth.uid, {advisorMode: mode});
   const profile = await getOrCreateUserProfile(request.auth.uid);
   return {advisorMode: profile.advisorMode};
+});
+
+export const analyzeMonthlyDeep = onCall<MonthlyDeepOutput>(async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Inicia sesión para usar IA.");
+  }
+  const profile = await getOrCreateUserProfile(request.auth.uid);
+  if (!["paid_byok", "paid_managed", "gifted_managed", "admin"].includes(profile.role)) {
+    throw new HttpsError("permission-denied", "Disponible para planes BYOK/PRO.");
+  }
+
+  const input = (request.data as {input?: MonthlyDeepInput} | undefined)?.input;
+  if (!input || !Array.isArray(input.months) || input.months.length < 3) {
+    throw new HttpsError("invalid-argument", "Faltan meses o datos.");
+  }
+
+  const months = input.months;
+  const lastLabel = months[months.length - 1];
+  const categoryPlans = input.categories.map((cat) => {
+    const last = cat.last3Months?.[cat.last3Months.length - 1] ?? 0;
+    const prev = cat.last3Months?.slice(0, cat.last3Months.length - 1) ?? [];
+    const avgPrev = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
+    const changePct = avgPrev > 0 ? ((last - avgPrev) / avgPrev) * 100 : last > 0 ? 100 : 0;
+    const lastBudget = cat.last3Budgets?.[cat.last3Budgets.length - 1] ?? null;
+    const overBudgetPct =
+      lastBudget && lastBudget > 0 ? ((last - lastBudget) / lastBudget) * 100 : null;
+    let priority: "alta" | "media" | "baja" = "baja";
+    if (changePct > 30 || (overBudgetPct !== null && overBudgetPct > 20)) priority = "alta";
+    else if (changePct > 10 || (overBudgetPct !== null && overBudgetPct > 0)) priority = "media";
+
+    let advice = cat.isIncome
+      ? "Ajusta tu flujo con los ingresos recientes."
+      : "Mantén control y define un tope claro.";
+    if (!cat.isIncome) {
+      if (priority === "alta") advice = "Recorta 10-20% este mes y fija alertas.";
+      else if (priority === "media") advice = "Revisa compras frecuentes y baja frecuencia.";
+      else advice = "Sigue igual, sin cambios fuertes.";
+    }
+
+    return {
+      categoryName: cat.name,
+      lastMonthLabel: lastLabel,
+      lastMonthAmount: last,
+      avgPrev2Amount: Math.round(avgPrev),
+      changePctVsAvg: Math.round(changePct),
+      overBudgetPct: overBudgetPct !== null ? Math.round(overBudgetPct) : null,
+      priority,
+      advice,
+    };
+  });
+
+  const totalLast = input.categories.reduce(
+    (acc, c) => acc + (c.last3Months?.[c.last3Months.length - 1] ?? 0),
+    0,
+  );
+  const totalPrevAvg = input.categories.reduce((acc, c) => {
+    const prev = c.last3Months?.slice(0, c.last3Months.length - 1) ?? [];
+    const avgPrev = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
+    return acc + avgPrev;
+  }, 0);
+  const globalChange = totalPrevAvg > 0 ? ((totalLast - totalPrevAvg) / totalPrevAvg) * 100 : 0;
+  const globalTrend = globalChange > 5 ? "sube" : globalChange < -5 ? "baja" : "estable";
+
+  const keySignals = categoryPlans
+    .filter((p) => Math.abs(p.changePctVsAvg) >= 20)
+    .slice(0, 4)
+    .map((p) => ({
+      type: p.changePctVsAvg >= 0 ? "alto_gasto" : "bajo_gasto",
+      categoryName: p.categoryName,
+      description: `${p.categoryName}: ${p.changePctVsAvg >= 0 ? "+" : ""}${p.changePctVsAvg}% vs prom.`,
+    }));
+
+  const sortedByPriority = [...categoryPlans].sort((a, b) => {
+    const rank = {alta: 3, media: 2, baja: 1};
+    return rank[b.priority] - rank[a.priority];
+  });
+  const top3Actions = sortedByPriority
+    .filter((p) => p.priority !== "baja")
+    .slice(0, 3)
+    .map((p) => `${p.categoryName}: ${p.advice}`);
+
+  const summaryParts: string[] = [];
+  if (globalTrend === "sube") summaryParts.push("Gasto del último mes sube vs promedio previo.");
+  else if (globalTrend === "baja") summaryParts.push("Gasto bajó frente a los 2 meses anteriores.");
+  else summaryParts.push("Gasto estable comparado con meses previos.");
+  if (sortedByPriority[0]) {
+    summaryParts.push(`Categoría clave: ${sortedByPriority[0].categoryName}.`);
+  }
+
+  return {
+    summary: summaryParts.join(" "),
+    globalTrend,
+    keySignals,
+    categoryPlans,
+    top3Actions,
+  };
 });
 
 function deriveRelativeDate(text: string, offsetMinutes?: number): string | null {

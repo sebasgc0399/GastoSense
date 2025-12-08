@@ -8,11 +8,16 @@ import { TopExpensesChart } from './components/TopExpensesChart';
 import { TransactionEditModal } from './components/TransactionEditModal';
 import { TransactionFilters } from './components/TransactionFilters';
 import { ResponsiveSelect } from './components/ResponsiveSelect';
+import { IaQuotaProgress } from './components/IaQuotaProgress';
+import { FeatureLockCard } from './components/FeatureLockCard';
+import { UpgradeModal } from './components/UpgradeModal';
+import { LimitsHelpModal } from './components/LimitsHelpModal';
 import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
-import { callAnalyzeSummary, callParseTransactionPhrase } from './services/functions';
+import { callAnalyzeSummary, callAnalyzeMonthlyDeep, callParseTransactionPhrase } from './services/functions';
 import { trackEvent } from './services/analytics';
+import { useIaQuota } from './hooks/useIaQuota';
 import { getBudget, saveBudget } from './services/budgets';
 import {
   adminSetUserRole,
@@ -57,6 +62,7 @@ type ChatItem = {
   ts: number;
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
+  chartTop?: { category: string; amount: number }[];
 };
 type SmartCard = {
   id: string;
@@ -109,6 +115,31 @@ function App() {
   const [advisorLoading, setAdvisorLoading] = useState(false);
   const [smartCards, setSmartCards] = useState<SmartCard[]>([]);
   const [smartCardIndex, setSmartCardIndex] = useState(0);
+  const { quota: iaQuotaFresh } = useIaQuota();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
+    'parse_exhausted',
+  );
+  const [showLimitsHelp, setShowLimitsHelp] = useState(false);
+  const plansRef = useRef<HTMLDivElement | null>(null);
+
+  const iaQuota = useMemo(() => {
+    if (aiQuota) {
+      return {
+        role: aiQuota.role ?? (userProfile?.role as UserRole) ?? 'free',
+        parseUsed: aiQuota.parse.used,
+        parseLimit: aiQuota.parse.limit,
+        analyzeUsed: aiQuota.analyze.used,
+        analyzeLimit: aiQuota.analyze.limit,
+        week: aiQuota.week,
+        resetAt: aiQuota.resetAt,
+      };
+    }
+    if (iaQuotaFresh) return iaQuotaFresh;
+    return null;
+  }, [aiQuota, iaQuotaFresh, userProfile?.role]);
+  const parseProgress = iaQuota && iaQuota.parseLimit ? iaQuota.parseUsed / iaQuota.parseLimit : 0;
+  const analyzeProgress = iaQuota && iaQuota.analyzeLimit ? iaQuota.analyzeUsed / iaQuota.analyzeLimit : 0;
 
   // Mes de referencia para la vista "Inicio" y presupuestos (no depende del filtro de la vista Movimientos)
   const currentMonth = todayIso().slice(0, 7);
@@ -119,6 +150,17 @@ function App() {
       setAdvisorMode(stored);
     }
   }, []);
+
+  useEffect(() => {
+    if (showUpgradeModal) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [showUpgradeModal]);
 
   useEffect(() => {
     if (!user) return;
@@ -300,6 +342,19 @@ function App() {
       userProfile.role === 'gifted_managed' ||
       (userProfile.role === 'paid_managed' && userProfile.subscription?.status === 'active'));
 
+  const isResourceExhausted = (err: unknown) => {
+    const codeRaw = (err as { code?: unknown } | null)?.code;
+    const code =
+      typeof codeRaw === 'string'
+        ? codeRaw
+        : typeof codeRaw === 'number'
+          ? codeRaw.toString()
+          : codeRaw && typeof (codeRaw as { toString?: () => string }).toString === 'function'
+            ? (codeRaw as { toString: () => string }).toString()
+            : '';
+    return code.includes('resource-exhausted');
+  };
+
   const mapAiError = (err: unknown) => {
     const codeRaw = (err as { code?: unknown } | null)?.code;
     const code =
@@ -310,16 +365,16 @@ function App() {
           : codeRaw && typeof (codeRaw as { toString?: () => string }).toString === 'function'
             ? (codeRaw as { toString: () => string }).toString()
             : '';
-    const totalUsed = aiQuota?.parse.used ?? 0;
-    const limit = aiQuota?.parse.limit ?? 0;
+    const totalUsed = iaQuota?.parseUsed ?? 0;
+    const limit = iaQuota?.parseLimit ?? 0;
     const quotaText = limit ? ` (${totalUsed}/${limit})` : '';
     if (code.includes('permission-denied') || code.includes('failed-precondition')) {
-      return 'Configura tu API key en Configuración o activa tu membresía para usar la IA.';
+      return 'Configura tu API key en Configuracion o activa tu membresia para usar la IA.';
     }
     if (code.includes('resource-exhausted')) {
-      return `Alcanzaste el límite semanal de IA para tu plan${quotaText}.`;
+      return `Alcanzaste el limite semanal de IA para tu plan${quotaText}.`;
     }
-    return 'No pudimos consultar la IA. Inténtalo de nuevo en unos minutos.';
+    return 'No pudimos consultar la IA. Intentalo de nuevo en unos minutos.';
   };
 
   const formatCurrency = (cents?: number | null) => {
@@ -367,6 +422,10 @@ function App() {
   }, []);
 
   const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
+  const scrollToPlans = useCallback(
+    () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    [],
+  );
   const scrollToBudgets = useCallback(
     () => categoryBudgetsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     [],
@@ -402,7 +461,48 @@ function App() {
   const openPlans = useCallback(() => {
     setActiveTab('settings');
     trackEvent('smart_card_click', { action: 'plans' });
-  }, []);
+    setTimeout(() => scrollToPlans(), 120);
+  }, [scrollToPlans]);
+
+  const getWeekKey = useCallback(() => {
+    if (iaQuota?.week) return iaQuota.week;
+    if (iaQuota?.resetAt) return iaQuota.resetAt.slice(0, 10);
+    return todayIso();
+  }, [iaQuota?.resetAt, iaQuota?.week]);
+
+  const hasShownUpgrade = useCallback(
+    (kind: 'parse' | 'analyze') => {
+      const key = `upgrade_shown_${kind}_${getWeekKey()}`;
+      return localStorage.getItem(key) === '1';
+    },
+    [getWeekKey],
+  );
+
+  const markUpgradeShown = useCallback(
+    (kind: 'parse' | 'analyze') => {
+      const key = `upgrade_shown_${kind}_${getWeekKey()}`;
+      localStorage.setItem(key, '1');
+    },
+    [getWeekKey],
+  );
+
+  const openUpgrade = useCallback(
+    (ctx: 'parse_exhausted' | 'analyze_exhausted' | 'feature_locked') => {
+      setUpgradeContext(ctx);
+      setShowUpgradeModal(true);
+    },
+    [],
+  );
+
+  const triggerUpgradeOnce = useCallback(
+    (ctx: 'parse_exhausted' | 'analyze_exhausted') => {
+      const kind = ctx === 'parse_exhausted' ? 'parse' : 'analyze';
+      if (hasShownUpgrade(kind)) return;
+      markUpgradeShown(kind);
+      openUpgrade(ctx);
+    },
+    [hasShownUpgrade, markUpgradeShown, openUpgrade],
+  );
 
   const addPeriod = useCallback((date: Date, frequency: Template['frequency']) => {
     const next = new Date(date);
@@ -620,13 +720,13 @@ function App() {
 
     // Slot 4: storytelling / IA / upsell
     const analyzeLimitReached =
-      aiQuota?.analyze && aiQuota.analyze.limit > 0 && aiQuota.analyze.used >= aiQuota.analyze.limit;
-    if (analyzeLimitReached && (aiQuota?.analyze.used ?? 0) > 0) {
+      iaQuota?.analyzeLimit && iaQuota.analyzeLimit > 0 && iaQuota.analyzeUsed >= iaQuota.analyzeLimit;
+    if (analyzeLimitReached && (iaQuota?.analyzeUsed ?? 0) > 0) {
       cards.push({
         id: 'ia_limit',
         slot: 4,
         title: 'Te quedaste sin análisis IA',
-        body: `Ya usaste tus ${aiQuota?.analyze.limit ?? 0} análisis de IA de esta semana. Desbloquea más en el plan PRO.`,
+        body: `Ya usaste tus ${iaQuota?.analyzeLimit ?? 0} análisis de IA de esta semana. Desbloquea más en el plan PRO.`,
         primaryAction: {
           label: 'Ver planes',
           onClick: openPlans,
@@ -667,7 +767,8 @@ function App() {
     const finalCards = [1, 2, 3, 4].map((slot) => bySlot[slot]).filter(Boolean) as SmartCard[];
     setSmartCards(finalCards);
   }, [
-    aiQuota?.analyze,
+    iaQuota?.analyzeLimit,
+    iaQuota?.analyzeUsed,
     budget?.perCategory,
     categorySpendMap,
     dayOfMonth,
@@ -705,11 +806,46 @@ function App() {
     else handlePrevInsight();
   };
 
+  const isFreeRole = (iaQuota?.role || userProfile?.role || 'free') === 'free';
   const advisorQuickActions = [
-    { label: 'Espejo diario', description: 'Resumen de hoy', action: 'Espejo diario' },
-    { label: 'Gastos hormiga', description: 'Qué recortar sin sufrir', action: 'Gastos hormiga' },
-    { label: 'Resumen semanal', description: 'Resumen de la semana', action: 'Resumen semanal' },
+    {
+      label: 'Espejo diario',
+      description: 'Resumen de hoy',
+      action: 'Espejo diario',
+      locked: false,
+      badge: '',
+    },
+    {
+      label: 'Detector de gastos hormiga',
+      description: 'Detecta gastos pequeños recurrentes y cuánto podrías ahorrar.',
+      action: 'Gastos hormiga',
+      locked: isFreeRole,
+      badge: 'PRO/BYOK',
+    },
+    {
+      label: 'Resumen semanal',
+      description: 'Cómo vas esta semana vs la anterior.',
+      action: 'Resumen semanal',
+      locked: isFreeRole,
+      badge: 'PRO/BYOK',
+    },
+    {
+      label: 'En qué se va la plata',
+      description: 'Top de categorías y proporciones.',
+      action: 'En qué se va la plata',
+      locked: isFreeRole,
+      badge: 'PRO/BYOK',
+    },
+    {
+      label: 'Análisis mensual profundo',
+      description: 'Compara tus últimos 3 meses y da un plan por categoría.',
+      action: 'Análisis mensual profundo',
+      locked: isFreeRole,
+      badge: 'PRO',
+    },
   ];
+
+  const featureLocks: { id: string; title: string; description: string; badge: string }[] = [];
 
   const pushFeedItem = (item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => {
     const id = item.id ?? `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -745,6 +881,9 @@ function App() {
       if (quota) setAiQuota(quota);
       return data.parsed;
     } catch (err) {
+      if (isResourceExhausted(err)) {
+        triggerUpgradeOnce('parse_exhausted');
+      }
       throw new Error(mapAiError(err));
     }
   };
@@ -765,33 +904,139 @@ function App() {
 
   const handleAdvisorAction = async (action: string) => {
     try {
+      if (!user) {
+        pushFeedItem({
+          from: 'ia',
+          text: 'Inicia sesión para usar el asesor IA.',
+          tone: advisorMode,
+          kind: 'ia',
+        });
+        return;
+      }
       setAdvisorLoading(true);
       pushFeedItem({
         from: 'user',
         text: action,
         kind: 'action',
       });
-      const resp = await callAnalyzeSummary({
-        mode: advisorMode,
-        action,
-        summary: {
-          month: currentMonth,
-          totalExpense: monthlyExpense,
-          totalIncome: monthlyIncome,
-          topCategories: topExpenses,
-          budget: budget?.total,
-          lastTransactions: monthTransactions.slice(0, 5),
-          previousMonthExpense: previousMonth?.expense,
-          previousMonthIncome: previousMonth?.income,
-        },
-      });
-      const data = resp.data as { message?: string };
-      pushFeedItem({
-        from: 'ia',
-        text: data?.message ?? 'Sin respuesta de IA.',
-        tone: advisorMode,
-        kind: 'ia',
-      });
+      if (action === 'Análisis mensual profundo') {
+        const now = new Date();
+        const months: string[] = [];
+        for (let i = 2; i >= 0; i -= 1) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          months.push(d.toISOString().slice(0, 7));
+        }
+        const rangeStart = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
+        const rangeEnd = todayIso();
+        const txs = await fetchTransactionsRange({ userId: user?.uid || '', startDate: rangeStart, endDate: rangeEnd });
+        const catMap: Record<
+          string,
+          {
+            name: string;
+            sums: number[];
+            isIncome?: boolean;
+          }
+        > = {};
+        txs.forEach((tx) => {
+          if (!tx.date || !tx.category) return;
+          const m = tx.date.slice(0, 7);
+          const pos = months.indexOf(m);
+          if (pos === -1) return;
+          if (!catMap[tx.category]) {
+            catMap[tx.category] = { name: tx.category, sums: Array(months.length).fill(0), isIncome: tx.type === 'income' };
+          }
+          catMap[tx.category].sums[pos] += tx.amount;
+          if (tx.type === 'income') catMap[tx.category].isIncome = true;
+        });
+        const categories = Object.values(catMap).map((c) => ({
+          id: c.name,
+          name: c.name,
+          last3Months: c.sums,
+          last3Budgets: months.map((m) =>
+            m === currentMonth && budget?.perCategory ? budget.perCategory[c.name] ?? null : null,
+          ),
+          isIncome: c.isIncome,
+        }));
+        const payload = {
+          tone: advisorMode,
+          currency: 'COP',
+          userLocale: 'es-CO',
+          months,
+          categories,
+        };
+        const resp = await callAnalyzeMonthlyDeep({ input: payload });
+        const data = resp.data as {
+          summary?: string;
+          globalTrend?: string;
+          categoryPlans?: { categoryName: string; advice?: string; changePctVsAvg?: number; overBudgetPct?: number | null }[];
+          top3Actions?: string[];
+        };
+        const parts: string[] = [];
+        if (data.summary) parts.push(data.summary);
+        if (data.globalTrend) {
+          const trendText =
+            data.globalTrend === 'sube'
+              ? 'Gasto subiendo vs. promedio previo.'
+            : data.globalTrend === 'baja'
+              ? 'Gasto bajando vs. promedio previo.'
+              : 'Gasto estable vs. meses previos.';
+          parts.push(`Tendencia: ${trendText}`);
+        }
+        const plans = data.categoryPlans?.slice(0, 3) ?? [];
+        if (plans.length) {
+          parts.push('Categorías clave:');
+          plans.forEach((p) => {
+            const change =
+              typeof p.changePctVsAvg === 'number'
+                ? `${p.changePctVsAvg > 0 ? '+' : ''}${Math.round(p.changePctVsAvg)}%`
+                : '';
+            const over =
+              typeof p.overBudgetPct === 'number' && p.overBudgetPct > 0
+                ? `, sobre tope ${Math.round(p.overBudgetPct)}%`
+                : '';
+            parts.push(`• ${p.categoryName}: ${p.advice ?? ''} (cambio ${change}${over})`);
+          });
+        }
+        const actionsSet = new Set<string>();
+        (data.top3Actions || []).forEach((a) => actionsSet.add(a));
+        const actions = Array.from(actionsSet).slice(0, 3);
+        if (actions.length) {
+          parts.push('');
+          parts.push('Acciones clave:');
+          actions.forEach((a) => parts.push(`• ${a}`));
+        }
+        pushFeedItem({
+          from: 'ia',
+          text: parts.join('\n'),
+          tone: advisorMode,
+          kind: 'ia',
+        });
+      } else {
+        const resp = await callAnalyzeSummary({
+          mode: advisorMode,
+          action,
+          summary: {
+            month: currentMonth,
+            totalExpense: monthlyExpense,
+            totalIncome: monthlyIncome,
+            topCategories: topExpenses,
+            budget: budget?.total,
+            lastTransactions: monthTransactions.slice(0, 5),
+            previousMonthExpense: previousMonth?.expense,
+            previousMonthIncome: previousMonth?.income,
+          },
+        });
+        const data = resp.data as { message?: string };
+        pushFeedItem({
+          from: 'ia',
+          text: data?.message ?? 'Sin respuesta de IA.',
+          tone: advisorMode,
+          kind: 'ia',
+          chartTop: action.toLowerCase().includes('plata')
+            ? topExpenses.slice(0, 3).map((t) => ({ category: t.category, amount: t.amount }))
+            : undefined,
+        });
+      }
       const quota = await fetchUsageQuota();
       if (quota) setAiQuota(quota);
     } catch (err) {
@@ -802,6 +1047,9 @@ function App() {
         tone: advisorMode,
         kind: 'ia',
       });
+      if (isResourceExhausted(err)) {
+        triggerUpgradeOnce('analyze_exhausted');
+      }
     } finally {
       setAdvisorLoading(false);
     }
@@ -1172,17 +1420,17 @@ function App() {
                           style={{ transform: `translateX(-${smartCardIndex * 100}%)` }}
                           onTouchStart={handleTouchStart}
                           onTouchEnd={handleTouchEnd}
-                        >
-                          {smartCards.map((item) => (
-                            <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
-                              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-                                <p className="text-sm font-semibold text-white">{item.title}</p>
-                                <p className="text-sm text-slate-200">{item.body}</p>
-                                <div className="mt-2 flex gap-2">
-                                  <button
-                                    className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
-                                    onClick={item.primaryAction.onClick}
-                                  >
+                          >
+                            {smartCards.map((item) => (
+                              <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
+                                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                                  <p className="text-sm text-slate-200">{item.body}</p>
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
+                                      onClick={item.primaryAction.onClick}
+                                    >
                                     {item.primaryAction.label}
                                   </button>
                                   {item.secondaryAction && (
@@ -1414,18 +1662,51 @@ function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {advisorQuickActions.map((item) => (
-                  <button
-                    key={item.action}
-                    onClick={() => handleAdvisorAction(item.action)}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:border-primary"
-                  >
-                    <p className="text-sm font-semibold text-white">{item.label}</p>
-                    <p className="text-xs text-slate-300">{item.description}</p>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {advisorQuickActions.map((item) => {
+                  const locked = item.locked;
+                  const badge = item.badge;
+                  return (
+                    <button
+                      key={item.action}
+                      onClick={() => (locked ? openUpgrade('feature_locked') : handleAdvisorAction(item.action))}
+                      className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
+                        locked
+                          ? 'border-dashed border-white/20 bg-white/5 opacity-80'
+                          : 'border-white/10 bg-white/5 hover:border-primary'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white">{item.label}</p>
+                        {badge && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
+                            {locked ? '🔒 ' : ''}
+                            {badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-300">{item.description}</p>
+                      {locked && (
+                        <p className="text-[11px] font-medium text-primary">Toca para ver cómo desbloquearlo</p>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+
+              {featureLocks.length > 0 && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {featureLocks.map((lock) => (
+                    <FeatureLockCard
+                      key={lock.id}
+                      title={lock.title}
+                      description={lock.description}
+                      badgeLabel={lock.badge}
+                      onUpgradeClick={() => openUpgrade('feature_locked')}
+                    />
+                  ))}
+                </div>
+              )}
 
               <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
@@ -1458,6 +1739,28 @@ function App() {
                           </span>
                         </div>
                         <p className="whitespace-pre-line">{item.text}</p>
+                        {item.chartTop && item.chartTop.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {item.chartTop.map((ct) => {
+                              const max = item.chartTop?.[0]?.amount || 1;
+                              const pct = Math.round((ct.amount / max) * 100);
+                              return (
+                                <div key={ct.category} className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] text-slate-200">
+                                    <span>{ct.category}</span>
+                                    <span className="font-semibold">{formatPesos(ct.amount)}</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-white/10">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{ width: `${pct}%`, minWidth: '4%' }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                         {item.tone && item.from === 'ia' && (
                           <p className="mt-1 text-[10px] opacity-80">
                             Tono: {item.tone === 'amable' ? 'Amable' : 'Regañón'}
@@ -1569,16 +1872,6 @@ function App() {
                   >
                     {userProfile?.openaiKeyStored ? 'Key BYOK guardada' : 'Sin key BYOK'}
                   </span>
-                  {aiQuota && (
-                    <>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
-                        Modo frase (IA): {aiQuota.parse.used}/{aiQuota.parse.limit}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
-                        Asesor IA semana: {aiQuota.analyze.used}/{aiQuota.analyze.limit}
-                      </span>
-                    </>
-                  )}
                   {userProfile?.subscription?.expiresAt ? (
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
                       Expira: {formatDate(userProfile.subscription.expiresAt) || '--'}
@@ -1590,6 +1883,42 @@ function App() {
               {settingsMessage && (
                 <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
                   {settingsMessage}
+                </div>
+              )}
+
+              {iaQuota && (
+                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Uso semanal de IA</p>
+                      <p className="text-xs text-slate-300">
+                        Se renueva cada semana (lunes). Úsalo para registrar por voz y pedir consejos.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLimitsHelp(true)}
+                      className="text-[11px] font-semibold text-primary underline"
+                    >
+                      ¿Cómo se calculan los límites?
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <IaQuotaProgress
+                      label="Modo frase / voz"
+                      used={iaQuota.parseUsed}
+                      limit={iaQuota.parseLimit}
+                      ratio={parseProgress}
+                      onUpgradeClick={() => openUpgrade('parse_exhausted')}
+                    />
+                    <IaQuotaProgress
+                      label="Asesor IA"
+                      used={iaQuota.analyzeUsed}
+                      limit={iaQuota.analyzeLimit}
+                      ratio={analyzeProgress}
+                      onUpgradeClick={() => openUpgrade('analyze_exhausted')}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1672,7 +2001,11 @@ function App() {
                 </p>
               </div>
 
-              <div className="space-y-3 rounded-xl border border-indigo-400/30 bg-indigo-500/5 p-4">
+              <div
+                ref={plansRef}
+                id="plans"
+                className="space-y-3 rounded-xl border border-indigo-400/30 bg-indigo-500/5 p-4"
+              >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs uppercase text-indigo-200">Planes</p>
@@ -1929,6 +2262,17 @@ function App() {
         onSave={handleUpdateTransaction}
         onDelete={handleDeleteTransaction}
       />
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        context={upgradeContext}
+        role={(iaQuota?.role as UserRole) || userProfile?.role || 'free'}
+        plans={plans}
+        onGoToPlans={openPlans}
+      />
+
+      <LimitsHelpModal open={showLimitsHelp} onClose={() => setShowLimitsHelp(false)} />
     </div>
   );
 }
