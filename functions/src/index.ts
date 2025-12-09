@@ -232,8 +232,13 @@ function sanitizePreferredKey(
   preferredKey: KeyPreference | null | undefined,
   hasByok: boolean,
 ): KeyPreference | null {
-  if (role === "free" || role === "paid_byok") {
-    return hasByok ? "byok" : null;
+  if (role === "free") {
+    return null;
+  }
+  if (role === "paid_byok") {
+    if (preferredKey === "byok" && hasByok) return "byok";
+    if (preferredKey === "managed") return "managed";
+    return hasByok ? "byok" : "managed";
   }
   if (role === "paid_managed" || role === "gifted_managed" || role === "admin") {
     if (preferredKey === "managed") return "managed";
@@ -278,6 +283,16 @@ function subscriptionIsActive(profile: ResolvedUserProfile): boolean {
     return false;
   }
   return true;
+}
+
+function membershipExpired(profile: ResolvedUserProfile): boolean {
+  const expiresAt =
+    typeof profile.subscription.expiresAt === "number"
+      ? profile.subscription.expiresAt
+      : (profile.subscription.expiresAt as admin.firestore.Timestamp | undefined)?.toMillis?.();
+  if (profile.subscription.status !== "active") return true;
+  if (expiresAt && expiresAt < Date.now()) return true;
+  return false;
 }
 
 function ensureProjectId(): string {
@@ -346,6 +361,8 @@ function managedKeyAllowed(profile: ResolvedUserProfile): boolean {
   return (
     profile.role === "admin" ||
     profile.role === "gifted_managed" ||
+    profile.role === "free" ||
+    profile.role === "paid_byok" ||
     (profile.role === "paid_managed" && subscriptionIsActive(profile))
   );
 }
@@ -354,6 +371,7 @@ async function resolveOpenAIClient(uid: string): Promise<{
   client: OpenAI;
   source: "managed" | "byok";
   profile: ResolvedUserProfile;
+  effectiveRoleForLimit: UserRole;
 }> {
   const profile = await getOrCreateUserProfile(uid);
   const hasByok = profile.openaiKeyStored;
@@ -403,7 +421,14 @@ async function resolveOpenAIClient(uid: string): Promise<{
     );
   }
 
-  return {client: new OpenAI({apiKey}), source, profile};
+  const expired = membershipExpired(profile);
+  let effectiveRoleForLimit: UserRole =
+    profile.role === "paid_byok" && source === "managed" ? "free" : profile.role;
+  if (expired && (profile.role === "paid_byok" || profile.role === "paid_managed")) {
+    effectiveRoleForLimit = "free";
+  }
+
+  return {client: new OpenAI({apiKey}), source, profile, effectiveRoleForLimit};
 }
 
 async function assertAdmin(uid: string) {
@@ -439,14 +464,14 @@ function currentWeekKey(): string {
 
 function getWeeklyLimit(role: UserRole, key: UsageKey): number {
   const baseParse: Record<UserRole, number> = {
-    free: 10,
+    free: 5,
     paid_byok: 70,
     paid_managed: 90,
     gifted_managed: 90,
     admin: 400,
   };
   const baseAnalyze: Record<UserRole, number> = {
-    free: 4,
+    free: 2,
     paid_byok: 20,
     paid_managed: 20,
     gifted_managed: 20,
@@ -462,10 +487,11 @@ async function checkRateLimit(
   uid: string,
   key: UsageKey,
   profile: ResolvedUserProfile,
+  roleForLimit?: UserRole,
 ): Promise<void> {
   const week = currentWeekKey();
   const ref = firestore.doc(`usage/${uid}`);
-  const limit = getWeeklyLimit(profile.role, key);
+  const limit = getWeeklyLimit(roleForLimit ?? profile.role, key);
 
   await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -640,8 +666,7 @@ export const transcribeAudio = onCall(
       );
     }
 
-    const {client, profile} = await resolveOpenAIClient(request.auth.uid);
-    await checkRateLimit(request.auth.uid, "parse", profile);
+    const {client} = await resolveOpenAIClient(request.auth.uid);
 
     try {
       const file = await toFile(buffer, "grabacion.webm", {type: resolvedMime || "audio/webm"});
@@ -684,8 +709,8 @@ export const parseTransactionPhrase = onCall(
       throw new HttpsError("invalid-argument", "Debes enviar un campo 'text' con la frase.");
     }
 
-    const {client, profile} = await resolveOpenAIClient(request.auth.uid);
-    await checkRateLimit(request.auth.uid, "parse", profile);
+    const {client, profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
+    await checkRateLimit(request.auth.uid, "parse", profile, effectiveRoleForLimit);
 
     const schema = {
       type: "object",
@@ -777,8 +802,8 @@ export const analyzeSummary = onCall(
       throw new HttpsError("invalid-argument", "Modo de asesor no soportado.");
     }
 
-    const {client, profile} = await resolveOpenAIClient(request.auth.uid);
-    await checkRateLimit(request.auth.uid, "analyze", profile);
+    const {client, profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
+    await checkRateLimit(request.auth.uid, "analyze", profile, effectiveRoleForLimit);
     const systemPrompt =
       `${advisorPrompts[mode]} ` +
       "Habla en viñetas cortas (máximo 4-6). Incluye siempre una línea " +
@@ -881,8 +906,16 @@ export const getUsageQuota = onCall(async (request) => {
   }
   const profile = await getOrCreateUserProfile(request.auth.uid);
   const week = currentWeekKey();
-  const parseLimit = getWeeklyLimit(profile.role, "parse");
-  const analyzeLimit = getWeeklyLimit(profile.role, "analyze");
+  const expired = membershipExpired(profile);
+  let effectiveRoleForLimit: UserRole =
+    profile.role === "paid_byok" && (!profile.openaiKeyStored || profile.preferredKey === "managed")
+      ? "free"
+      : profile.role;
+  if (expired && (profile.role === "paid_byok" || profile.role === "paid_managed")) {
+    effectiveRoleForLimit = "free";
+  }
+  const parseLimit = getWeeklyLimit(effectiveRoleForLimit, "parse");
+  const analyzeLimit = getWeeklyLimit(effectiveRoleForLimit, "analyze");
 
   const ref = firestore.doc(`usage/${request.auth.uid}`);
   const snap = await ref.get();
@@ -1133,7 +1166,7 @@ export const wompiWebhook = onRequest({region: "us-central1", maxInstances: 2}, 
  * Scheduled task: marca suscripciones vencidas como expiradas diariamente.
  */
 export const expireSubscriptions = onSchedule(
-  {region: "us-central1", schedule: "0 6 * * *"},
+  {region: "us-central1", schedule: "0 0 * * *"}, // 00:00 UTC diario
   async () => {
     const now = Date.now();
     const snap = await firestore
@@ -1369,10 +1402,11 @@ export const analyzeMonthlyDeep = onCall<MonthlyDeepOutput>(async (request) => {
   if (!request.auth?.uid) {
     throw new HttpsError("unauthenticated", "Inicia sesión para usar IA.");
   }
-  const profile = await getOrCreateUserProfile(request.auth.uid);
-  if (!["paid_byok", "paid_managed", "gifted_managed", "admin"].includes(profile.role)) {
-    throw new HttpsError("permission-denied", "Disponible para planes BYOK/PRO.");
+  const {profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
+  if (!["paid_byok", "paid_managed", "gifted_managed", "admin", "free"].includes(profile.role)) {
+    throw new HttpsError("permission-denied", "No tienes permisos para este analisis.");
   }
+  await checkRateLimit(request.auth.uid, "analyze", profile, effectiveRoleForLimit);
 
   const input = (request.data as {input?: MonthlyDeepInput} | undefined)?.input;
   if (!input || !Array.isArray(input.months) || input.months.length < 3) {

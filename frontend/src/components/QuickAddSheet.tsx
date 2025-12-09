@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { frequentCategories, paymentMethods } from '../data/frequentCategories';
 import { callTranscribeAudio } from '../services/functions';
 import { ResponsiveSelect } from './ResponsiveSelect';
@@ -11,6 +11,8 @@ interface QuickAddSheetProps {
   onClose: () => void;
   onSave: (payload: TransactionInput) => Promise<void> | void;
   onInterpret?: (text: string) => Promise<ParsedTransactionSuggestion>;
+  parseLocked?: boolean;
+  onParseLocked?: () => void;
   templates?: Template[];
   onSaveTemplate?: (name: string, payload: TransactionInput & { recurring?: boolean; frequency?: Template['frequency'] }) => Promise<void>;
   onDeleteTemplate?: (id: string) => Promise<void>;
@@ -27,6 +29,8 @@ export function QuickAddSheet({
   onClose,
   onSave,
   onInterpret,
+  parseLocked = false,
+  onParseLocked,
   templates = [],
   onSaveTemplate,
   onDeleteTemplate,
@@ -148,6 +152,12 @@ export function QuickAddSheet({
 
   const interpretText = async (text: string) => {
     const cleaned = text.trim();
+    if (parseLocked) {
+      setParsedSuggestion(null);
+      setInterpretError('Límite semanal alcanzado. Se renueva el lunes.');
+      onParseLocked?.();
+      return;
+    }
     if (!cleaned) {
       setInterpretError('Escribe una frase para interpretar.');
       return;
@@ -249,6 +259,11 @@ export function QuickAddSheet({
   };
 
   const handleStartRecording = async () => {
+    if (parseLocked) {
+      setInterpretError('Límite semanal alcanzado. Se renueva el lunes.');
+      onParseLocked?.();
+      return;
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setInterpretError('Tu navegador no permite grabar audio.');
       return;
@@ -712,7 +727,7 @@ export function QuickAddSheet({
                 <button
                   type="button"
                   onClick={handleMicToggle}
-                  disabled={transcribingAudio}
+                  disabled={transcribingAudio || parseLocked}
                   className={`flex h-12 w-12 items-center justify-center rounded-full border text-white transition ${
                     recording
                       ? 'border-red-400 bg-red-500/20 hover:bg-red-500/30'
@@ -735,12 +750,12 @@ export function QuickAddSheet({
                 </button>
                 <div className="flex flex-col text-xs text-slate-300">
                   <span className="font-semibold text-white">
-                    {recording ? 'Grabando...' : 'Modo frase (voz)'}
+                    {parseLocked ? 'Límite alcanzado' : recording ? 'Grabando...' : 'Modo frase (voz)'}
                   </span>
                   <span>
                     {recording
-                      ? `Pulsa para detener · ${recordingDuration}s / ${MAX_RECORDING_SECONDS}s`
-                      : 'Toque para grabar · Máx 10s'}
+                      ? `Pulsa para detener \u25a0 ${recordingDuration}s / ${MAX_RECORDING_SECONDS}s`
+                      : 'Toque para grabar - Max 10s'}
                   </span>
                   {recording && (
                     <span className="flex items-center gap-2 text-red-300">
@@ -760,7 +775,7 @@ export function QuickAddSheet({
 
               <button
                 onClick={handleInterpret}
-                disabled={interpreting || transcribingAudio}
+                disabled={interpreting || transcribingAudio || parseLocked}
                 className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800 disabled:opacity-60"
               >
                 {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}

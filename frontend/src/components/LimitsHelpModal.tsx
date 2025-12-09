@@ -6,7 +6,7 @@ interface LimitsHelpModalProps {
 export function LimitsHelpModal({ open, onClose }: LimitsHelpModalProps) {
   if (!open) return null;
   const rows = [
-    { role: 'Free', parse: '10', analyze: '4' },
+    { role: 'Free', parse: '5', analyze: '2' },
     { role: 'BYOK', parse: '70', analyze: '20' },
     { role: 'PRO', parse: '90', analyze: '20' },
     { role: 'Gifted', parse: '90', analyze: '20' },

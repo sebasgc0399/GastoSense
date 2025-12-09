@@ -124,6 +124,15 @@ function App() {
   const plansRef = useRef<HTMLDivElement | null>(null);
   const [txPage, setTxPage] = useState(1);
   const txPageSize = 8;
+  const refreshQuota = async () => {
+    if (!user) return;
+    try {
+      const quota = await fetchUsageQuota();
+      setAiQuota(quota);
+    } catch (err) {
+      console.error('No pudimos actualizar cuota IA', err);
+    }
+  };
 
   const iaQuota = useMemo(() => {
     if (aiQuota) {
@@ -343,12 +352,9 @@ function App() {
     );
   }, [userProfile]);
   const canUseManaged =
-    !!userProfile && ['paid_managed', 'gifted_managed', 'admin'].includes(userProfile.role);
-  const managedActive =
     !!userProfile &&
-    (userProfile.role === 'admin' ||
-      userProfile.role === 'gifted_managed' ||
-      (userProfile.role === 'paid_managed' && userProfile.subscription?.status === 'active'));
+    ['paid_managed', 'gifted_managed', 'admin', 'paid_byok', 'free'].includes(userProfile.role);
+  const showKeySettings = userProfile?.role === 'paid_byok' || userProfile?.role === 'admin';
 
   const isResourceExhausted = (err: unknown) => {
     const codeRaw = (err as { code?: unknown } | null)?.code;
@@ -814,13 +820,24 @@ function App() {
     else handlePrevInsight();
   };
 
-  const isFreeRole = (iaQuota?.role || userProfile?.role || 'free') === 'free';
+  const iaRole: UserRole = (iaQuota?.role as UserRole) || (userProfile?.role as UserRole) || 'free';
+  const isFreeRole = iaRole === 'free';
+  const isManagedRole = ['paid_managed', 'gifted_managed', 'admin'].includes(iaRole);
+  const parseExhausted =
+    iaQuota?.parseLimit !== undefined && iaQuota?.parseLimit !== null
+      ? iaQuota.parseUsed >= iaQuota.parseLimit
+      : false;
+  const analyzeExhausted =
+    iaQuota?.analyzeLimit !== undefined && iaQuota?.analyzeLimit !== null
+      ? iaQuota.analyzeUsed >= iaQuota.analyzeLimit
+      : false;
   const advisorQuickActions = [
     {
       label: 'Espejo diario',
       description: 'Resumen de hoy',
       action: 'Espejo diario',
       locked: false,
+      requiresAnalyze: true,
       badge: '',
     },
     {
@@ -828,6 +845,7 @@ function App() {
       description: 'Detecta gastos pequeños recurrentes y cuánto podrías ahorrar.',
       action: 'Gastos hormiga',
       locked: isFreeRole,
+      requiresAnalyze: true,
       badge: 'PRO/BYOK',
     },
     {
@@ -835,6 +853,7 @@ function App() {
       description: 'Cómo vas esta semana vs la anterior.',
       action: 'Resumen semanal',
       locked: isFreeRole,
+      requiresAnalyze: true,
       badge: 'PRO/BYOK',
     },
     {
@@ -842,13 +861,15 @@ function App() {
       description: 'Top de categorías y proporciones.',
       action: 'En qué se va la plata',
       locked: isFreeRole,
+      requiresAnalyze: true,
       badge: 'PRO/BYOK',
     },
     {
       label: 'Análisis mensual profundo',
       description: 'Compara tus últimos 3 meses y da un plan por categoría.',
       action: 'Análisis mensual profundo',
-      locked: isFreeRole,
+      locked: !isManagedRole,
+      requiresAnalyze: true,
       badge: 'PRO',
     },
   ];
@@ -911,6 +932,10 @@ function App() {
   };
 
   const handleAdvisorAction = async (action: string) => {
+    if (iaQuota && iaQuota.analyzeLimit !== undefined && iaQuota.analyzeUsed >= iaQuota.analyzeLimit) {
+      openUpgrade('analyze_exhausted');
+      return;
+    }
     try {
       if (!user) {
         pushFeedItem({
@@ -1153,6 +1178,7 @@ function App() {
       setUserProfile(profile);
       setApiKeyInput('');
       setSettingsMessage('API key guardada en el backend.');
+      await refreshQuota();
     } catch (err) {
       console.error(err);
       setSettingsMessage('No pudimos guardar la API key.');
@@ -1171,6 +1197,7 @@ function App() {
       setUserProfile(profile);
       setApiKeyInput('');
       setSettingsMessage('API key eliminada.');
+      await refreshQuota();
     } catch (err) {
       console.error(err);
       setSettingsMessage('No pudimos borrar la API key.');
@@ -1188,6 +1215,7 @@ function App() {
       const profile = await fetchUserProfile();
       setUserProfile(profile);
       setSettingsMessage('Preferencia actualizada.');
+      await refreshQuota();
     } catch (err) {
       console.error(err);
       setSettingsMessage('No pudimos actualizar la preferencia.');
@@ -1693,12 +1721,17 @@ function App() {
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {advisorQuickActions.map((item) => {
-                  const locked = item.locked;
+                  const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
+                  const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
                   const badge = item.badge;
                   return (
                     <button
                       key={item.action}
-                      onClick={() => (locked ? openUpgrade('feature_locked') : handleAdvisorAction(item.action))}
+                      onClick={() =>
+                        locked
+                          ? openUpgrade(lockedByQuota ? 'analyze_exhausted' : 'feature_locked')
+                          : handleAdvisorAction(item.action)
+                      }
                       className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
                         locked
                           ? 'border-dashed border-white/20 bg-white/5 opacity-80'
@@ -1709,14 +1742,22 @@ function App() {
                         <p className="text-sm font-semibold text-white">{item.label}</p>
                         {badge && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
-                            {locked ? '🔒 ' : ''}
-                            {badge}
+                            {locked && (
+                              <span aria-hidden="true" className="text-[11px] leading-none">
+                                🔒
+                              </span>
+                            )}
+                            <span>{badge}</span>
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-slate-300">{item.description}</p>
                       {locked && (
-                        <p className="text-[11px] font-medium text-primary">Toca para ver cómo desbloquearlo</p>
+                        <p className="text-[11px] font-medium text-primary">
+                          {lockedByQuota
+                            ? 'Límite semanal alcanzado. Se renueva el lunes.'
+                            : 'Toca para ver cómo desbloquearlo'}
+                        </p>
                       )}
                     </button>
                   );
@@ -1951,84 +1992,88 @@ function App() {
                 </div>
               )}
 
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">Tu API key de OpenAI (BYOK)</p>
-                    <p className="text-xs text-slate-300">Se guarda en el backend; usa formato sk-.</p>
-                  </div>
-                  {profileLoading && <span className="text-[11px] text-slate-300">Cargando perfil...</span>}
-                </div>
-                <input
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder="sk-..."
-                  className="w-full rounded-xl border border-white/10 bg-[var(--input-bg)] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-primary"
-                  type="password"
-                  disabled={keySaving}
-                />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={handleSaveApiKey}
-                    disabled={keySaving || !apiKeyInput.trim()}
-                    className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                  >
-                    {keySaving ? 'Guardando...' : 'Guardar key'}
-                  </button>
-                  {userProfile?.openaiKeyStored && (
-                    <button
-                      onClick={handleClearApiKey}
+              {showKeySettings && (
+                <>
+                  <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-white">Tu API key de OpenAI (BYOK)</p>
+                        <p className="text-xs text-slate-300">Se guarda en el backend; usa formato sk-.</p>
+                      </div>
+                      {profileLoading && <span className="text-[11px] text-slate-300">Cargando perfil...</span>}
+                    </div>
+                    <input
+                      value={apiKeyInput}
+                      onChange={(e) => setApiKeyInput(e.target.value)}
+                      placeholder="sk-..."
+                      className="w-full rounded-xl border border-white/10 bg-[var(--input-bg)] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-primary"
+                      type="password"
                       disabled={keySaving}
-                      className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:border-primary disabled:opacity-50"
-                    >
-                      {keySaving ? 'Procesando...' : 'Eliminar key'}
-                    </button>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  {userProfile?.openaiKeyStored
-                    ? 'Key guardada en backend. Nunca se expone al cliente.'
-                    : 'Pega tu clave privada de OpenAI. Se almacenará solo en el servidor.'}
-                </p>
-              </div>
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={handleSaveApiKey}
+                        disabled={keySaving || !apiKeyInput.trim()}
+                        className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {keySaving ? 'Guardando...' : 'Guardar key'}
+                      </button>
+                      {userProfile?.openaiKeyStored && (
+                        <button
+                          onClick={handleClearApiKey}
+                          disabled={keySaving}
+                          className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:border-primary disabled:opacity-50"
+                        >
+                          {keySaving ? 'Procesando...' : 'Eliminar key'}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      {userProfile?.openaiKeyStored
+                        ? 'Key guardada en backend. Nunca se expone al cliente.'
+                        : 'Pega tu clave privada de OpenAI. Se almacenará solo en el servidor.'}
+                    </p>
+                  </div>
 
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-white">Preferencia de clave</p>
-                  {userProfile?.preferredKey && (
-                    <span className="text-[11px] text-slate-300">
-                      Actual: {userProfile.preferredKey === 'byok' ? 'Mi key' : 'Key GastoSense'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => handlePreferredKeyChange('byok')}
-                    disabled={!userProfile?.openaiKeyStored || preferenceSaving}
-                    className={`rounded-lg px-4 py-2 text-xs font-semibold ${
-                      userProfile?.preferredKey === 'byok'
-                        ? 'bg-primary text-white'
-                        : 'border border-white/10 bg-white/5 text-white'
-                    } disabled:opacity-50`}
-                  >
-                    Usar mi key (BYOK)
-                  </button>
-                  <button
-                    onClick={() => handlePreferredKeyChange('managed')}
-                    disabled={!canUseManaged || !managedActive || preferenceSaving}
-                    className={`rounded-lg px-4 py-2 text-xs font-semibold ${
-                      userProfile?.preferredKey === 'managed'
-                        ? 'bg-primary text-white'
-                        : 'border border-white/10 bg-white/5 text-white'
-                    } disabled:opacity-50`}
-                  >
-                    Usar key de GastoSense
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  El backend decide la clave permitida según rol y estado. Free solo usa BYOK; la clave administrada requiere membresía.
-                </p>
-              </div>
+                  <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">Preferencia de clave</p>
+                      {userProfile?.preferredKey && (
+                        <span className="text-[11px] text-slate-300">
+                          Actual: {userProfile.preferredKey === 'byok' ? 'Mi key' : 'Key GastoSense'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handlePreferredKeyChange('byok')}
+                        disabled={!userProfile?.openaiKeyStored || preferenceSaving}
+                        className={`rounded-lg px-4 py-2 text-xs font-semibold ${
+                          userProfile?.preferredKey === 'byok'
+                            ? 'bg-primary text-white'
+                            : 'border border-white/10 bg-white/5 text-white'
+                        } disabled:opacity-50`}
+                      >
+                        Usar mi key (BYOK)
+                      </button>
+                      <button
+                        onClick={() => handlePreferredKeyChange('managed')}
+                        disabled={!canUseManaged || preferenceSaving}
+                        className={`rounded-lg px-4 py-2 text-xs font-semibold ${
+                          userProfile?.preferredKey === 'managed'
+                            ? 'bg-primary text-white'
+                            : 'border border-white/10 bg-white/5 text-white'
+                        } disabled:opacity-50`}
+                      >
+                        Usar key de GastoSense
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Si usas tu key (BYOK) tienes más cuota; con key GastoSense aplican límites de plan Free.
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div
                 ref={plansRef}
@@ -2276,6 +2321,8 @@ function App() {
         onClose={() => setShowQuickAdd(false)}
         onSave={handleSaveTransaction}
         onInterpret={handleInterpret}
+        parseLocked={parseExhausted}
+        onParseLocked={() => openUpgrade('parse_exhausted')}
         templates={templates}
         onSaveTemplate={handleSaveTemplate}
         onDeleteTemplate={handleDeleteTemplate}
@@ -2363,6 +2410,19 @@ const previousMonthRange = () => {
 };
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
