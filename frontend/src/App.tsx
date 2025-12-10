@@ -54,6 +54,7 @@ import type {
   PlanInfo,
   PlanPeriod,
 } from './types';
+type PlanId = 'plan_byok' | 'plan_pro';
 
 type ChatItem = {
   id: string;
@@ -351,6 +352,13 @@ function App() {
       }[userProfile.role] || userProfile.role
     );
   }, [userProfile]);
+  const currentPaidPlan: PlanId | null = useMemo(() => {
+    if (!userProfile) return null;
+    if (userProfile.role === 'paid_byok') return 'plan_byok';
+    if (['paid_managed', 'gifted_managed'].includes(userProfile.role)) return 'plan_pro';
+    return null;
+  }, [userProfile]);
+  const hasActiveSubscription = (userProfile?.subscription as { status?: string } | undefined)?.status === 'active';
   const canUseManaged =
     !!userProfile &&
     ['paid_managed', 'gifted_managed', 'admin', 'paid_byok', 'free'].includes(userProfile.role);
@@ -2093,6 +2101,8 @@ function App() {
                     const periodInfo = plan.periods.find((p) => p.period === selectedPeriod);
                     const price = periodInfo?.totalCents ?? 0;
                     const months = periodInfo?.months ?? 1;
+                    const switchingPlan = hasActiveSubscription && currentPaidPlan && currentPaidPlan !== (plan.id as PlanId);
+                    const sameActivePlan = hasActiveSubscription && currentPaidPlan === (plan.id as PlanId);
                     return (
                       <div
                         key={plan.id}
@@ -2121,6 +2131,16 @@ function App() {
                         <div className="text-lg font-semibold text-white">
                           Total {formatCurrency(price)} {formatUsdApprox(price)} {plan.currency}
                         </div>
+                        {switchingPlan && (
+                          <p className="text-[11px] text-amber-200">
+                            Al comprar este plan, tu plan actual se reemplaza desde hoy ({currentPaidPlan === 'plan_byok' ? 'BYOK' : 'PRO'} → {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}).
+                          </p>
+                        )}
+                        {sameActivePlan && (
+                          <p className="text-[11px] text-slate-200">
+                            Al renovar extiendes tu vencimiento {months > 1 ? `(+${months} meses)` : '(+1 mes)'} desde la fecha actual.
+                          </p>
+                        )}
                         <ResponsiveSelect
                           value={selectedPeriod}
                           onChange={(val) =>

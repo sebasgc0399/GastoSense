@@ -48,6 +48,7 @@ type SubscriptionSource = "manual" | "stripe" | "promo" | "wompi";
 type UsageKey = "parse" | "analyze";
 type PlanId = "plan_byok" | "plan_pro";
 type PlanPeriod = "monthly" | "quarterly" | "semiannual" | "annual";
+type TargetPlan = "byok" | "pro";
 
 interface UserProfile {
   role: UserRole;
@@ -57,7 +58,8 @@ interface UserProfile {
   subscription: {
     status: SubscriptionStatus;
     source: SubscriptionSource;
-    expiresAt?: FirebaseFirestore.Timestamp | null;
+    expiresAt?: FirebaseFirestore.Timestamp | number | null;
+    updatedAt?: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp | null;
   };
   createdAt?: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
@@ -72,6 +74,7 @@ interface ResolvedUserProfile {
     status: SubscriptionStatus;
     source: SubscriptionSource;
     expiresAt?: number;
+    updatedAt?: number;
   };
 }
 
@@ -511,9 +514,47 @@ async function checkRateLimit(
   });
 }
 
+function validWompiCurrency(tx: WompiTransaction): boolean {
+  if (!wompiPlanCurrency) return true;
+  return (tx.currency || "").toUpperCase() === wompiPlanCurrency;
+}
+
+function targetPlanFromId(plan: string | PlanId): TargetPlan {
+  return plan === "plan_byok" ? "byok" : "pro";
+}
+
+function isSamePaidPlan(currentRole: UserRole, targetPlan: TargetPlan): boolean {
+  if (targetPlan === "byok") return currentRole === "paid_byok";
+  return currentRole === "paid_managed" || currentRole === "gifted_managed";
+}
+
+function computeNewExpiresAt(
+  currentSub: {status: SubscriptionStatus; expiresAt?: number | FirebaseFirestore.Timestamp | null} | undefined,
+  currentRole: UserRole,
+  targetPlan: TargetPlan,
+  months: number,
+): number {
+  const nowMs = Date.now();
+  const extraMs = months * wompiDefaultDays * 24 * 60 * 60 * 1000;
+  const currentExpires =
+    currentSub?.status === "active"
+      ? typeof currentSub?.expiresAt === "number"
+        ? currentSub.expiresAt
+        : currentSub?.expiresAt && typeof (currentSub.expiresAt as FirebaseFirestore.Timestamp).toMillis === "function"
+          ? (currentSub.expiresAt as FirebaseFirestore.Timestamp).toMillis()
+          : undefined
+      : undefined;
+  const isActive = Boolean(currentExpires && currentExpires > nowMs);
+  const samePlan = isActive && isSamePaidPlan(currentRole, targetPlan);
+  if (samePlan && currentExpires) {
+    return currentExpires + extraMs;
+  }
+  return nowMs + extraMs;
+}
+
 function parseWompiReference(
   ref?: string | null,
-): {uid: string; plan: string; period: PlanPeriod} | null {
+): {uid: string; plan: string; period: PlanPeriod; targetPlan: TargetPlan; months: number} | null {
   if (!ref) return null;
   const clean = ref.trim();
   const parts = clean.includes(":") ? clean.split(":") : clean.split("_");
@@ -526,12 +567,9 @@ function parseWompiReference(
     period = maybePeriod;
   }
   if (!uid) return null;
-  return {uid, plan, period};
-}
-
-function validWompiCurrency(tx: WompiTransaction): boolean {
-  if (!wompiPlanCurrency) return true;
-  return (tx.currency || "").toUpperCase() === wompiPlanCurrency;
+  const targetPlan = targetPlanFromId(plan as PlanId);
+  const months = planPeriodMonths(period);
+  return {uid, plan, period, targetPlan, months};
 }
 
 function getPlanConfig(plan: string): PlanConfig | null {
@@ -1132,25 +1170,33 @@ export const wompiWebhook = onRequest({region: "us-central1", maxInstances: 2}, 
 
     try {
       const currentProfile = await getOrCreateUserProfile(refParsed.uid);
-      const months = planPeriodMonths(refParsed.period);
-      const days = wompiDefaultDays * months;
-      const nowMillis = Date.now();
-      const currentExpires =
-        currentProfile.subscription?.expiresAt && typeof currentProfile.subscription.expiresAt === "number"
-          ? currentProfile.subscription.expiresAt
-          : undefined;
-      const baseMillis = currentExpires && currentExpires > nowMillis ? currentExpires : nowMillis;
-      const newExpiresAt = admin.firestore.Timestamp.fromMillis(baseMillis + days * 24 * 60 * 60 * 1000);
+      const targetPlan = refParsed.targetPlan;
+      const newExpiresAtMillis = computeNewExpiresAt(
+        currentProfile.subscription,
+        currentProfile.role,
+        targetPlan,
+        refParsed.months,
+      );
 
-      const isByok = planCfg.id === "plan_byok";
+      const isByok = targetPlan === "byok";
+      let newPreferredKey = currentProfile.preferredKey;
+      if (isByok) {
+        if (!currentProfile.preferredKey) newPreferredKey = "byok";
+      } else {
+        if (!currentProfile.openaiKeyStored || !currentProfile.preferredKey) {
+          newPreferredKey = "managed";
+        }
+      }
+
       await updateUserProfile(refParsed.uid, {
         role: isByok ? "paid_byok" : "paid_managed",
         subscription: {
           status: "active",
           source: "wompi",
-          expiresAt: newExpiresAt,
+          expiresAt: admin.firestore.Timestamp.fromMillis(newExpiresAtMillis),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
-        preferredKey: isByok ? "byok" : "managed",
+        ...(newPreferredKey ? {preferredKey: newPreferredKey} : {}),
       });
     } catch (error) {
       console.error("Error actualizando suscripción Wompi", error);
