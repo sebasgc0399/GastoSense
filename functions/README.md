@@ -36,7 +36,7 @@ Configura en Firebase (secrets o env) al menos:
 - **Perfiles/cuotas**:
   - `getUserProfile`, `registerUserEntry`.
   - `getUsageQuota`: consumo y límite semanal por rol (free 5/2, BYOK 70/20, managed 90/20, admin 400/400; BYOK con clave gestionada o membresía expirada se degrada a free).
-  - `setUserAdvisorMode`: guarda tono (amable/regańón) en perfil.
+  - `setUserAdvisorMode`: guarda tono (amable/regañón) en perfil.
 - **Claves**:
   - `setUserOpenAIKey`, `clearUserOpenAIKey` (BYOK en Secret Manager).
   - `setUserKeyPreference` (byok/managed, según rol/plan).
@@ -45,19 +45,19 @@ Configura en Firebase (secrets o env) al menos:
 - **Planes/pagos**:
   - `getPlans`: precios totales por periodo.
   - `createWompiCheckout`: genera URL de pago con firma (referencia `plan:period:uid:timestamp`).
-  - `wompiWebhook` (HTTP): valida firma/monto/moneda; calcula `expiresAt` extendiendo si renueva el mismo plan activo o reiniciando si cambia de plan/estaba vencido; actualiza rol (`paid_byok`/`paid_managed`), preferencia de clave (PRO ⇒ managed si no hay BYOK; BYOK ⇒ byok si no había) y suscripción activa.
+  - `wompiWebhook` (HTTP, idempotente): valida firma/monto/moneda; usa colección `payments/{transactionId}` para no procesar dos veces; calcula `expiresAt` extendiendo si renueva el mismo plan activo o reiniciando si cambia de plan/estaba vencido; actualiza rol (`paid_byok`/`paid_managed`), preferencia de clave (PRO ⇒ managed si no hay BYOK; BYOK ⇒ byok si no había) y suscripción activa.
 - **Scheduler**:
   - `expireSubscriptions` (cron diario 00:00 UTC) marca suscripciones vencidas como `expired`.
 
 ## Firestore (referencia rápida)
-- `transactions`, `templates`, `budgets`, `users`, `usage`.
+- Colecciones: `transactions`, `templates`, `budgets`, `users`, `usage`, `payments` (idempotencia de Wompi).
 - Reglas: cada doc pertenece a `userId`; `users` editable solo por admin; validaciones de tipos/enums y tamaños.
 
 ## Notas técnicas
 - Región: `us-central1`, `maxInstances: 10`.
 - BYOK se guarda en Secret Manager; clave gestionada via `OPENAI_API_KEY`.
-- Rate limiting semanal por rol (`usage/{uid}` con clave de semana); membresía expirada degrada límites a free sin cambiar el rol almacenado.
-- Wompi: firma HMAC/SHA256, referencia `plan:period:uid:timestamp`; helper `computeNewExpiresAt` extiende si es el mismo plan activo, o reinicia si cambia de plan o estaba vencido.
+- Rate limiting semanal por rol (`usage/{uid}` con clave de semana); membresía expirada degrada límites a free sin cambiar el rol almacenado; BYOK con clave gestionada se trata como free.
+- Wompi: firma HMAC/SHA256, referencia `plan:period:uid:timestamp`; helper `computeNewExpiresAt` extiende si es el mismo plan activo, o reinicia si cambia de plan o estaba vencido; `wompiWebhook` usa transacción e idempotencia con la colección `payments`.
 
 ## Desarrollo local
 - Usa `npm run build` para asegurarte de tipado; no se incluye emulador en este README, pero puedes usar `firebase emulators:start` si lo tienes configurado.

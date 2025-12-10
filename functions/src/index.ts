@@ -49,6 +49,7 @@ type UsageKey = "parse" | "analyze";
 type PlanId = "plan_byok" | "plan_pro";
 type PlanPeriod = "monthly" | "quarterly" | "semiannual" | "annual";
 type TargetPlan = "byok" | "pro";
+type PaymentStatus = "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
 
 interface UserProfile {
   role: UserRole;
@@ -167,6 +168,21 @@ interface WompiTransaction {
   created_at?: string;
   payment_method_type?: string;
 }
+
+type Payment = {
+  transactionId: string;
+  uid: string;
+  targetPlan: TargetPlan;
+  months: number;
+  amountInCents: number;
+  currency: string;
+  reference: string;
+  status: PaymentStatus;
+  processed: boolean;
+  webhookCount: number;
+  createdAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
+  lastWebhookAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
+};
 
 interface WompiEvent {
   event?: string;
@@ -1140,69 +1156,158 @@ export const wompiWebhook = onRequest({region: "us-central1", maxInstances: 2}, 
   }
 
   const status = tx?.status?.toUpperCase?.() || "";
-  if (status === "APPROVED") {
-    if (!tx) {
-      res.status(200).send("ok");
-      return;
-    }
-    const planCfg = getPlanConfig(refParsed.plan as PlanId);
-    if (!planCfg) {
-      console.error("Plan no reconocido en reference", refParsed.plan);
-      res.status(200).send("Plan no válido");
-      return;
-    }
-    if (!validWompiCurrency(tx)) {
-      console.error("Moneda no coincide", {txCurrency: tx?.currency, expectedCurrency: wompiPlanCurrency});
-      res.status(200).send("Moneda inválida");
-      return;
-    }
-    const expectedAmount = computePlanPrice(planCfg, refParsed.period);
-    if (!expectedAmount || tx.amount_in_cents !== expectedAmount) {
-      console.error("Monto no coincide", {
-        txAmount: tx?.amount_in_cents,
-        expectedAmount,
-        plan: planCfg.id,
-        period: refParsed.period,
-      });
-      res.status(200).send("Monto inválido");
-      return;
-    }
+  const relevantStatus: PaymentStatus[] = ["APPROVED", "PENDING", "DECLINED", "ERROR"];
+  if (!relevantStatus.includes(status as PaymentStatus)) {
+    res.status(200).send("ok");
+    return;
+  }
 
-    try {
-      const currentProfile = await getOrCreateUserProfile(refParsed.uid);
-      const targetPlan = refParsed.targetPlan;
-      const newExpiresAtMillis = computeNewExpiresAt(
-        currentProfile.subscription,
-        currentProfile.role,
-        targetPlan,
-        refParsed.months,
-      );
+  if (!tx) {
+    res.status(200).send("ok");
+    return;
+  }
 
-      const isByok = targetPlan === "byok";
-      let newPreferredKey = currentProfile.preferredKey;
-      if (isByok) {
-        if (!currentProfile.preferredKey) newPreferredKey = "byok";
-      } else {
-        if (!currentProfile.openaiKeyStored || !currentProfile.preferredKey) {
-          newPreferredKey = "managed";
+  const planCfg = getPlanConfig(refParsed.plan as PlanId);
+  if (!planCfg) {
+    console.error("Plan no reconocido en reference", refParsed.plan);
+    res.status(200).send("Plan no válido");
+    return;
+  }
+  if (!validWompiCurrency(tx)) {
+    console.error("Moneda no coincide", {txCurrency: tx?.currency, expectedCurrency: wompiPlanCurrency});
+    res.status(200).send("Moneda inválida");
+    return;
+  }
+  const expectedAmount = computePlanPrice(planCfg, refParsed.period);
+  if (!expectedAmount || tx.amount_in_cents !== expectedAmount) {
+    console.error("Monto no coincide", {
+      txAmount: tx?.amount_in_cents,
+      expectedAmount,
+      plan: planCfg.id,
+      period: refParsed.period,
+    });
+    res.status(200).send("Monto inválido");
+    return;
+  }
+
+  try {
+    await firestore.runTransaction(async (t) => {
+      const paymentRef = firestore.collection("payments").doc(tx.id as string);
+      const paymentSnap = await t.get(paymentRef);
+      const nowTs = admin.firestore.FieldValue.serverTimestamp();
+      const statusUpper = status as PaymentStatus;
+
+      if (!paymentSnap.exists) {
+        const newPayment: Payment = {
+          transactionId: tx.id as string,
+          uid: refParsed.uid,
+          targetPlan: refParsed.targetPlan,
+          months: refParsed.months,
+          amountInCents: tx.amount_in_cents ?? expectedAmount,
+          currency: tx.currency || wompiPlanCurrency,
+          reference: tx.reference || "",
+          status: statusUpper,
+          processed: false,
+          webhookCount: 1,
+          createdAt: nowTs,
+          lastWebhookAt: nowTs,
+        };
+
+        if (statusUpper === "APPROVED") {
+          const currentProfile = await getOrCreateUserProfile(refParsed.uid);
+          const newExpiresAtMillis = computeNewExpiresAt(
+            currentProfile.subscription,
+            currentProfile.role,
+            refParsed.targetPlan,
+            refParsed.months,
+          );
+          const isByok = refParsed.targetPlan === "byok";
+          let newPreferredKey = currentProfile.preferredKey;
+          if (isByok) {
+            if (!currentProfile.preferredKey) newPreferredKey = "byok";
+          } else if (!currentProfile.openaiKeyStored || !currentProfile.preferredKey) {
+            newPreferredKey = "managed";
+          }
+          t.set(
+            firestore.collection("users").doc(refParsed.uid),
+            {
+              role: isByok ? "paid_byok" : "paid_managed",
+              subscription: {
+                status: "active",
+                source: "wompi",
+                expiresAt: admin.firestore.Timestamp.fromMillis(newExpiresAtMillis),
+                updatedAt: nowTs,
+              },
+              ...(newPreferredKey ? {preferredKey: newPreferredKey} : {}),
+            },
+            {merge: true},
+          );
+          newPayment.processed = true;
         }
+
+        t.set(paymentRef, newPayment);
+        return;
       }
 
-      await updateUserProfile(refParsed.uid, {
-        role: isByok ? "paid_byok" : "paid_managed",
-        subscription: {
-          status: "active",
-          source: "wompi",
-          expiresAt: admin.firestore.Timestamp.fromMillis(newExpiresAtMillis),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        ...(newPreferredKey ? {preferredKey: newPreferredKey} : {}),
+      const existing = paymentSnap.data() as Payment;
+
+      if (existing.processed) {
+        t.update(paymentRef, {
+          status: statusUpper,
+          webhookCount: admin.firestore.FieldValue.increment(1),
+          lastWebhookAt: nowTs,
+        });
+        return;
+      }
+
+      if (statusUpper === "APPROVED") {
+        const currentProfile = await getOrCreateUserProfile(existing.uid);
+        const newExpiresAtMillis = computeNewExpiresAt(
+          currentProfile.subscription,
+          currentProfile.role,
+          existing.targetPlan,
+          existing.months,
+        );
+        const isByok = existing.targetPlan === "byok";
+        let newPreferredKey = currentProfile.preferredKey;
+        if (isByok) {
+          if (!currentProfile.preferredKey) newPreferredKey = "byok";
+        } else if (!currentProfile.openaiKeyStored || !currentProfile.preferredKey) {
+          newPreferredKey = "managed";
+        }
+        t.set(
+          firestore.collection("users").doc(existing.uid),
+          {
+            role: isByok ? "paid_byok" : "paid_managed",
+            subscription: {
+              status: "active",
+              source: "wompi",
+              expiresAt: admin.firestore.Timestamp.fromMillis(newExpiresAtMillis),
+              updatedAt: nowTs,
+            },
+            ...(newPreferredKey ? {preferredKey: newPreferredKey} : {}),
+          },
+          {merge: true},
+        );
+        t.update(paymentRef, {
+          status: statusUpper,
+          processed: true,
+          webhookCount: admin.firestore.FieldValue.increment(1),
+          lastWebhookAt: nowTs,
+        });
+        return;
+      }
+
+      t.update(paymentRef, {
+        status: statusUpper,
+        webhookCount: admin.firestore.FieldValue.increment(1),
+        lastWebhookAt: nowTs,
       });
-    } catch (error) {
-      console.error("Error actualizando suscripción Wompi", error);
-      res.status(500).send("error");
-      return;
-    }
+    });
+  } catch (error) {
+    console.error("Error actualizando suscripción Wompi", error);
+    res.status(500).send("error");
+    return;
   }
 
   res.status(200).send("ok");
