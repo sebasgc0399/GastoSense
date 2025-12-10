@@ -2196,7 +2196,6 @@ function App() {
                       <tbody>
                         {adminUsers
                           .filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase()))
-                          .slice(0, 5)
                           .map((u) => (
                             <tr key={u.uid} className="border-t border-white/5">
                               <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{u.uid}</td>

@@ -76,3 +76,11 @@ firebase.json, firestore.rules, firestore.indexes.json
 - Export/backup de movimientos (CSV).
 - Notificaciones de presupuesto (80%/100%) y vencimiento de suscripción.
 - Mejora de clasificación automática por merchant/detalle de tarjeta.
+
+## Pruebas sugeridas para validar cambios recientes (panel admin)
+1. **Lint front-end**: `cd frontend && npm run lint` para asegurar que los cambios no rompieron las reglas de estilo ni el build.
+2. **Carga inicial de admins**: inicia sesión con un usuario con rol `admin` y abre el panel. La lista de usuarios debe aparecer sin necesidad de tocar el buscador y el filtro de búsqueda debe estar vacío tras cargar.
+3. **Actualización tras cambio de rol**: cambia el rol de un usuario desde el panel y confirma que la tabla se refresca inmediatamente con el nuevo rol sin tener que recargar la página.
+4. **Búsqueda y reseteo**: aplica un término en el buscador de admins, recarga el perfil (por ejemplo, cerrando y volviendo a abrir la sesión) y verifica que el filtro se limpia y la lista completa vuelve a mostrarse.
+5. **Errores visibles**: si ocurre un fallo en la carga de la lista, valida que se muestre un mensaje en consola y que la aplicación no se quede en estado de carga infinito.
+6. **Listado completo**: crea o detecta más de cinco usuarios admin/managed y confirma que la tabla muestra todos los resultados filtrados (el límite anterior de 5 filas se eliminó para no ocultar entradas).
