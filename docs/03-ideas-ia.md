@@ -97,9 +97,9 @@ Estas propuestas se pueden implementar como nuevas callable functions en `functi
   - Incluye analisis avanzados, comparativos 3 meses, recomendaciones por categoria, recordatorios inteligentes y prioridad en features nuevas.
   - Mensaje: "No configures nada; la IA trabaja por ti."
 - **Tabla sugerida para getWeeklyLimit(role, key)**:
-  - parse (semanal): free 10, paid_byok 70, paid_managed 90, gifted_managed 90, admin 400.
-  - analyze (semanal): free 4, paid_byok 20, paid_managed 20, gifted_managed 20, admin 400.
-  - fallback: parse 10, analyze 4.
+  - parse (semanal): free 5, paid_byok 70, paid_managed 90, gifted_managed 90, admin 400.
+  - analyze (semanal): free 2, paid_byok 20, paid_managed 20, gifted_managed 20, admin 400.
+  - fallback: parse 5, analyze 2.
 - **UX para upsell**:
   - Mostrar progreso de cuota semanal (ej. "80% usado") y CTA al plan superior justo al agotarse.
   - Features vistas con candado: tarjetas de "gastos hormiga" o "analisis mensual profundo" etiquetadas Pro.
