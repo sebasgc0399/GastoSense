@@ -149,8 +149,9 @@ function App() {
     }));
 
   const refreshAdminUsers = useCallback(
-    async ({ resetSearch = false }: { resetSearch?: boolean } = {}) => {
-      if (!user || userProfile?.role !== 'admin') return;
+    async ({ resetSearch = false, role }: { resetSearch?: boolean; role?: UserRole } = {}) => {
+      const effectiveRole = role ?? userProfile?.role;
+      if (!user || effectiveRole !== 'admin') return;
       const list = await fetchUsersList();
       setAdminUsers(formatAdminUsers(list));
       if (resetSearch) {
@@ -287,7 +288,7 @@ function App() {
         }
         if (profile?.role === 'admin') {
           setAdminLoading(true);
-          await refreshAdminUsers({ resetSearch: true });
+          await refreshAdminUsers({ resetSearch: true, role: profile.role });
         } else {
           setAdminUsers([]);
         }
