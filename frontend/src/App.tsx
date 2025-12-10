@@ -125,6 +125,40 @@ function App() {
   const plansRef = useRef<HTMLDivElement | null>(null);
   const [txPage, setTxPage] = useState(1);
   const txPageSize = 8;
+  const formatAdminUsers = (
+    list: Awaited<ReturnType<typeof fetchUsersList>>,
+  ): {
+    uid: string;
+    role: UserRole;
+    openaiKeyStored: boolean;
+    preferredKey?: KeyPreference | undefined;
+    subscriptionStatus?: string | undefined;
+    subscriptionSource?: AdminSubscriptionSource | undefined;
+    subscriptionExpires?: string | undefined;
+  }[] =>
+    list.map((item) => ({
+      uid: item.uid,
+      role: item.profile.role,
+      openaiKeyStored: item.profile.openaiKeyStored,
+      preferredKey: item.profile.preferredKey,
+      subscriptionStatus: item.profile.subscription?.status,
+      subscriptionSource: item.profile.subscription?.source,
+      subscriptionExpires: item.profile.subscription?.expiresAt
+        ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
+        : '',
+    }));
+
+  const refreshAdminUsers = useCallback(
+    async ({ resetSearch = false }: { resetSearch?: boolean } = {}) => {
+      if (!user || userProfile?.role !== 'admin') return;
+      const list = await fetchUsersList();
+      setAdminUsers(formatAdminUsers(list));
+      if (resetSearch) {
+        setAdminSearch('');
+      }
+    },
+    [user, userProfile?.role],
+  );
   const refreshQuota = async () => {
     if (!user) return;
     try {
@@ -253,23 +287,7 @@ function App() {
         }
         if (profile?.role === 'admin') {
           setAdminLoading(true);
-          const list = await fetchUsersList();
-          setAdminUsers(
-            list.map((item) => ({
-              uid: item.uid,
-              role: item.profile.role,
-              openaiKeyStored: item.profile.openaiKeyStored,
-              preferredKey: item.profile.preferredKey,
-              subscriptionStatus: item.profile.subscription?.status,
-              subscriptionSource: item.profile.subscription?.source,
-              subscriptionExpires: item.profile.subscription?.expiresAt
-                ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-                : '',
-            })),
-          );
-          if (adminSearch) {
-            setAdminSearch('');
-          }
+          await refreshAdminUsers({ resetSearch: true });
         } else {
           setAdminUsers([]);
         }
@@ -288,7 +306,7 @@ function App() {
       }
     };
     loadProfile();
-  }, [adminSearch, logout, user]);
+  }, [logout, refreshAdminUsers, user]);
 
   useEffect(() => {
     const loadPreviousMonth = async () => {
@@ -1247,20 +1265,7 @@ function App() {
           expiresAt: target?.subscriptionExpires ? new Date(target.subscriptionExpires).getTime() : null,
         },
       });
-      const list = await fetchUsersList();
-      setAdminUsers(
-        list.map((item) => ({
-          uid: item.uid,
-          role: item.profile.role,
-          openaiKeyStored: item.profile.openaiKeyStored,
-          preferredKey: item.profile.preferredKey,
-          subscriptionStatus: item.profile.subscription?.status,
-          subscriptionSource: item.profile.subscription?.source,
-          subscriptionExpires: item.profile.subscription?.expiresAt
-            ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-            : '',
-        })),
-      );
+      await refreshAdminUsers();
       const profile = await fetchUserProfile();
       setUserProfile(profile);
       setSettingsMessage('Rol actualizado.');
@@ -1288,20 +1293,7 @@ function App() {
           expiresAt: target.subscriptionExpires ? new Date(target.subscriptionExpires).getTime() : null,
         },
       });
-      const list = await fetchUsersList();
-      setAdminUsers(
-        list.map((item) => ({
-          uid: item.uid,
-          role: item.profile.role,
-          openaiKeyStored: item.profile.openaiKeyStored,
-          preferredKey: item.profile.preferredKey,
-          subscriptionStatus: item.profile.subscription?.status,
-          subscriptionSource: item.profile.subscription?.source,
-          subscriptionExpires: item.profile.subscription?.expiresAt
-            ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-            : '',
-        })),
-      );
+      await refreshAdminUsers();
       setSettingsMessage('Usuario actualizado.');
     } catch (err) {
       console.error(err);
@@ -1315,20 +1307,7 @@ function App() {
     if (!user || userProfile?.role !== 'admin') return;
     setAdminLoading(true);
     try {
-      const list = await fetchUsersList();
-      setAdminUsers(
-        list.map((item) => ({
-          uid: item.uid,
-          role: item.profile.role,
-          openaiKeyStored: item.profile.openaiKeyStored,
-          preferredKey: item.profile.preferredKey,
-          subscriptionStatus: item.profile.subscription?.status,
-          subscriptionSource: item.profile.subscription?.source,
-          subscriptionExpires: item.profile.subscription?.expiresAt
-            ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-            : '',
-        })),
-      );
+      await refreshAdminUsers();
     } catch (err) {
       console.error(err);
       setSettingsMessage('No pudimos recargar la lista de usuarios.');
