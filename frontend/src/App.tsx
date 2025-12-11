@@ -1407,14 +1407,6 @@ function App() {
       <main className="mx-auto max-w-5xl px-4 py-5 space-y-4">
         {activeTab === 'home' && (
           <section className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-              <RobotAvatar className="h-16 w-16 md:h-20 md:w-20" />
-              <div>
-                <p className="text-xs uppercase text-slate-400">Tu asesor IA</p>
-                <h3 className="text-sm font-semibold text-white sm:text-base">GastoSense te ayuda a entender tus gastos</h3>
-                <p className="text-xs text-slate-300">Acciones rápidas con IA, siempre visibles en tu panel.</p>
-              </div>
-            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <CardStat title="Gasto mensual" value={monthlyExpense} tone="danger" subtitle="Objetivo: no pasar presupuesto." />
               <CardStat title="Ingreso mensual" value={monthlyIncome} tone="success" subtitle="Suma ingresos fijos." />
@@ -1716,35 +1708,36 @@ function App() {
         {activeTab === 'advisor' && (
           <section className="space-y-4">
             <div className="card space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase text-slate-400">Asesor IA</p>
-                  <h2 className="text-lg font-semibold text-white">Finanzas chat</h2>
-                  <p className="text-xs text-slate-300">
-                    Elige el tono y lanza una acción; la respuesta aparece en el feed.
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {(['amable', 'reganon'] as AdvisorMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => handleToneChange(mode)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        advisorMode === mode
-                          ? 'bg-primary text-white'
-                          : 'border border-white/10 bg-white/5 text-white'
-                      }`}
-                    >
-                      {mode === 'amable' ? 'Amable' : 'Regañón'}
-                    </button>
-                  ))}
+              <div className="flex items-start gap-3">
+                <RobotAvatar className="h-16 w-16 md:h-20 md:w-20" />
+                <div className="flex flex-1 flex-col gap-2">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase text-slate-400">Asesor IA</p>
+                    <h2 className="text-lg font-semibold text-white">Finanzas chat</h2>
+                    <p className="text-xs text-slate-300">Elige el tono y lanza una acción; la respuesta aparece en el feed.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(['amable', 'reganon'] as AdvisorMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => handleToneChange(mode)}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          advisorMode === mode
+                            ? 'bg-primary text-white'
+                            : 'border border-white/10 bg-white/5 text-white'
+                        }`}
+                      >
+                        {mode === 'amable' ? 'Amable' : 'Regañón'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {advisorQuickActions.map((item) => {
-                  const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
-                  const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {advisorQuickActions.map((item) => {
+                const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
+                const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
                   const badge = item.badge;
                   return (
                     <button
