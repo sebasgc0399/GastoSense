@@ -89,6 +89,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const userRoleRef = useRef<UserRole | undefined>(undefined);
+  const [transactionsReady, setTransactionsReady] = useState(false);
+  const transactionsUserRef = useRef<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [keySaving, setKeySaving] = useState(false);
@@ -125,6 +128,45 @@ function App() {
   const plansRef = useRef<HTMLDivElement | null>(null);
   const [txPage, setTxPage] = useState(1);
   const txPageSize = 8;
+  const formatAdminUsers = (
+    list: Awaited<ReturnType<typeof fetchUsersList>>,
+  ): {
+    uid: string;
+    role: UserRole;
+    openaiKeyStored: boolean;
+    preferredKey?: KeyPreference | undefined;
+    subscriptionStatus?: string | undefined;
+    subscriptionSource?: AdminSubscriptionSource | undefined;
+    subscriptionExpires?: string | undefined;
+  }[] =>
+    list.map((item) => ({
+      uid: item.uid,
+      role: item.profile.role,
+      openaiKeyStored: item.profile.openaiKeyStored,
+      preferredKey: item.profile.preferredKey,
+      subscriptionStatus: item.profile.subscription?.status,
+      subscriptionSource: item.profile.subscription?.source,
+      subscriptionExpires: item.profile.subscription?.expiresAt
+        ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
+        : '',
+    }));
+
+  useEffect(() => {
+    userRoleRef.current = userProfile?.role;
+  }, [userProfile?.role]);
+
+  const refreshAdminUsers = useCallback(
+    async ({ resetSearch = false, role }: { resetSearch?: boolean; role?: UserRole } = {}) => {
+      const effectiveRole = role ?? userRoleRef.current;
+      if (!user || effectiveRole !== 'admin') return;
+      const list = await fetchUsersList();
+      setAdminUsers(formatAdminUsers(list));
+      if (resetSearch) {
+        setAdminSearch('');
+      }
+    },
+    [user],
+  );
   const refreshQuota = async () => {
     if (!user) return;
     try {
@@ -175,14 +217,29 @@ function App() {
   }, [showUpgradeModal]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setTransactions([]);
+      setTransactionsReady(false);
+      transactionsUserRef.current = null;
+      return;
+    }
+    if (transactionsUserRef.current !== user.uid) {
+      setTransactionsReady(false);
+      transactionsUserRef.current = user.uid;
+    }
     const unsubscribe = listenTransactions({
       userId: user.uid,
       startDate: filters.startDate,
       endDate: filters.endDate,
       category: filters.category,
-      onChange: setTransactions,
-      onError: (err) => setError(err.message),
+      onChange: (list) => {
+        setTransactions(list);
+        setTransactionsReady(true);
+      },
+      onError: (err) => {
+        setError(err.message);
+        setTransactionsReady(true);
+      },
     });
     setTxPage(1);
     return () => unsubscribe();
@@ -235,12 +292,6 @@ function App() {
           localStorage.setItem('advisorMode', profile.advisorMode);
         }
         try {
-          const quota = await fetchUsageQuota();
-          setAiQuota(quota);
-        } catch (err) {
-          console.error('No pudimos obtener cuota IA', err);
-        }
-        try {
           const planData = await fetchPlans();
           setPlans(planData);
           const defaults: Record<string, PlanPeriod> = {};
@@ -253,23 +304,7 @@ function App() {
         }
         if (profile?.role === 'admin') {
           setAdminLoading(true);
-          const list = await fetchUsersList();
-          setAdminUsers(
-            list.map((item) => ({
-              uid: item.uid,
-              role: item.profile.role,
-              openaiKeyStored: item.profile.openaiKeyStored,
-              preferredKey: item.profile.preferredKey,
-              subscriptionStatus: item.profile.subscription?.status,
-              subscriptionSource: item.profile.subscription?.source,
-              subscriptionExpires: item.profile.subscription?.expiresAt
-                ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-                : '',
-            })),
-          );
-          if (adminSearch) {
-            setAdminSearch('');
-          }
+          await refreshAdminUsers({ resetSearch: true, role: profile.role });
         } else {
           setAdminUsers([]);
         }
@@ -288,7 +323,7 @@ function App() {
       }
     };
     loadProfile();
-  }, [adminSearch, logout, user]);
+  }, [logout, refreshAdminUsers, user]);
 
   useEffect(() => {
     const loadPreviousMonth = async () => {
@@ -828,7 +863,7 @@ function App() {
     else handlePrevInsight();
   };
 
-  const iaRole: UserRole = (iaQuota?.role as UserRole) || (userProfile?.role as UserRole) || 'free';
+  const iaRole: UserRole = (userProfile?.role as UserRole) || (iaQuota?.role as UserRole) || 'free';
   const isFreeRole = iaRole === 'free';
   const isManagedRole = ['paid_managed', 'gifted_managed', 'admin'].includes(iaRole);
   const parseExhausted =
@@ -1247,20 +1282,7 @@ function App() {
           expiresAt: target?.subscriptionExpires ? new Date(target.subscriptionExpires).getTime() : null,
         },
       });
-      const list = await fetchUsersList();
-      setAdminUsers(
-        list.map((item) => ({
-          uid: item.uid,
-          role: item.profile.role,
-          openaiKeyStored: item.profile.openaiKeyStored,
-          preferredKey: item.profile.preferredKey,
-          subscriptionStatus: item.profile.subscription?.status,
-          subscriptionSource: item.profile.subscription?.source,
-          subscriptionExpires: item.profile.subscription?.expiresAt
-            ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-            : '',
-        })),
-      );
+      await refreshAdminUsers();
       const profile = await fetchUserProfile();
       setUserProfile(profile);
       setSettingsMessage('Rol actualizado.');
@@ -1288,20 +1310,7 @@ function App() {
           expiresAt: target.subscriptionExpires ? new Date(target.subscriptionExpires).getTime() : null,
         },
       });
-      const list = await fetchUsersList();
-      setAdminUsers(
-        list.map((item) => ({
-          uid: item.uid,
-          role: item.profile.role,
-          openaiKeyStored: item.profile.openaiKeyStored,
-          preferredKey: item.profile.preferredKey,
-          subscriptionStatus: item.profile.subscription?.status,
-          subscriptionSource: item.profile.subscription?.source,
-          subscriptionExpires: item.profile.subscription?.expiresAt
-            ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-            : '',
-        })),
-      );
+      await refreshAdminUsers();
       setSettingsMessage('Usuario actualizado.');
     } catch (err) {
       console.error(err);
@@ -1315,20 +1324,7 @@ function App() {
     if (!user || userProfile?.role !== 'admin') return;
     setAdminLoading(true);
     try {
-      const list = await fetchUsersList();
-      setAdminUsers(
-        list.map((item) => ({
-          uid: item.uid,
-          role: item.profile.role,
-          openaiKeyStored: item.profile.openaiKeyStored,
-          preferredKey: item.profile.preferredKey,
-          subscriptionStatus: item.profile.subscription?.status,
-          subscriptionSource: item.profile.subscription?.source,
-          subscriptionExpires: item.profile.subscription?.expiresAt
-            ? new Date(item.profile.subscription.expiresAt).toISOString().slice(0, 10)
-            : '',
-        })),
-      );
+      await refreshAdminUsers();
     } catch (err) {
       console.error(err);
       setSettingsMessage('No pudimos recargar la lista de usuarios.');
@@ -1348,7 +1344,16 @@ function App() {
     }
   };
 
-  if (loading) {
+  const loaderMessage = useMemo(() => {
+    const pendingTransactions = user && !transactionsReady;
+    const pendingProfile = user && profileLoading;
+    const pendingAuth = loading;
+    const needsLoader = pendingAuth || pendingProfile || pendingTransactions;
+    if (needsLoader) return 'Sincronizando datos y configuración...';
+    return null;
+  }, [loading, profileLoading, transactionsReady, user]);
+
+  if (loaderMessage) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 text-slate-100">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_80%_25%,rgba(59,130,246,0.16),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.12),transparent_40%)]" />
@@ -1357,7 +1362,7 @@ function App() {
             <div className="h-12 w-12 rounded-full border-4 border-emerald-400/30 border-t-transparent animate-spin" />
             <div className="flex flex-col">
               <p className="text-base font-semibold text-white">Preparando tu espacio</p>
-              <p className="text-sm text-slate-300">Sincronizando datos y sesión segura...</p>
+              <p className="text-sm text-slate-300">{loaderMessage}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs text-emerald-200">
@@ -2216,7 +2221,6 @@ function App() {
                       <tbody>
                         {adminUsers
                           .filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase()))
-                          .slice(0, 5)
                           .map((u) => (
                             <tr key={u.uid} className="border-t border-white/5">
                               <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{u.uid}</td>

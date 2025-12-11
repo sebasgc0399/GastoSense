@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchUsageQuota } from '../services/users';
 import type { IaQuota, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,7 @@ export function useIaQuota() {
   const [quota, setQuota] = useState<IaQuota | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchedForUser = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -16,9 +17,17 @@ export function useIaQuota() {
         setQuota(null);
         setLoading(false);
         setError(null);
+        fetchedForUser.current = null;
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      if (fetchedForUser.current === user.uid) {
+        setLoading(false);
         return;
       }
       try {
+        fetchedForUser.current = user.uid;
         const data = await fetchUsageQuota();
         if (!cancelled) {
           const role: UserRole = (data?.role as UserRole) || 'free';
