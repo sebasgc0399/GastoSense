@@ -147,6 +147,23 @@ body {
   }
 }
 
+@keyframes robot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+.robot-eye {
+  transform-origin: center center;
+  transform-box: fill-box;
+  animation: robot-blink 5s infinite;
+}
+
 /* Overrides de utilidad para contraste en modo claro/oscuro */
 .text-white,
 .text-slate-50,

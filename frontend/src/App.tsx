@@ -12,6 +12,7 @@ import { IaQuotaProgress } from './components/IaQuotaProgress';
 import { FeatureLockCard } from './components/FeatureLockCard';
 import { UpgradeModal } from './components/UpgradeModal';
 import { LimitsHelpModal } from './components/LimitsHelpModal';
+import { RobotAvatar } from './components/RobotAvatar';
 import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
@@ -1406,6 +1407,14 @@ function App() {
       <main className="mx-auto max-w-5xl px-4 py-5 space-y-4">
         {activeTab === 'home' && (
           <section className="space-y-4">
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+              <RobotAvatar className="h-16 w-16 md:h-20 md:w-20" />
+              <div>
+                <p className="text-xs uppercase text-slate-400">Tu asesor IA</p>
+                <h3 className="text-sm font-semibold text-white sm:text-base">GastoSense te ayuda a entender tus gastos</h3>
+                <p className="text-xs text-slate-300">Acciones rápidas con IA, siempre visibles en tu panel.</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <CardStat title="Gasto mensual" value={monthlyExpense} tone="danger" subtitle="Objetivo: no pasar presupuesto." />
               <CardStat title="Ingreso mensual" value={monthlyIncome} tone="success" subtitle="Suma ingresos fijos." />
