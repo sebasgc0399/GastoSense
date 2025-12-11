@@ -241,7 +241,7 @@ async function ensureUserCapacity() {
   if (current >= maxUsers) {
     throw new HttpsError(
       "resource-exhausted",
-      "Capacidad de usuarios alcanzada. Intenta m��s tarde.",
+      "Capacidad de usuarios alcanzada. Intenta más tarde.",
     );
   }
 }
@@ -420,14 +420,14 @@ async function resolveOpenAIClient(uid: string): Promise<{
   if (!source) {
     throw new HttpsError(
       "permission-denied",
-      "No tienes una API key disponible. Sube tu clave o activa una membres��a.",
+      "No tienes una API key disponible. Sube tu clave o activa una membresía.",
     );
   }
 
   if (source === "managed" && !managedKeyAllowed(profile)) {
     throw new HttpsError(
       "permission-denied",
-      "Tu membres��a no est�� activa para usar la clave administrada.",
+      "Tu membresía no está activa para usar la clave administrada.",
     );
   }
 
@@ -456,7 +456,7 @@ async function assertAdmin(uid: string) {
   const user = await auth.getUser(uid);
   const isAdminClaim = Boolean(user.customClaims?.admin);
   if (!isAdminClaim) {
-    throw new HttpsError("permission-denied", "Necesitas rol admin para esta acci��n.");
+    throw new HttpsError("permission-denied", "Necesitas rol admin para esta acción.");
   }
 }
 
@@ -940,7 +940,7 @@ export const getUserProfile = onCall(async (request) => {
 });
 
 /**
- * Callable: registra la entrada del usuario y respeta el l��mite de capacidad.
+ * Callable: registra la entrada del usuario y respeta el límite de capacidad.
  * Si ya existe, solo devuelve el perfil.
  */
 export const registerUserEntry = onCall(async (request) => {
