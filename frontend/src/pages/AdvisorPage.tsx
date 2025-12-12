@@ -57,7 +57,7 @@ export function AdvisorPage({
             <div className="space-y-1">
               <p className="text-xs uppercase text-slate-400">Asesor IA</p>
               <h2 className="text-lg font-semibold text-white">Finanzas chat</h2>
-              <p className="text-xs text-slate-300">Elige el tono y lanza una acci¢n; la respuesta aparece en el feed.</p>
+              <p className="text-xs text-slate-300">Elige el tono y lanza una acción; la respuesta aparece en el feed.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {(['amable', 'reganon'] as AdvisorMode[]).map((mode) => (
@@ -68,7 +68,7 @@ export function AdvisorPage({
                     advisorMode === mode ? 'bg-primary text-white' : 'border border-white/10 bg-white/5 text-white'
                   }`}
                 >
-                  {mode === 'amable' ? 'Amable' : 'Rega¤¢n'}
+                  {mode === 'amable' ? 'Amable' : 'Regañón'}
                 </button>
               ))}
             </div>
@@ -110,7 +110,7 @@ export function AdvisorPage({
                 <p className="text-xs text-slate-300">{item.description}</p>
                 {locked && (
                   <p className="text-[11px] font-medium text-primary">
-                    {lockedByQuota ? 'L¡mite semanal alcanzado. Se renueva el lunes.' : 'Toca para ver c¢mo desbloquearlo'}
+                    {lockedByQuota ? 'Límite semanal alcanzado. Se renueva el lunes.' : 'Toca para ver cómo desbloquearlo'}
                   </p>
                 )}
               </button>
@@ -135,12 +135,12 @@ export function AdvisorPage({
         <div className="rounded-xl border border-white/10 bg-white/5 p-3">
           <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
             <span>Feed IA</span>
-            <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega¤¢n'}</span>
+            <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Regañón'}</span>
           </div>
           <div className="flex flex-col gap-3">
             {chatFeed.length === 0 && (
               <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-                A£n no hay mensajes. Lanza una acci¢n arriba para ver el estilo chat.
+                Aún no hay mensajes. Lanza una acción arriba para ver el estilo chat.
               </div>
             )}
             {chatFeed.map((item) => (
@@ -151,7 +151,7 @@ export function AdvisorPage({
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
-                    <span>{item.from === 'ia' ? 'IA' : 'T£'}</span>
+                    <span>{item.from === 'ia' ? 'IA' : 'Tú'}</span>
                     <span>
                       {new Date(item.ts).toLocaleTimeString('es-CO', {
                         hour: '2-digit',
@@ -184,7 +184,7 @@ export function AdvisorPage({
                   )}
                   {item.tone && item.from === 'ia' && (
                     <p className="mt-1 text-[10px] opacity-80">
-                      Tono: {item.tone === 'amable' ? 'Amable' : 'Rega¤¢n'}
+                      Tono: {item.tone === 'amable' ? 'Amable' : 'Regañón'}
                     </p>
                   )}
                 </div>

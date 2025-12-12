@@ -38,7 +38,7 @@ export function TransactionsPage({
     <section className="space-y-4 pb-5">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold text-white">Movimientos</h2>
-        <p className="text-xs text-slate-400">Filtra por fecha o categor¡a.</p>
+        <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -72,7 +72,7 @@ export function TransactionsPage({
       <div className="space-y-2">
         {transactions.length === 0 && (
           <p className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-            A£n no hay movimientos en este rango. Agrega el primero.
+            Aún no hay movimientos en este rango. Agrega el primero.
           </p>
         )}
         {paginatedTransactions.map((tx) => (
@@ -82,14 +82,14 @@ export function TransactionsPage({
           >
             <div>
               <p className="text-sm font-semibold text-white">
-                {tx.note || tx.category}  {tx.category}
+                {tx.note || tx.category} • {tx.category}
               </p>
               <p className="text-xs text-slate-400">
-                {tx.date}  {tx.paymentMethod}
+                {tx.date} • {tx.paymentMethod}
               </p>
               {budget?.perCategory?.[tx.category] && (
                 <p className="text-[11px] text-slate-300">
-                  Presupuesto cat: ${budget.perCategory[tx.category].toLocaleString()}  Gastado:{' '}
+                  Presupuesto cat: ${budget.perCategory[tx.category].toLocaleString()} • Gastado:{' '}
                   {(categorySpendMap[tx.category] || 0).toLocaleString()}
                 </p>
               )}

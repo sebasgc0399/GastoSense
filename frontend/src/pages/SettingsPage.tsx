@@ -117,7 +117,7 @@ export function SettingsPage({
         <div className="space-y-1">
           <p className="text-xs uppercase text-slate-400">Cuenta</p>
           <h2 className="text-lg font-semibold text-white">ID de usuario</h2>
-          <p className="text-xs text-slate-300">彋il para soporte o auditor｛.</p>
+          <p className="text-xs text-slate-300">ID para soporte o auditoría.</p>
         </div>
         <div className="flex w-full items-center gap-2">
           <div className="max-w-full grow overflow-x-auto rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-mono text-white">
@@ -164,7 +164,7 @@ export function SettingsPage({
       <div className="card space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs uppercase text-slate-400">IA / Suscripci▋</p>
+            <p className="text-xs uppercase text-slate-400">IA / Suscripción</p>
             <h2 className="text-lg font-semibold text-white">Gestiona tus claves</h2>
             <p className="text-xs text-slate-300">BYOK se guarda en backend (Secret Manager). El cliente nunca ve la clave.</p>
           </div>
@@ -177,7 +177,7 @@ export function SettingsPage({
                   : 'badge-warn'
               }`}
             >
-              {userProfile?.subscription?.status === 'active' ? 'Membres｛ activa' : 'Membres｛ inactiva'}
+              {userProfile?.subscription?.status === 'active' ? 'Membresía activa' : 'Membresía inactiva'}
             </span>
             <span
               className={`rounded-full border px-3 py-1 ${
@@ -207,10 +207,10 @@ export function SettingsPage({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-white">Uso semanal de IA</p>
-                <p className="text-xs text-slate-300">Se renueva cada semana (lunes). 廥alo para registrar por voz y pedir consejos.</p>
+                <p className="text-xs text-slate-300">Se renueva cada semana (lunes). Úsalo para registrar por voz y pedir consejos.</p>
               </div>
               <button type="button" onClick={onShowLimitsHelp} className="text-[11px] font-semibold text-primary underline">
-                每▌o se calculan los l《ites?
+                ¿Cómo se calculan los límites?
               </button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
@@ -271,7 +271,7 @@ export function SettingsPage({
               <p className="text-[11px] text-slate-300">
                 {userProfile?.openaiKeyStored
                   ? 'Key guardada en backend. Nunca se expone al cliente.'
-                  : 'Pega tu clave privada de OpenAI. Se almacenar  solo en el servidor.'}
+                  : 'Pega tu clave privada de OpenAI. Se almacenará solo en el servidor.'}
               </p>
             </div>
 
@@ -341,7 +341,7 @@ export function SettingsPage({
                   </div>
                   {plan.promoActive && plan.promoPriceCents ? (
                     <div className="text-sm text-emerald-200">
-                      Promo: {formatCurrency(plan.promoPriceCents)} {formatUsdApprox(plan.promoPriceCents)} / mes ú hasta{' '}
+                      Promo: {formatCurrency(plan.promoPriceCents)} {formatUsdApprox(plan.promoPriceCents)} / mes · hasta{' '}
                       {plan.promoEndsAt ? new Date(plan.promoEndsAt).toISOString().slice(0, 10) : ''}
                     </div>
                   ) : (
@@ -357,8 +357,7 @@ export function SettingsPage({
                   </div>
                   {switchingPlan && (
                     <p className="text-[11px] text-amber-200">
-                      Al comprar este plan, tu plan actual se reemplaza desde hoy ({currentPaidPlan === 'plan_byok' ? 'BYOK' : 'PRO'} {' '}
-                      {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}).
+                      Al comprar este plan, tu plan actual se reemplaza desde hoy ({currentPaidPlan === 'plan_byok' ? 'BYOK' : 'PRO'} → {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}).
                     </p>
                   )}
                   {sameActivePlan && (
@@ -472,7 +471,7 @@ export function SettingsPage({
                               { value: 'active', label: 'Activa' },
                               { value: 'expired', label: 'Inactiva' },
                             ]}
-                            title="Estado suscripci▋"
+                            title="Estado suscripción"
                             className="text-[11px]"
                             buttonClassName="text-[11px]"
                           />
@@ -519,7 +518,7 @@ export function SettingsPage({
                                 : 'bg-white/5 text-slate-300'
                             }`}
                           >
-                            {u.openaiKeyStored ? 'SĄ' : 'No'}
+                            {u.openaiKeyStored ? 'Sí' : 'No'}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-[11px] text-slate-200 space-y-1">
