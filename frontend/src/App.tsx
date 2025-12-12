@@ -869,6 +869,18 @@ function App() {
     if (delta < 0) handleNextInsight();
     else handlePrevInsight();
   };
+  const handleFiltersChange = useCallback(
+    (next: { startDate: string; endDate: string; category: string }) => {
+      const { startDate, endDate, category } = next;
+      // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
+      if (startDate && endDate && startDate > endDate) {
+        setFilters({ startDate: endDate, endDate: startDate, category });
+      } else {
+        setFilters(next);
+      }
+    },
+    [],
+  );
 
   const iaRole: UserRole = (userProfile?.role as UserRole) || (iaQuota?.role as UserRole) || 'free';
   const isFreeRole = iaRole === 'free';
@@ -1606,7 +1618,7 @@ function App() {
               startDate={filters.startDate}
               endDate={filters.endDate}
               category={filters.category}
-              onChange={(next) => setFilters(next)}
+              onChange={handleFiltersChange}
             />
 
             {error && <p className="text-sm text-red-400">{error}</p>}
