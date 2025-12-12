@@ -5,11 +5,14 @@ import {
   setPersistence,
   browserLocalPersistence,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   type User,
 } from 'firebase/auth';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { auth } from '../config/firebase';
+import { isIOSSafari } from '../utils/isIOSSafari';
 
 interface AuthContextState {
   user: User | null;
@@ -25,20 +28,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Aseguramos persistencia basada en storage/cookies (no por pestaña) para evitar sesiones "fantasma".
-    setPersistence(auth, browserLocalPersistence).catch((err) => {
-      console.error('No se pudo configurar la persistencia de auth:', err);
-    });
+    let isMounted = true;
+    let unsubscribe: (() => void) | undefined;
 
-    const unsubscribe = onAuthStateChanged(auth, (current) => {
-      setUser(current);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    const initializeAuth = async () => {
+      try {
+        // Aseguramos persistencia basada en storage/cookies (no por pestaña) para evitar sesiones "fantasma".
+        await setPersistence(auth, browserLocalPersistence);
+        const redirectResult = await getRedirectResult(auth);
+        if (redirectResult?.user && isMounted) {
+          setUser(redirectResult.user);
+        }
+      } catch (err) {
+        console.error('No se pudo completar el flujo de redirect:', err);
+      } finally {
+        unsubscribe = onAuthStateChanged(auth, (current) => {
+          if (!isMounted) return;
+          setUser(current);
+          setLoading(false);
+        });
+      }
+    };
+
+    void initializeAuth();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    if (isIOSSafari()) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
     await signInWithPopup(auth, provider);
   };
 
