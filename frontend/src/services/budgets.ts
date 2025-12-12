@@ -1,10 +1,11 @@
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { getFirestoreDb } from '../config/firebase';
 import type { Budget } from '../types';
 
 const COLLECTION = 'budgets';
 
 export async function getBudget(userId: string, month: string): Promise<Budget | null> {
+  const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, `${userId}_${month}`);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
@@ -24,6 +25,7 @@ export async function saveBudget(
   month: string,
   payload: { total: number; perCategory?: Record<string, number> },
 ) {
+  const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, `${userId}_${month}`);
   await setDoc(
     ref,

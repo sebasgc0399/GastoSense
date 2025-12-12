@@ -5,11 +5,11 @@ interface BottomNavProps {
   onChange: (value: TabKey) => void;
 }
 
-const tabs: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'home', label: 'Inicio', icon: '🏠' },
-  { key: 'transactions', label: 'Movimientos', icon: '📋' },
-  { key: 'advisor', label: 'Asesor IA', icon: '🤖' },
-  { key: 'settings', label: 'Config', icon: '⚙️' },
+const tabs: { key: TabKey; label: string; iconSrc: string }[] = [
+  { key: 'home', label: 'Inicio', iconSrc: '/icons/Home_64v2.svg' },
+  { key: 'transactions', label: 'Movimientos', iconSrc: '/icons/Movements_64.svg' },
+  { key: 'advisor', label: 'Asesor IA', iconSrc: '/icons/RobotIA_64.svg' },
+  { key: 'settings', label: 'Config', iconSrc: '/icons/Gear_64.svg' },
 ];
 
 export function BottomNav({ value, onChange }: BottomNavProps) {
@@ -29,7 +29,13 @@ export function BottomNav({ value, onChange }: BottomNavProps) {
                   : 'text-[var(--text-muted)] hover:text-[var(--text)]'
               }`}
             >
-              <span className="text-lg leading-none">{tab.icon}</span>
+              <img
+                src={tab.iconSrc}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className={`h-6 w-6 transition ${active ? 'opacity-100' : 'opacity-70 grayscale'}`}
+              />
               <span className="leading-none">{tab.label}</span>
             </button>
           );
