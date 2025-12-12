@@ -24,7 +24,7 @@ type IaQuotaLike = {
   analyzeLimit: number;
 } | null;
 
-interface SettingsPageProps {
+export interface SettingsPageProps {
   userUid?: string | null;
   handleCopyUid: () => Promise<void>;
   theme: ThemeMode;

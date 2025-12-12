@@ -14,7 +14,7 @@ type SmartCard = {
   secondaryAction?: { label: string; onClick: () => void };
 };
 
-interface HomePageProps {
+export interface HomePageProps {
   monthlyExpense: number;
   monthlyIncome: number;
   availableBalance: number;

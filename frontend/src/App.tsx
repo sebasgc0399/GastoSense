@@ -168,7 +168,7 @@ function App() {
     },
     [user],
   );
-  const refreshQuota = async () => {
+  const refreshQuota = useCallback(async () => {
     if (!user) return;
     try {
       const quota = await fetchUsageQuota();
@@ -176,7 +176,7 @@ function App() {
     } catch (err) {
       console.error('No pudimos actualizar cuota IA', err);
     }
-  };
+  }, [user]);
 
   const iaQuota = useMemo(() => {
     if (aiQuota) {
@@ -411,7 +411,7 @@ function App() {
     ['paid_managed', 'gifted_managed', 'admin', 'paid_byok', 'free'].includes(userProfile.role);
   const showKeySettings = userProfile?.role === 'paid_byok' || userProfile?.role === 'admin';
 
-  const isResourceExhausted = (err: unknown) => {
+  const isResourceExhausted = useCallback((err: unknown) => {
     const codeRaw = (err as { code?: unknown } | null)?.code;
     const code =
       typeof codeRaw === 'string'
@@ -422,9 +422,9 @@ function App() {
             ? (codeRaw as { toString: () => string }).toString()
             : '';
     return code.includes('resource-exhausted');
-  };
+  }, []);
 
-  const mapAiError = (err: unknown) => {
+  const mapAiError = useCallback((err: unknown) => {
     const codeRaw = (err as { code?: unknown } | null)?.code;
     const code =
       typeof codeRaw === 'string'
@@ -444,35 +444,35 @@ function App() {
       return `Alcanzaste el límite semanal de IA para tu plan${quotaText}.`;
     }
     return 'No pudimos consultar la IA. Inténtalo de nuevo en unos minutos.';
-  };
+  }, [iaQuota?.parseLimit, iaQuota?.parseUsed]);
 
-  const formatCurrency = (cents?: number | null) => {
+  const formatCurrency = useCallback((cents?: number | null) => {
     if (!cents && cents !== 0) return '--';
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
       cents / 100,
     );
-  };
+  }, []);
 
-  const formatPesos = (value?: number | null) => {
+  const formatPesos = useCallback((value?: number | null) => {
     if (!value && value !== 0) return '--';
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
       value,
     );
-  };
+  }, []);
 
-  const formatUsdApprox = (cents?: number | null) => {
+  const formatUsdApprox = useCallback((cents?: number | null) => {
     if (!cents && cents !== 0) return '';
     // Aproximación rápida: 1 USD = 4000 COP; ajusta si quieres un tipo de cambio distinto.
     const usd = (cents / 100) / 4000;
     return `(≈ ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usd)})`;
-  };
+  }, []);
 
-  const formatDate = (ts?: number | null) => {
+  const formatDate = useCallback((ts?: number | null) => {
     if (!ts) return null;
     const d = new Date(ts);
     if (Number.isNaN(d.getTime())) return null;
     return d.toISOString().slice(0, 10);
-  };
+  }, []);
 
   const categorySpendMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -522,6 +522,11 @@ function App() {
     }
   }, []);
 
+  const handleUseTemplate = useCallback((tpl: Template) => {
+    setSelectedTemplate(tpl);
+    setShowQuickAdd(true);
+  }, []);
+
   const openAdvisor = useCallback((context?: Record<string, unknown>) => {
     setActiveTab('advisor');
     trackEvent('smart_card_click', { action: 'advisor', ...context });
@@ -562,6 +567,8 @@ function App() {
     },
     [],
   );
+
+  const handleShowLimitsHelp = useCallback(() => setShowLimitsHelp(true), []);
 
   const triggerUpgradeOnce = useCallback(
     (ctx: 'parse_exhausted' | 'analyze_exhausted') => {
@@ -848,11 +855,13 @@ function App() {
     topExpenses,
     transactions,
     daysElapsed,
+    formatPesos,
     openAdvisor,
     openBudgets,
     openMovements,
     openPlans,
     openQuickAdd,
+    handleUseTemplate,
     calcNextDue,
     todayStart,
   ]);
@@ -860,26 +869,26 @@ function App() {
   useEffect(() => {
     setSmartCardIndex(0);
   }, [smartCards.length]);
-  const handlePrevInsight = () => {
+  const handlePrevInsight = useCallback(() => {
     if (smartCards.length === 0) return;
     setSmartCardIndex((i) => (i - 1 + smartCards.length) % smartCards.length);
-  };
-  const handleNextInsight = () => {
+  }, [smartCards.length]);
+  const handleNextInsight = useCallback(() => {
     if (smartCards.length === 0) return;
     setSmartCardIndex((i) => (i + 1) % smartCards.length);
-  };
+  }, [smartCards.length]);
   const touchStartX = useRef<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     touchStartX.current = e.touches[0].clientX;
-  };
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+  }, []);
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
     if (Math.abs(delta) < 30) return;
     if (delta < 0) handleNextInsight();
     else handlePrevInsight();
-  };
+  }, [handleNextInsight, handlePrevInsight]);
   const handleFiltersChange = useCallback(
     (next: { startDate: string; endDate: string; category: string }) => {
       const { startDate, endDate, category } = next;
@@ -949,14 +958,14 @@ function App() {
 
   const featureLocks: { id: string; title: string; description: string; badge: string }[] = [];
 
-  const pushFeedItem = (item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => {
+  const pushFeedItem = useCallback((item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => {
     const id = item.id ?? `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const ts = item.ts ?? Date.now();
     setChatFeed((prev) => {
       const next = [...prev, { ...item, id, ts }];
       return next.length > 50 ? next.slice(next.length - 50) : next;
     });
-  };
+  }, []);
 
   const handleSaveTransaction = async (payload: TransactionInput) => {
     if (!user) return;
@@ -968,9 +977,9 @@ function App() {
     await updateTransaction(id, payload, user.uid);
   };
 
-  const handleDeleteTransaction = async (id: string) => {
+  const handleDeleteTransaction = useCallback(async (id: string) => {
     await deleteTransaction(id);
-  };
+  }, []);
 
   const handleInterpret = async (text: string): Promise<ParsedTransactionSuggestion> => {
     try {
@@ -990,7 +999,7 @@ function App() {
     }
   };
 
-  const handleToneChange = async (mode: AdvisorMode) => {
+  const handleToneChange = useCallback(async (mode: AdvisorMode) => {
     if (mode === advisorMode) return;
     setAdvisorMode(mode);
     setChatFeed([]);
@@ -1002,9 +1011,9 @@ function App() {
         console.error('No pudimos guardar el tono en perfil', err);
       }
     }
-  };
+  }, [advisorMode, user]);
 
-  const handleAdvisorAction = async (action: string) => {
+  const handleAdvisorAction = useCallback(async (action: string) => {
     if (iaQuota && iaQuota.analyzeLimit !== undefined && iaQuota.analyzeUsed >= iaQuota.analyzeLimit) {
       openUpgrade('analyze_exhausted');
       return;
@@ -1159,9 +1168,25 @@ function App() {
     } finally {
       setAdvisorLoading(false);
     }
-  };
+  }, [
+    advisorMode,
+    budget,
+    currentMonth,
+    iaQuota,
+    isResourceExhausted,
+    mapAiError,
+    monthTransactions,
+    monthlyExpense,
+    monthlyIncome,
+    openUpgrade,
+    previousMonth,
+    pushFeedItem,
+    topExpenses,
+    triggerUpgradeOnce,
+    user,
+  ]);
 
-  const handleSaveBudget = async (total: number) => {
+  const handleSaveBudget = useCallback(async (total: number) => {
     setBudgetSaving(true);
     try {
       if (!user) return;
@@ -1173,9 +1198,9 @@ function App() {
     } finally {
       setBudgetSaving(false);
     }
-  };
+  }, [currentMonth, user]);
 
-  const handleSaveCategoryBudgets = async (perCategory: Record<string, number>) => {
+  const handleSaveCategoryBudgets = useCallback(async (perCategory: Record<string, number>) => {
     setBudgetSaving(true);
     try {
       if (!user) return;
@@ -1187,7 +1212,7 @@ function App() {
     } finally {
       setBudgetSaving(false);
     }
-  };
+  }, [budget?.total, currentMonth, user]);
 
   const handleSaveTemplate = async (name: string, payload: TransactionInput) => {
     if (!user) return;
@@ -1196,7 +1221,7 @@ function App() {
     setTemplates(data);
   };
 
-  const handleCheckout = async (planId: 'plan_byok' | 'plan_pro') => {
+  const handleCheckout = useCallback(async (planId: 'plan_byok' | 'plan_pro') => {
     if (!user) {
       setSettingsMessage('Inicia sesión para pagar.');
       return;
@@ -1213,14 +1238,14 @@ function App() {
     } finally {
       setCheckoutLoading(null);
     }
-  };
+  }, [planPeriods, user]);
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = useCallback(async (id: string) => {
     if (!user) return;
     await deleteTemplate(id);
     const data = await fetchTemplates(user.uid);
     setTemplates(data);
-  };
+  }, [user]);
 
   const handleUpdateTemplate = async (
     id: string,
@@ -1232,12 +1257,7 @@ function App() {
     setTemplates(data);
   };
 
-  const handleUseTemplate = (tpl: Template) => {
-    setSelectedTemplate(tpl);
-    setShowQuickAdd(true);
-  };
-
-  const handleSaveApiKey = async () => {
+  const handleSaveApiKey = useCallback(async () => {
     if (!user) return;
     if (!apiKeyInput.trim()) {
       setSettingsMessage('Pega tu API key antes de guardar.');
@@ -1258,9 +1278,9 @@ function App() {
     } finally {
       setKeySaving(false);
     }
-  };
+  }, [apiKeyInput, refreshQuota, user]);
 
-  const handleClearApiKey = async () => {
+  const handleClearApiKey = useCallback(async () => {
     if (!user) return;
     setKeySaving(true);
     setSettingsMessage(null);
@@ -1277,9 +1297,9 @@ function App() {
     } finally {
       setKeySaving(false);
     }
-  };
+  }, [refreshQuota, user]);
 
-  const handlePreferredKeyChange = async (preferred: KeyPreference) => {
+  const handlePreferredKeyChange = useCallback(async (preferred: KeyPreference) => {
     if (!user) return;
     setPreferenceSaving(true);
     setSettingsMessage(null);
@@ -1295,9 +1315,9 @@ function App() {
     } finally {
       setPreferenceSaving(false);
     }
-  };
+  }, [refreshQuota, user]);
 
-  const handleAdminChangeRole = async (targetUid: string, nextRole: UserRole) => {
+  const handleAdminChangeRole = useCallback(async (targetUid: string, nextRole: UserRole) => {
     if (!user) return;
     setAdminLoading(true);
     setSettingsMessage(null);
@@ -1322,9 +1342,9 @@ function App() {
     } finally {
       setAdminLoading(false);
     }
-  };
+  }, [adminUsers, refreshAdminUsers, user]);
 
-  const handleAdminSaveUser = async (targetUid: string) => {
+  const handleAdminSaveUser = useCallback(async (targetUid: string) => {
     if (!user) return;
     const target = adminUsers.find((u) => u.uid === targetUid);
     if (!target) return;
@@ -1348,9 +1368,9 @@ function App() {
     } finally {
       setAdminLoading(false);
     }
-  };
+  }, [adminUsers, refreshAdminUsers, user]);
 
-  const handleAdminReload = async () => {
+  const handleAdminReload = useCallback(async () => {
     if (!user || userProfile?.role !== 'admin') return;
     setAdminLoading(true);
     try {
@@ -1361,9 +1381,9 @@ function App() {
     } finally {
       setAdminLoading(false);
     }
-  };
+  }, [refreshAdminUsers, user, userProfile?.role]);
 
-  const handleCopyUid = async () => {
+  const handleCopyUid = useCallback(async () => {
     if (!user?.uid) return;
     try {
       await navigator.clipboard.writeText(user.uid);
@@ -1372,7 +1392,7 @@ function App() {
       console.error(err);
       setSettingsMessage('No se pudo copiar el UID.');
     }
-  };
+  }, [user?.uid]);
 
   const loaderMessage = useMemo(() => {
     const pendingTransactions = user && !transactionsReady;
@@ -1502,7 +1522,7 @@ function App() {
             parseProgress={parseProgress}
             analyzeProgress={analyzeProgress}
             openUpgrade={openUpgrade}
-            onShowLimitsHelp={() => setShowLimitsHelp(true)}
+            onShowLimitsHelp={handleShowLimitsHelp}
             showKeySettings={showKeySettings}
             profileLoading={profileLoading}
             apiKeyInput={apiKeyInput}

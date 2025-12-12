@@ -3,7 +3,7 @@ import { TransactionFilters } from '../components/TransactionFilters';
 import { CardMini } from '../components/stats/CardMini';
 import type { Budget, Transaction } from '../types';
 
-interface TransactionsPageProps {
+export interface TransactionsPageProps {
   transactions: Transaction[];
   filters: { startDate: string; endDate: string; category: string };
   handleFiltersChange: (next: { startDate: string; endDate: string; category: string }) => void;

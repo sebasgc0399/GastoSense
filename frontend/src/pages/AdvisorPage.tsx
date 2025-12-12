@@ -23,7 +23,7 @@ type AdvisorQuickAction = {
 
 type FeatureLock = { id: string; title: string; description: string; badge: string };
 
-interface AdvisorPageProps {
+export interface AdvisorPageProps {
   advisorMode: AdvisorMode;
   handleToneChange: (mode: AdvisorMode) => Promise<void>;
   advisorQuickActions: AdvisorQuickAction[];
