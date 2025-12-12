@@ -1549,7 +1549,7 @@ export const setAdvisorMode = onCall(async (request) => {
   return {advisorMode: profile.advisorMode};
 });
 
-export const analyzeMonthlyDeep = onCall<MonthlyDeepOutput>(async (request) => {
+export const analyzeMonthlyDeep = onCall({secrets: [openAIApiKey]}, async (request): Promise<MonthlyDeepOutput> => {
   if (!request.auth?.uid) {
     throw new HttpsError("unauthenticated", "Inicia sesión para usar IA.");
   }
@@ -1611,7 +1611,7 @@ export const analyzeMonthlyDeep = onCall<MonthlyDeepOutput>(async (request) => {
   const globalChange = totalPrevAvg > 0 ? ((totalLast - totalPrevAvg) / totalPrevAvg) * 100 : 0;
   const globalTrend = globalChange > 5 ? "sube" : globalChange < -5 ? "baja" : "estable";
 
-  const keySignals = categoryPlans
+  const keySignals: MonthlyDeepOutput["keySignals"] = categoryPlans
     .filter((p) => Math.abs(p.changePctVsAvg) >= 20)
     .slice(0, 4)
     .map((p) => ({
