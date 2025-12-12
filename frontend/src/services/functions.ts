@@ -1,8 +1,14 @@
 import { getApp, getApps } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { firebaseApp } from '../config/firebase';
+import { getFirebaseApp, firebaseInitError } from '../config/firebase';
 
-const app = getApps().length ? getApp() : firebaseApp;
+const resolveApp = () => {
+  if (getApps().length) return getApp();
+  if (firebaseInitError) throw firebaseInitError;
+  return getFirebaseApp();
+};
+
+const app = resolveApp();
 const functions = getFunctions(app, 'us-central1');
 
 export const callAnalyzeSummary = httpsCallable(functions, 'analyzeSummary');

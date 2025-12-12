@@ -12,7 +12,7 @@ import {
   where,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { getFirestoreDb } from '../config/firebase';
 import type { Transaction, TransactionInput } from '../types';
 
 const COLLECTION = 'transactions';
@@ -27,6 +27,7 @@ interface ListenParams {
 }
 
 export function listenTransactions({ userId, startDate, endDate, category, onChange, onError }: ListenParams) {
+  const db = getFirestoreDb();
   const constraints: QueryConstraint[] = [where('userId', '==', userId), orderBy('date', 'desc')];
 
   if (startDate) constraints.push(where('date', '>=', startDate));
@@ -73,6 +74,7 @@ export async function fetchTransactionsRange(params: {
   endDate?: string;
   category?: string;
 }): Promise<Transaction[]> {
+  const db = getFirestoreDb();
   const constraints: QueryConstraint[] = [where('userId', '==', params.userId), orderBy('date', 'desc')];
   if (params.startDate) constraints.push(where('date', '>=', params.startDate));
   if (params.endDate) constraints.push(where('date', '<=', params.endDate));
@@ -104,6 +106,7 @@ export async function fetchTransactionsRange(params: {
 }
 
 export async function createTransaction(payload: TransactionInput, userId: string) {
+  const db = getFirestoreDb();
   await addDoc(collection(db, COLLECTION), {
     ...payload,
     userId,
@@ -112,11 +115,13 @@ export async function createTransaction(payload: TransactionInput, userId: strin
 }
 
 export async function updateTransaction(id: string, payload: TransactionInput, userId: string) {
+  const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, id);
   await updateDoc(ref, { ...payload, userId });
 }
 
 export async function deleteTransaction(id: string) {
+  const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, id);
   await deleteDoc(ref);
 }
