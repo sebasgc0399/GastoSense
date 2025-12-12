@@ -849,8 +849,14 @@ function App() {
   useEffect(() => {
     setSmartCardIndex(0);
   }, [smartCards.length]);
-  const handlePrevInsight = () => setSmartCardIndex((i) => Math.max(0, i - 1));
-  const handleNextInsight = () => setSmartCardIndex((i) => Math.min(smartCards.length - 1, i + 1));
+  const handlePrevInsight = () => {
+    if (smartCards.length === 0) return;
+    setSmartCardIndex((i) => (i - 1 + smartCards.length) % smartCards.length);
+  };
+  const handleNextInsight = () => {
+    if (smartCards.length === 0) return;
+    setSmartCardIndex((i) => (i + 1) % smartCards.length);
+  };
   const touchStartX = useRef<number | null>(null);
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     touchStartX.current = e.touches[0].clientX;
@@ -1455,14 +1461,16 @@ function App() {
                               className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
                               aria-label="Anterior"
                             >
-                              {'<'}
+                              <span aria-hidden="true" className="inline-block rotate-180">
+                                ➜
+                              </span>
                             </button>
                             <button
                               onClick={handleNextInsight}
                               className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
                               aria-label="Siguiente"
                             >
-                              {'>'}
+                              <span aria-hidden="true">➜</span>
                             </button>
                           </div>
                         )}
