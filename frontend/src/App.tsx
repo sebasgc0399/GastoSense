@@ -1,21 +1,17 @@
 ﻿import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
-import { BudgetCard } from './components/BudgetCard';
-import { CategoryBudgets } from './components/CategoryBudgets';
 import { QuickAddSheet } from './components/QuickAddSheet';
-import { TopExpensesChart } from './components/TopExpensesChart';
 import { TransactionEditModal } from './components/TransactionEditModal';
-import { TransactionFilters } from './components/TransactionFilters';
-import { ResponsiveSelect } from './components/ResponsiveSelect';
-import { IaQuotaProgress } from './components/IaQuotaProgress';
-import { FeatureLockCard } from './components/FeatureLockCard';
 import { UpgradeModal } from './components/UpgradeModal';
 import { LimitsHelpModal } from './components/LimitsHelpModal';
-import { RobotAvatar } from './components/RobotAvatar';
 import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
+import { AdvisorPage } from './pages/AdvisorPage';
+import { HomePage } from './pages/HomePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { TransactionsPage } from './pages/TransactionsPage';
 import { callAnalyzeSummary, callAnalyzeMonthlyDeep, callParseTransactionPhrase } from './services/functions';
 import { trackEvent } from './services/analytics';
 import { useIaQuota } from './hooks/useIaQuota';
@@ -55,6 +51,7 @@ import type {
   PlanInfo,
   PlanPeriod,
 } from './types';
+import { monthEndIso, monthStartIso, previousMonthRange, todayIso } from './utils/dates';
 type PlanId = 'plan_byok' | 'plan_pro';
 
 type ChatItem = {
@@ -1435,941 +1432,106 @@ function App() {
 
       <main className="mx-auto max-w-5xl px-4 py-5 space-y-4">
         {activeTab === 'home' && (
-          <section className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <CardStat title="Gasto mensual" value={monthlyExpense} tone="danger" subtitle="Objetivo: no pasar presupuesto." />
-              <CardStat title="Ingreso mensual" value={monthlyIncome} tone="success" subtitle="Suma ingresos fijos." />
-              <CardStat
-                title="Saldo disponible"
-                value={availableBalance}
-                tone={availableBalance >= 0 ? 'success' : 'danger'}
-                subtitle="Ingreso - Gasto del mes."
-              />
-            </div>
-
-            <div className="card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs uppercase text-[var(--text-muted)]">Mes de referencia</p>
-                <p className="text-sm text-[var(--text-muted)]">Cambia el mes para ver presupuestos y totales.</p>
-              </div>
-              <input
-                type="month"
-                value={currentMonth}
-                onChange={(e) => setCurrentMonth(e.target.value || defaultMonth)}
-                className="input w-full sm:w-auto sm:min-w-[180px]"
-              />
-            </div>
-
-            <div className="card p-0">
-              <BudgetCard
-                month={currentMonth}
-                totalExpense={monthlyExpense}
-                budget={budget}
-                onSave={handleSaveBudget}
-                loading={budgetSaving}
-              />
-            </div>
-
-            <div className="card p-0" ref={categoryBudgetsRef}>
-              <CategoryBudgets perCategory={budget?.perCategory} onSave={handleSaveCategoryBudgets} />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <TopExpensesChart data={topExpenses} />
-              <div className="card">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-[var(--text)]">Tarjetas inteligentes</h2>
-                  <span className="text-xs text-[var(--text-muted)]">Detectadas con datos reales</span>
-                </div>
-                <div className="space-y-3">
-                  {smartCards.length === 0 && <p className="text-sm text-[var(--text-muted)]">Sin alertas por ahora.</p>}
-                  {smartCards.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                        <span>{smartCards.length > 1 ? 'Desliza para ver más' : 'Sugerencia destacada'}</span>
-                        {smartCards.length > 1 && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={handlePrevInsight}
-                              className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
-                              aria-label="Anterior"
-                            >
-                              <span aria-hidden="true" className="inline-block rotate-180">
-                                ➜
-                              </span>
-                            </button>
-                            <button
-                              onClick={handleNextInsight}
-                              className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
-                              aria-label="Siguiente"
-                            >
-                              <span aria-hidden="true">➜</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="relative overflow-hidden rounded-xl">
-                        <div
-                          className="flex transition-transform duration-300 ease-out"
-                          style={{ transform: `translateX(-${smartCardIndex * 100}%)` }}
-                          onTouchStart={handleTouchStart}
-                          onTouchEnd={handleTouchEnd}
-                          >
-                            {smartCards.map((item) => (
-                              <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
-                                <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-3">
-                                  <p className="text-sm font-semibold text-[var(--text)]">{item.title}</p>
-                                  <p className="text-sm text-[var(--text-muted)]">{item.body}</p>
-                                  <div className="mt-2 flex gap-2">
-                                    <button
-                                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
-                                      onClick={item.primaryAction.onClick}
-                                    >
-                                    {item.primaryAction.label}
-                                  </button>
-                                  {item.secondaryAction && (
-                                    <button
-                                      className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)]"
-                                      onClick={item.secondaryAction.onClick}
-                                    >
-                                      {item.secondaryAction.label}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {smartCards.length > 1 && (
-                          <div className="mt-2 flex justify-center gap-1">
-                            {smartCards.map((_, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => setSmartCardIndex(idx)}
-                                className={`h-2 w-2 rounded-full border ${
-                                  idx === smartCardIndex
-                                    ? 'bg-primary border-primary'
-                                    : 'bg-[var(--input-bg)] border-[var(--card-border)]'
-                                }`}
-                                aria-label={`Ir a tarjeta ${idx + 1}`}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[var(--text)]">Recordatorios recurrentes</h2>
-                <span className="text-xs text-[var(--text-muted)]">Plantillas marcadas como recurrentes</span>
-              </div>
-              {recurringTemplates.length === 0 && (
-                <p className="text-sm text-[var(--text-muted)]">Aún no tienes plantillas recurrentes.</p>
-              )}
-              <div className="space-y-3">
-                {recurringTemplates.map((tpl) => (
-                  <div
-                    key={tpl.id}
-                    className="flex flex-col gap-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)]/60 px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-[var(--text)]">{tpl.name}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                        <span className="rounded-full bg-[var(--input-bg)] px-2 py-1 capitalize">
-                          {tpl.frequency ?? 'mensual'}
-                        </span>
-                        {tpl.category && <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">Cat: {tpl.category}</span>}
-                        {tpl.amount ? <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">${tpl.amount.toLocaleString()}</span> : null}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
-                        onClick={() => handleUseTemplate(tpl)}
-                      >
-                        Registrar
-                      </button>
-                      <button
-                        className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
-                        onClick={() => handleUseTemplate(tpl)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="text-xs font-semibold text-[var(--error-text)] hover:underline"
-                        onClick={() => handleDeleteTemplate(tpl.id)}
-                      >
-                        Borrar
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+          <HomePage
+            monthlyExpense={monthlyExpense}
+            monthlyIncome={monthlyIncome}
+            availableBalance={availableBalance}
+            currentMonth={currentMonth}
+            defaultMonth={defaultMonth}
+            setCurrentMonth={setCurrentMonth}
+            budget={budget}
+            handleSaveBudget={handleSaveBudget}
+            budgetSaving={budgetSaving}
+            categoryBudgetsRef={categoryBudgetsRef}
+            handleSaveCategoryBudgets={handleSaveCategoryBudgets}
+            topExpenses={topExpenses}
+            smartCards={smartCards}
+            smartCardIndex={smartCardIndex}
+            setSmartCardIndex={setSmartCardIndex}
+            handlePrevInsight={handlePrevInsight}
+            handleNextInsight={handleNextInsight}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            recurringTemplates={recurringTemplates}
+            handleUseTemplate={handleUseTemplate}
+            handleDeleteTemplate={handleDeleteTemplate}
+          />
         )}
-
         {activeTab === 'transactions' && (
-          <section className="space-y-4 pb-5">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-white">Movimientos</h2>
-              <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <CardMini title="Gasto (filtro)" value={transactions.filter((t) => t.type === 'expense').reduce((a, t) => a + t.amount, 0)} />
-              <CardMini title="Ingreso (filtro)" value={transactions.filter((t) => t.type === 'income').reduce((a, t) => a + t.amount, 0)} tone="success" />
-              <CardMini
-                title="Saldo (filtro)"
-                value={transactions.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0)}
-                tone={
-                  transactions.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0) >= 0
-                    ? 'success'
-                    : 'danger'
-                }
-              />
-            </div>
-
-            <TransactionFilters
-              startDate={filters.startDate}
-              endDate={filters.endDate}
-              category={filters.category}
-              onChange={handleFiltersChange}
-            />
-
-            {error && <p className="text-sm text-red-400">{error}</p>}
-
-            <div className="space-y-2">
-              {transactions.length === 0 && (
-                <p className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-                  Aún no hay movimientos en este rango. Agrega el primero.
-                </p>
-              )}
-              {paginatedTransactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      {tx.note || tx.category} • {tx.category}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {tx.date} • {tx.paymentMethod}
-                    </p>
-                    {budget?.perCategory?.[tx.category] && (
-                      <p className="text-[11px] text-slate-300">
-                        Presupuesto cat: $
-                        {budget.perCategory[tx.category].toLocaleString()} • Gastado: $
-                        {(categorySpendMap[tx.category] || 0).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`text-base font-bold ${
-                        tx.type === 'expense' ? 'text-red-300' : 'text-emerald-300'
-                      }`}
-                    >
-                      {tx.type === 'expense' ? '-' : '+'}${tx.amount.toLocaleString()}
-                    </p>
-                    <div className="mt-1 flex items-center justify-end gap-2 text-[11px]">
-                      <span
-                        className={`rounded-full px-2 py-1 ${
-                          tx.type === 'income'
-                            ? 'bg-emerald-500/10 text-emerald-200'
-                            : 'bg-red-500/10 text-red-200'
-                        }`}
-                      >
-                        {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
-                      </span>
-                      {budget?.perCategory?.[tx.category] && (
-                        <span
-                          className={`rounded-full px-2 py-1 ${
-                            categorySpendMap[tx.category] >= budget.perCategory[tx.category]
-                              ? 'bg-red-500/10 text-red-200'
-                              : categorySpendMap[tx.category] / budget.perCategory[tx.category] >= 0.8
-                                ? 'bg-amber-500/10 text-amber-200'
-                                : 'bg-emerald-500/10 text-emerald-200'
-                          }`}
-                        >
-                          Cat{' '}
-                          {Math.round(
-                            Math.min(
-                              (categorySpendMap[tx.category] / budget.perCategory[tx.category]) * 100,
-                              150,
-                            ),
-                          )}
-                          %
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex justify-end gap-2 text-[11px]">
-                      <button className="text-primary" onClick={() => setSelectedTx(tx)}>
-                        Editar
-                      </button>
-                      <button className="text-red-300" onClick={() => handleDeleteTransaction(tx.id)}>
-                        Borrar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {transactions.length > txPageSize && (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
-                  <button
-                    className="rounded-lg border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
-                    onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                    disabled={txPage === 1}
-                  >
-                    Anterior
-                  </button>
-                  <span className="text-xs text-slate-300">
-                    Página {txPage} de {totalTxPages}
-                  </span>
-                  <button
-                    className="rounded-lg border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
-                    onClick={() => setTxPage((p) => Math.min(totalTxPages, p + 1))}
-                    disabled={txPage >= totalTxPages}
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
+          <TransactionsPage
+            transactions={transactions}
+            filters={filters}
+            handleFiltersChange={handleFiltersChange}
+            error={error}
+            paginatedTransactions={paginatedTransactions}
+            txPageSize={txPageSize}
+            txPage={txPage}
+            totalTxPages={totalTxPages}
+            setTxPage={setTxPage}
+            budget={budget}
+            categorySpendMap={categorySpendMap}
+            setSelectedTx={setSelectedTx}
+            handleDeleteTransaction={handleDeleteTransaction}
+          />
         )}
-
         {activeTab === 'advisor' && (
-          <section className="space-y-4">
-            <div className="card space-y-3">
-              <div className="flex items-start gap-3">
-                <RobotAvatar className="h-16 w-16 md:h-20 md:w-20" />
-                <div className="flex flex-1 flex-col gap-2">
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase text-slate-400">Asesor IA</p>
-                    <h2 className="text-lg font-semibold text-white">Finanzas chat</h2>
-                    <p className="text-xs text-slate-300">Elige el tono y lanza una acción; la respuesta aparece en el feed.</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(['amable', 'reganon'] as AdvisorMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => handleToneChange(mode)}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          advisorMode === mode
-                            ? 'bg-primary text-white'
-                            : 'border border-white/10 bg-white/5 text-white'
-                        }`}
-                      >
-                        {mode === 'amable' ? 'Amable' : 'Regañón'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {advisorQuickActions.map((item) => {
-                const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
-                const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
-                  const badge = item.badge;
-                  return (
-                    <button
-                      key={item.action}
-                      onClick={() =>
-                        locked
-                          ? openUpgrade(lockedByQuota ? 'analyze_exhausted' : 'feature_locked')
-                          : handleAdvisorAction(item.action)
-                      }
-                      className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
-                        locked
-                          ? 'border-dashed border-white/20 bg-white/5 opacity-80'
-                          : 'border-white/10 bg-white/5 hover:border-primary'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-white">{item.label}</p>
-                        {badge && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
-                            {locked && (
-                              <span aria-hidden="true" className="text-[11px] leading-none">
-                                🔒
-                              </span>
-                            )}
-                            <span>{badge}</span>
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-300">{item.description}</p>
-                      {locked && (
-                        <p className="text-[11px] font-medium text-primary">
-                          {lockedByQuota
-                            ? 'Límite semanal alcanzado. Se renueva el lunes.'
-                            : 'Toca para ver cómo desbloquearlo'}
-                        </p>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {featureLocks.length > 0 && (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {featureLocks.map((lock) => (
-                    <FeatureLockCard
-                      key={lock.id}
-                      title={lock.title}
-                      description={lock.description}
-                      badgeLabel={lock.badge}
-                      onUpgradeClick={() => openUpgrade('feature_locked')}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                  <span>Feed IA</span>
-                  <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Regañón'}</span>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {chatFeed.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-                      Aún no hay mensajes. Lanza una acción arriba para ver el estilo chat.
-                    </div>
-                  )}
-                  {chatFeed.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}
-                    >
-                      <div
-                        className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                          item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
-                          <span>{item.from === 'ia' ? 'IA' : 'Tú'}</span>
-                          <span>
-                            {new Date(item.ts).toLocaleTimeString('es-CO', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                        <p className="whitespace-pre-line">{item.text}</p>
-                        {item.chartTop && item.chartTop.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            {item.chartTop.map((ct) => {
-                              const max = item.chartTop?.[0]?.amount || 1;
-                              const pct = Math.round((ct.amount / max) * 100);
-                              return (
-                                <div key={ct.category} className="space-y-1">
-                                  <div className="flex items-center justify-between text-[11px] text-slate-200">
-                                    <span>{ct.category}</span>
-                                    <span className="font-semibold">{formatPesos(ct.amount)}</span>
-                                  </div>
-                                  <div className="h-2 rounded-full bg-white/10">
-                                    <div
-                                      className="h-full rounded-full bg-primary"
-                                      style={{ width: `${pct}%`, minWidth: '4%' }}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {item.tone && item.from === 'ia' && (
-                          <p className="mt-1 text-[10px] opacity-80">
-                            Tono: {item.tone === 'amable' ? 'Amable' : 'Regañón'}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {advisorLoading && (
-                    <div className="flex items-center gap-2 text-xs text-slate-200">
-                      <span className="font-semibold text-white">IA escribiendo</span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
-                        <span
-                          className="h-2 w-2 animate-bounce rounded-full bg-white"
-                          style={{ animationDelay: '0.15s' }}
-                        />
-                        <span
-                          className="h-2 w-2 animate-bounce rounded-full bg-white"
-                          style={{ animationDelay: '0.3s' }}
-                        />
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
+          <AdvisorPage
+            advisorMode={advisorMode}
+            handleToneChange={handleToneChange}
+            advisorQuickActions={advisorQuickActions}
+            analyzeExhausted={analyzeExhausted}
+            openUpgrade={openUpgrade}
+            handleAdvisorAction={handleAdvisorAction}
+            featureLocks={featureLocks}
+            chatFeed={chatFeed}
+            advisorLoading={advisorLoading}
+            formatPesos={formatPesos}
+          />
         )}
-
         {activeTab === 'settings' && (
-          <section className="space-y-4">
-            <div className="card flex flex-col gap-3">
-              <div className="space-y-1">
-                <p className="text-xs uppercase text-slate-400">Cuenta</p>
-                <h2 className="text-lg font-semibold text-white">ID de usuario</h2>
-                <p className="text-xs text-slate-300">Útil para soporte o auditoría.</p>
-              </div>
-              <div className="flex w-full items-center gap-2">
-                <div className="max-w-full grow overflow-x-auto rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-mono text-white">
-                  {user?.uid}
-                </div>
-                <button
-                  onClick={handleCopyUid}
-                  aria-label="Copiar ID de usuario"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white hover:border-primary"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="card space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase text-slate-400">Apariencia</p>
-                  <h2 className="text-lg font-semibold text-white">Tema</h2>
-                  <p className="text-xs text-slate-300">Alterna entre modo claro y oscuro.</p>
-                </div>
-                <button
-                  className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
-                  onClick={toggleTheme}
-                >
-                  {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-                </button>
-              </div>
-            </div>
-
-            <div className="card space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase text-slate-400">IA / Suscripción</p>
-                  <h2 className="text-lg font-semibold text-white">Gestiona tus claves</h2>
-                  <p className="text-xs text-slate-300">
-                    BYOK se guarda en backend (Secret Manager). El cliente nunca ve la clave.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
-                    Rol: {roleLabel}
-                  </span>
-                  <span
-                    className={`rounded-full border px-3 py-1 ${
-                      userProfile?.subscription?.status === 'active'
-                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                        : 'badge-warn'
-                    }`}
-                  >
-                    {userProfile?.subscription?.status === 'active' ? 'Membresía activa' : 'Membresía inactiva'}
-                  </span>
-                  <span
-                    className={`rounded-full border px-3 py-1 ${
-                      userProfile?.openaiKeyStored
-                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                        : 'border-white/10 bg-white/5 text-slate-200'
-                    }`}
-                  >
-                    {userProfile?.openaiKeyStored ? 'Key BYOK guardada' : 'Sin key BYOK'}
-                  </span>
-                  {userProfile?.subscription?.expiresAt ? (
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
-                      Expira: {formatDate(userProfile.subscription.expiresAt) || '--'}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              {settingsMessage && (
-                <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-                  {settingsMessage}
-                </div>
-              )}
-
-              {iaQuota && (
-                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-white">Uso semanal de IA</p>
-                      <p className="text-xs text-slate-300">
-                        Se renueva cada semana (lunes). Úsalo para registrar por voz y pedir consejos.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowLimitsHelp(true)}
-                      className="text-[11px] font-semibold text-primary underline"
-                    >
-                      ¿Cómo se calculan los límites?
-                    </button>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <IaQuotaProgress
-                      label="Modo frase / voz"
-                      used={iaQuota.parseUsed}
-                      limit={iaQuota.parseLimit}
-                      ratio={parseProgress}
-                      onUpgradeClick={() => openUpgrade('parse_exhausted')}
-                    />
-                    <IaQuotaProgress
-                      label="Asesor IA"
-                      used={iaQuota.analyzeUsed}
-                      limit={iaQuota.analyzeLimit}
-                      ratio={analyzeProgress}
-                      onUpgradeClick={() => openUpgrade('analyze_exhausted')}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {showKeySettings && (
-                <>
-                  <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-white">Tu API key de OpenAI (BYOK)</p>
-                        <p className="text-xs text-slate-300">Se guarda en el backend; usa formato sk-.</p>
-                      </div>
-                      {profileLoading && <span className="text-[11px] text-slate-300">Cargando perfil...</span>}
-                    </div>
-                    <input
-                      value={apiKeyInput}
-                      onChange={(e) => setApiKeyInput(e.target.value)}
-                      placeholder="sk-..."
-                      className="w-full rounded-xl border border-white/10 bg-[var(--input-bg)] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-primary"
-                      type="password"
-                      disabled={keySaving}
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={handleSaveApiKey}
-                        disabled={keySaving || !apiKeyInput.trim()}
-                        className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                      >
-                        {keySaving ? 'Guardando...' : 'Guardar key'}
-                      </button>
-                      {userProfile?.openaiKeyStored && (
-                        <button
-                          onClick={handleClearApiKey}
-                          disabled={keySaving}
-                          className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:border-primary disabled:opacity-50"
-                        >
-                          {keySaving ? 'Procesando...' : 'Eliminar key'}
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-300">
-                      {userProfile?.openaiKeyStored
-                        ? 'Key guardada en backend. Nunca se expone al cliente.'
-                        : 'Pega tu clave privada de OpenAI. Se almacenará solo en el servidor.'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-white">Preferencia de clave</p>
-                      {userProfile?.preferredKey && (
-                        <span className="text-[11px] text-slate-300">
-                          Actual: {userProfile.preferredKey === 'byok' ? 'Mi key' : 'Key GastoSense'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handlePreferredKeyChange('byok')}
-                        disabled={!userProfile?.openaiKeyStored || preferenceSaving}
-                        className={`rounded-lg px-4 py-2 text-xs font-semibold ${
-                          userProfile?.preferredKey === 'byok'
-                            ? 'bg-primary text-white'
-                            : 'border border-white/10 bg-white/5 text-white'
-                        } disabled:opacity-50`}
-                      >
-                        Usar mi key (BYOK)
-                      </button>
-                      <button
-                        onClick={() => handlePreferredKeyChange('managed')}
-                        disabled={!canUseManaged || preferenceSaving}
-                        className={`rounded-lg px-4 py-2 text-xs font-semibold ${
-                          userProfile?.preferredKey === 'managed'
-                            ? 'bg-primary text-white'
-                            : 'border border-white/10 bg-white/5 text-white'
-                        } disabled:opacity-50`}
-                      >
-                        Usar key de GastoSense
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-slate-300">
-                      Si usas tu key (BYOK) tienes más cuota; con key GastoSense aplican límites de plan Free.
-                    </p>
-                  </div>
-                </>
-              )}
-
-              <div
-                ref={plansRef}
-                id="plans"
-                className="space-y-3 rounded-xl border border-indigo-400/30 bg-indigo-500/5 p-4"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs uppercase text-indigo-200">Planes</p>
-                    <h3 className="text-lg font-semibold text-white">Elige tu plan</h3>
-                    <p className="text-xs text-slate-300">Precios muestran promo y descuentos por periodo.</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {plans.map((plan) => {
-                    const selectedPeriod = planPeriods[plan.id] ?? 'monthly';
-                    const periodInfo = plan.periods.find((p) => p.period === selectedPeriod);
-                    const price = periodInfo?.totalCents ?? 0;
-                    const months = periodInfo?.months ?? 1;
-                    const switchingPlan = hasActiveSubscription && currentPaidPlan && currentPaidPlan !== (plan.id as PlanId);
-                    const sameActivePlan = hasActiveSubscription && currentPaidPlan === (plan.id as PlanId);
-                    return (
-                      <div
-                        key={plan.id}
-                        className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm flex flex-col gap-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-base font-semibold text-white">{plan.label}</h4>
-                          <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] text-white">
-                            {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}
-                          </span>
-                        </div>
-                        {plan.promoActive && plan.promoPriceCents ? (
-                          <div className="text-sm text-emerald-200">
-                            Promo: {formatCurrency(plan.promoPriceCents)} {formatUsdApprox(plan.promoPriceCents)} / mes · hasta{' '}
-                            {plan.promoEndsAt ? new Date(plan.promoEndsAt).toISOString().slice(0, 10) : ''}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-slate-200">
-                            Precio: {formatCurrency(plan.basePriceCents)} {formatUsdApprox(plan.basePriceCents)} / mes
-                          </div>
-                        )}
-                        <div className="text-xs text-slate-300">
-                          Periodo: {months} {months === 1 ? 'mes' : 'meses'} (
-                          {Math.round((periodInfo?.discount ?? 0) * 100)}% desc.)
-                        </div>
-                        <div className="text-lg font-semibold text-white">
-                          Total {formatCurrency(price)} {formatUsdApprox(price)} {plan.currency}
-                        </div>
-                        {switchingPlan && (
-                          <p className="text-[11px] text-amber-200">
-                            Al comprar este plan, tu plan actual se reemplaza desde hoy ({currentPaidPlan === 'plan_byok' ? 'BYOK' : 'PRO'} → {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}).
-                          </p>
-                        )}
-                        {sameActivePlan && (
-                          <p className="text-[11px] text-slate-200">
-                            Al renovar extiendes tu vencimiento {months > 1 ? `(+${months} meses)` : '(+1 mes)'} desde la fecha actual.
-                          </p>
-                        )}
-                        <ResponsiveSelect
-                          value={selectedPeriod}
-                          onChange={(val) =>
-                            setPlanPeriods((prev) => ({
-                              ...prev,
-                              [plan.id]: val,
-                            }))
-                          }
-                          options={[
-                            { value: 'monthly', label: 'Mensual' },
-                            { value: 'quarterly', label: 'Trimestral (-5%)' },
-                            { value: 'semiannual', label: 'Semestral (-10%)' },
-                            { value: 'annual', label: 'Anual (-15%)' },
-                          ]}
-                          title="Elige periodo"
-                        />
-                        <div className="text-xs text-slate-300">
-                          Incluye: {plan.id === 'plan_byok' ? 'IA con tu propia API key' : 'IA con clave gestionada'}.
-                        </div>
-                        <button
-                          onClick={() => handleCheckout(plan.id as 'plan_byok' | 'plan_pro')}
-                          disabled={checkoutLoading === plan.id}
-                          className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                        >
-                          {checkoutLoading === plan.id ? 'Generando...' : 'Pagar con Wompi'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {plans.length === 0 && (
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                      No pudimos cargar los planes. Intenta más tarde.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {userProfile?.role === 'admin' && (
-                <div className="space-y-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs uppercase text-primary/80">Admin</p>
-                      <h3 className="text-lg font-semibold text-white">Usuarios y roles</h3>
-                      <p className="text-xs text-slate-300">Cambia rol o preferencia. Máx 200 usuarios.</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <input
-                        value={adminSearch}
-                        onChange={(e) => setAdminSearch(e.target.value)}
-                        placeholder="Buscar UID..."
-                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white outline-none placeholder:text-slate-400"
-                      />
-                      <button
-                        onClick={handleAdminReload}
-                        disabled={adminLoading}
-                        className="rounded-lg border border-primary/50 bg-primary/20 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/30 disabled:opacity-50"
-                      >
-                        {adminLoading ? 'Cargando...' : 'Recargar'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="overflow-auto rounded-lg border border-white/10">
-                    <table className="min-w-full text-left text-xs text-white">
-                      <thead className="bg-white/5 text-[11px] uppercase tracking-wide text-slate-300">
-                        <tr>
-                          <th className="px-3 py-2">UID</th>
-                          <th className="px-3 py-2">Rol</th>
-                          <th className="px-3 py-2">Suscripción</th>
-                          <th className="px-3 py-2">BYOK</th>
-                          <th className="px-3 py-2">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {adminUsers
-                          .filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase()))
-                          .map((u) => (
-                            <tr key={u.uid} className="border-t border-white/5">
-                              <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{u.uid}</td>
-                              <td className="px-3 py-2">
-                                <ResponsiveSelect
-                                  value={u.role}
-                                  onChange={(val) => handleAdminChangeRole(u.uid, val as UserRole)}
-                                  options={[
-                                    { value: 'free', label: 'free' },
-                                    { value: 'paid_byok', label: 'paid_byok' },
-                                    { value: 'paid_managed', label: 'paid_managed' },
-                                    { value: 'gifted_managed', label: 'gifted_managed' },
-                                    { value: 'admin', label: 'admin' },
-                                  ]}
-                                  title="Rol"
-                                  className="text-[11px]"
-                                  buttonClassName="text-[11px]"
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-[11px] text-slate-200 space-y-1">
-                                <ResponsiveSelect
-                                  value={u.subscriptionStatus || 'expired'}
-                                  onChange={(val) =>
-                                    setAdminUsers((prev) =>
-                                      prev.map((item) =>
-                                        item.uid === u.uid ? { ...item, subscriptionStatus: val } : item,
-                                      ),
-                                    )
-                                  }
-                                  options={[
-                                    { value: 'active', label: 'Activa' },
-                                    { value: 'expired', label: 'Inactiva' },
-                                  ]}
-                                  title="Estado suscripción"
-                                  className="text-[11px]"
-                                  buttonClassName="text-[11px]"
-                                />
-                                <ResponsiveSelect
-                                  value={(u.subscriptionSource as AdminSubscriptionSource) || 'manual'}
-                                  onChange={(val) =>
-                                    setAdminUsers((prev) =>
-                                      prev.map((item) =>
-                                        item.uid === u.uid ? { ...item, subscriptionSource: val as AdminSubscriptionSource } : item,
-                                      ),
-                                    )
-                                  }
-                                  options={[
-                                    { value: 'manual', label: 'Manual' },
-                                    { value: 'stripe', label: 'Stripe' },
-                                    { value: 'promo', label: 'Promo' },
-                                    { value: 'wompi', label: 'Wompi' },
-                                  ]}
-                                  title="Fuente"
-                                  className="text-[11px]"
-                                  buttonClassName="text-[11px]"
-                                />
-                              <input
-                                type="date"
-                                value={u.subscriptionExpires || ''}
-                                onChange={(e) =>
-                                    setAdminUsers((prev) =>
-                                      prev.map((item) =>
-                                        item.uid === u.uid ? { ...item, subscriptionExpires: e.target.value } : item,
-                                      ),
-                                    )
-                                  }
-                                  className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white"
-                                  disabled={adminLoading}
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-[11px]">
-                                <span
-                                  className={`rounded-full px-2 py-1 ${
-                                    u.openaiKeyStored
-                                      ? 'bg-emerald-500/10 text-emerald-200'
-                                      : 'bg-white/5 text-slate-300'
-                                  }`}
-                                >
-                                  {u.openaiKeyStored ? 'Sí' : 'No'}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 text-[11px] text-slate-200 space-y-1">
-                                <div>Pref: {u.preferredKey ?? 'n/a'}</div>
-                                <button
-                                  onClick={() => handleAdminSaveUser(u.uid)}
-                                  disabled={adminLoading}
-                                  className="w-full rounded-lg border border-primary/40 bg-primary/20 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/30 disabled:opacity-50"
-                                >
-                                  Guardar
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        {adminUsers.filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase())).length === 0 && (
-                          <tr>
-                            <td className="px-3 py-2 text-slate-300" colSpan={5}>
-                              {adminLoading ? 'Cargando...' : 'Sin usuarios que coincidan.'}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
+          <SettingsPage
+            userUid={user?.uid}
+            handleCopyUid={handleCopyUid}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            roleLabel={roleLabel}
+            userProfile={userProfile}
+            settingsMessage={settingsMessage}
+            formatDate={formatDate}
+            iaQuota={iaQuota}
+            parseProgress={parseProgress}
+            analyzeProgress={analyzeProgress}
+            openUpgrade={openUpgrade}
+            onShowLimitsHelp={() => setShowLimitsHelp(true)}
+            showKeySettings={showKeySettings}
+            profileLoading={profileLoading}
+            apiKeyInput={apiKeyInput}
+            setApiKeyInput={setApiKeyInput}
+            keySaving={keySaving}
+            handleSaveApiKey={handleSaveApiKey}
+            handleClearApiKey={handleClearApiKey}
+            preferenceSaving={preferenceSaving}
+            canUseManaged={canUseManaged}
+            handlePreferredKeyChange={handlePreferredKeyChange}
+            plansRef={plansRef}
+            plans={plans}
+            planPeriods={planPeriods}
+            setPlanPeriods={setPlanPeriods}
+            hasActiveSubscription={hasActiveSubscription}
+            currentPaidPlan={currentPaidPlan}
+            checkoutLoading={checkoutLoading}
+            handleCheckout={handleCheckout}
+            formatCurrency={formatCurrency}
+            formatUsdApprox={formatUsdApprox}
+            adminSearch={adminSearch}
+            setAdminSearch={setAdminSearch}
+            adminLoading={adminLoading}
+            handleAdminReload={handleAdminReload}
+            adminUsers={adminUsers}
+            setAdminUsers={setAdminUsers}
+            handleAdminChangeRole={handleAdminChangeRole}
+            handleAdminSaveUser={handleAdminSaveUser}
+          />
         )}
       </main>
 
@@ -2419,80 +1581,4 @@ function App() {
   );
 }
 
-function CardStat({
-  title,
-  value,
-  subtitle,
-  tone = 'neutral',
-}: {
-  title: string;
-  value: number;
-  subtitle?: string;
-  tone?: 'neutral' | 'success' | 'danger';
-}) {
-  const color =
-    tone === 'success' ? 'text-emerald-300' : tone === 'danger' ? 'text-red-300' : 'text-white';
-  return (
-    <div className="card">
-      <p className="text-xs uppercase text-[var(--muted)]">{title}</p>
-      <p className={`text-2xl font-bold ${color}`}>${value.toLocaleString()}</p>
-      {subtitle && <p className="text-sm text-[var(--muted)]">{subtitle}</p>}
-    </div>
-  );
-}
-
-function CardMini({
-  title,
-  value,
-  tone = 'neutral',
-}: {
-  title: string;
-  value: number;
-  tone?: 'neutral' | 'success' | 'danger';
-}) {
-  const color =
-    tone === 'success' ? 'text-emerald-300' : tone === 'danger' ? 'text-red-300' : 'text-white';
-  return (
-    <div className="card">
-      <p className="text-xs uppercase text-[var(--muted)]">{title}</p>
-      <p className={`text-lg font-bold ${color}`}>${value.toLocaleString()}</p>
-    </div>
-  );
-}
-
-const todayIso = () => new Date().toISOString().slice(0, 10);
-const monthStartIso = (month?: string) => {
-  const base = month ? new Date(`${month}-01T00:00:00`) : new Date();
-  return new Date(base.getFullYear(), base.getMonth(), 1).toISOString().slice(0, 10);
-};
-const monthEndIso = (month?: string) => {
-  const base = month ? new Date(`${month}-01T00:00:00`) : new Date();
-  return new Date(base.getFullYear(), base.getMonth() + 1, 0).toISOString().slice(0, 10);
-};
-const previousMonthRange = (month?: string) => {
-  const base = month ? new Date(`${month}-01T00:00:00`) : new Date();
-  const start = new Date(base.getFullYear(), base.getMonth() - 1, 1);
-  const end = new Date(base.getFullYear(), base.getMonth(), 0);
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
-};
-
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
