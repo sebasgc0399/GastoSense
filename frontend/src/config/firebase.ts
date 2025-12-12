@@ -2,9 +2,26 @@ import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
+function resolveAuthDomain() {
+  const envAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
+
+  if (typeof window === 'undefined') return envAuthDomain;
+
+  const hostname = window.location.hostname;
+  const isLocalhost =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname.endsWith('.local') ||
+    /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+console.log(`Host: ${isLocalhost ? envAuthDomain : hostname}`);
+  return isLocalhost ? envAuthDomain : hostname;
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  // En iOS Safari con storage partitioning, usar un authDomain distinto al hostname puede romper popup/redirect.
+  authDomain: resolveAuthDomain(),
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,

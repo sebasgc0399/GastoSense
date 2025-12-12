@@ -4,6 +4,35 @@ import { GoogleAuthProvider, signInWithPopup, signInWithRedirect } from 'firebas
 import { getFirebaseAuth, firebaseInitError } from '../config/firebase';
 import { RobotAvatar } from './RobotAvatar';
 import { isIOSSafari } from '../utils/isIOSSafari';
+import { useAuth } from '../context/AuthContext';
+
+type AuthErrorLike = { code?: string; message?: string };
+
+const AUTH_REDIRECT_FLAG_KEY = 'gastosense:authRedirectStartedAt';
+
+function getAuthErrorMessage(error: unknown) {
+  const authError = typeof error === 'object' && error !== null ? (error as AuthErrorLike) : undefined;
+  const code = authError?.code;
+  const message = authError?.message?.toLowerCase();
+
+  if (code === 'auth/popup-blocked') {
+    return 'El navegador bloqueó la ventana de Google. Habilita popups o intenta con otro navegador.';
+  }
+  if (code === 'auth/popup-closed-by-user') {
+    return 'Cerraste el login de Google antes de finalizar. Intenta de nuevo.';
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return 'Este dominio no está autorizado para Firebase Auth. Agrega los dominios de Hosting en Firebase Console → Authentication → Settings → Authorized domains.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'No pudimos conectar con Firebase. Revisa tu conexión e intenta de nuevo.';
+  }
+  if (code === 'auth/missing-initial-state' || message?.includes('missing initial state')) {
+    return 'Parece que el login se abrió en otra pestaña o navegador. Intenta de nuevo desde el mismo navegador.';
+  }
+
+  return 'No pudimos iniciar sesión, intenta de nuevo.';
+}
 
 const Loader2 = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -54,6 +83,7 @@ const loadingStages = [
 ];
 
 export function LoginHero() {
+  const { loginHint, clearLoginHint } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(idleMessages[0].text);
   const [messageVisible, setMessageVisible] = useState(true);
@@ -62,14 +92,14 @@ export function LoginHero() {
   const [botBob, setBotBob] = useState(0);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || loginHint) return;
     const interval = setInterval(() => {
       idleIndex.current = (idleIndex.current + 1) % idleMessages.length;
       const next = idleMessages[idleIndex.current];
       swapMessage(next.text);
     }, 3500);
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, loginHint]);
 
   useEffect(() => {
     const bobInterval = setInterval(() => {
@@ -77,6 +107,11 @@ export function LoginHero() {
     }, 1800);
     return () => clearInterval(bobInterval);
   }, []);
+
+  useEffect(() => {
+    if (!loginHint || isLoading) return;
+    swapMessage(loginHint);
+  }, [loginHint, isLoading]);
 
   const swapMessage = (text: string) => {
     setMessageVisible(false);
@@ -96,6 +131,8 @@ export function LoginHero() {
   };
 
   const handleGoogleLogin = async () => {
+    if (isLoading) return;
+    clearLoginHint();
     if (firebaseInitError) {
       swapMessage('No pudimos iniciar la sesión porque falta configurar Firebase.');
       return;
@@ -105,9 +142,17 @@ export function LoginHero() {
     setIsLoading(true);
     setLoadingStage(0);
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    let redirecting = false;
     try {
       swapMessage(loadingStages[0].text);
       if (isIOSSafari()) {
+        redirecting = true;
+        try {
+          localStorage.setItem(AUTH_REDIRECT_FLAG_KEY, String(Date.now()));
+        } catch {
+          // ignore storage failures (Safari private mode / strict privacy)
+        }
         await signInWithRedirect(auth, provider);
         return;
       }
@@ -115,15 +160,10 @@ export function LoginHero() {
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error(error);
-      const errorMessage = typeof error === 'object' && error !== null ? (error as { code?: string; message?: string }) : {};
-      const messageText =
-        errorMessage?.code === 'auth/missing-initial-state' ||
-        errorMessage?.message?.toLowerCase().includes('missing initial state')
-          ? 'Parece que el login se abrio en otra pestaña o navegador. Intenta de nuevo desde el mismo navegador.'
-          : 'No pudimos iniciar sesion, intenta de nuevo.';
-      swapMessage(messageText);
+      redirecting = false;
+      swapMessage(getAuthErrorMessage(error));
     } finally {
-      setIsLoading(false);
+      if (!redirecting) setIsLoading(false);
     }
   };
 

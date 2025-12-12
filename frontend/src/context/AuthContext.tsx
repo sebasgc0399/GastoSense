@@ -4,6 +4,9 @@ import {
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence,
+  indexedDBLocalPersistence,
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
@@ -14,19 +17,52 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { getFirebaseAuth, firebaseInitError } from '../config/firebase';
 import { isIOSSafari } from '../utils/isIOSSafari';
 
+type AuthErrorLike = { code?: string; message?: string };
+
+const AUTH_REDIRECT_FLAG_KEY = 'gastosense:authRedirectStartedAt';
+
+function getAuthErrorMessage(error: unknown) {
+  const authError = typeof error === 'object' && error !== null ? (error as AuthErrorLike) : undefined;
+  const code = authError?.code;
+  const message = authError?.message?.toLowerCase();
+
+  if (code === 'auth/popup-blocked') {
+    return 'El navegador bloqueó la ventana de Google. Habilita popups o intenta con otro navegador.';
+  }
+  if (code === 'auth/popup-closed-by-user') {
+    return 'Cerraste el login de Google antes de finalizar. Intenta de nuevo.';
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return 'Este dominio no está autorizado para Firebase Auth. Agrega los dominios de Hosting en Firebase Console → Authentication → Settings → Authorized domains.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'No pudimos conectar con Firebase. Revisa tu conexión e intenta de nuevo.';
+  }
+  if (code === 'auth/missing-initial-state' || message?.includes('missing initial state')) {
+    return 'Parece que el login se abrió en otra pestaña o navegador. Intenta de nuevo desde el mismo navegador.';
+  }
+
+  return 'No pudimos iniciar sesión, intenta de nuevo.';
+}
+
 interface AuthContextState {
   user: User | null;
   loading: boolean;
+  loginHint: string | null;
+  clearLoginHint: () => void;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextState | undefined>(undefined);
 
+let redirectResultProcessed = false;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<Error | null>(firebaseInitError);
+  const [loginHint, setLoginHint] = useState<string | null>(null);
 
   useEffect(() => {
     if (initError) {
@@ -50,18 +86,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // Aseguramos persistencia basada en storage/cookies (no por pestaña) para evitar sesiones "fantasma".
-        await setPersistence(auth, browserLocalPersistence);
-        const redirectResult = await getRedirectResult(auth);
-        if (redirectResult?.user && isMounted) {
-          setUser(redirectResult.user);
+        // Intentamos persistencia robusta para sobrevivir reloads del redirect (iOS Safari puede ser estricto).
+        const persistenceOptions = [
+          indexedDBLocalPersistence,
+          browserLocalPersistence,
+          browserSessionPersistence,
+          inMemoryPersistence,
+        ] as const;
+        for (const persistence of persistenceOptions) {
+          try {
+            await setPersistence(auth, persistence);
+            break;
+          } catch (persistenceError) {
+            console.warn('No se pudo configurar persistencia de auth:', persistenceError);
+          }
+        }
+
+        // Solo una vez: procesamos el resultado del redirect antes de suscribir onAuthStateChanged.
+        let sawRedirectAttempt = false;
+        try {
+          sawRedirectAttempt = !!localStorage.getItem(AUTH_REDIRECT_FLAG_KEY);
+        } catch {
+          // ignore storage failures
+        }
+
+        let redirectUser: User | null = null;
+        if (!redirectResultProcessed) {
+          redirectResultProcessed = true;
+          const redirectResult = await getRedirectResult(auth);
+          redirectUser = redirectResult?.user ?? null;
+          if (redirectUser && isMounted) setUser(redirectUser);
+        }
+
+        if (sawRedirectAttempt) {
+          try {
+            localStorage.removeItem(AUTH_REDIRECT_FLAG_KEY);
+          } catch {
+            // ignore
+          }
+          if (!redirectUser && !auth.currentUser && isMounted) {
+            setLoginHint(
+              'Safari no pudo completar el login con Google. Intenta nuevamente en la misma pestaña; si estás en modo privado, desactívalo.',
+            );
+          }
         }
       } catch (err) {
         console.error('No se pudo completar el flujo de redirect:', err);
+        if (isMounted) setLoginHint(getAuthErrorMessage(err));
       } finally {
         unsubscribe = onAuthStateChanged(auth, (current) => {
           if (!isMounted) return;
-          setUser(current);
+          // En algunos casos (iOS Safari) el redirect completa pero la primera notificación llega como null.
+          if (!current && auth.currentUser) {
+            setUser(auth.currentUser);
+          } else {
+            setUser(current);
+          }
+          if (current) setLoginHint(null);
           setLoading(false);
         });
       }
@@ -79,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (initError) throw initError;
     const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     if (isIOSSafari()) {
       await signInWithRedirect(auth, provider);
       return;
@@ -114,7 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const value = { user, loading, signInWithGoogle, logout };
+  const clearLoginHint = () => setLoginHint(null);
+  const value = { user, loading, loginHint, clearLoginHint, signInWithGoogle, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
