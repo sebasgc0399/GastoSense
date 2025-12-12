@@ -1568,17 +1568,9 @@ function App() {
 
         {activeTab === 'transactions' && (
           <section className="space-y-4 pb-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Movimientos</h2>
-                <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
-              </div>
-              <button
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm"
-                onClick={() => setShowQuickAdd(true)}
-              >
-                + Añadir
-              </button>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white">Movimientos</h2>
+              <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
