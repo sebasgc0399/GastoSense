@@ -1,11 +1,12 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc, where } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { getFirestoreDb } from '../config/firebase';
 import type { Template, TransactionInput } from '../types';
 
 const COLLECTION = 'templates';
 const DEFAULT_USER_ID = 'personal';
 
 export async function fetchTemplates(userId: string): Promise<Template[]> {
+  const db = getFirestoreDb();
   const q = query(collection(db, COLLECTION), where('userId', '==', userId), orderBy('name'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((docSnap) => {
@@ -29,6 +30,7 @@ export async function fetchTemplates(userId: string): Promise<Template[]> {
 }
 
 export async function saveTemplate(name: string, payload: Partial<TransactionInput>, userId = DEFAULT_USER_ID) {
+  const db = getFirestoreDb();
   const data: Record<string, unknown> = {
     userId,
     name: name.trim(),
@@ -50,6 +52,7 @@ export async function updateTemplate(
   payload: Partial<TransactionInput> & { name?: string; recurring?: boolean; frequency?: Template['frequency'] },
   userId = DEFAULT_USER_ID,
 ) {
+  const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, id);
   const data: Record<string, unknown> = { updatedAt: new Date().toISOString(), userId };
   if (payload.name) data.name = payload.name.trim();
@@ -65,6 +68,7 @@ export async function updateTemplate(
 }
 
 export async function deleteTemplate(id: string) {
+  const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, id);
   await deleteDoc(ref);
 }

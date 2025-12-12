@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SVGProps } from 'react';
 import { GoogleAuthProvider, signInWithPopup, signInWithRedirect } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { getFirebaseAuth, firebaseInitError } from '../config/firebase';
 import { RobotAvatar } from './RobotAvatar';
 import { isIOSSafari } from '../utils/isIOSSafari';
 
@@ -96,6 +96,12 @@ export function LoginHero() {
   };
 
   const handleGoogleLogin = async () => {
+    if (firebaseInitError) {
+      swapMessage('No pudimos iniciar la sesión porque falta configurar Firebase.');
+      return;
+    }
+
+    const auth = getFirebaseAuth();
     setIsLoading(true);
     setLoadingStage(0);
     try {
