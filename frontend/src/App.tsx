@@ -108,6 +108,8 @@ function App() {
       subscriptionExpires?: string;
     }[]
   >([]);
+  const defaultMonth = todayIso().slice(0, 7);
+  const [currentMonth, setCurrentMonth] = useState(defaultMonth);
   const [adminSearch, setAdminSearch] = useState('');
   const [aiQuota, setAiQuota] = useState<UsageQuota | null>(null);
   const [plans, setPlans] = useState<PlanInfo[]>([]);
@@ -120,6 +122,7 @@ function App() {
   const [advisorLoading, setAdvisorLoading] = useState(false);
   const [smartCards, setSmartCards] = useState<SmartCard[]>([]);
   const [smartCardIndex, setSmartCardIndex] = useState(0);
+  const [homeMonthTransactions, setHomeMonthTransactions] = useState<Transaction[]>([]);
   const { quota: iaQuotaFresh } = useIaQuota();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
@@ -196,9 +199,6 @@ function App() {
   const parseProgress = iaQuota && iaQuota.parseLimit ? iaQuota.parseUsed / iaQuota.parseLimit : 0;
   const analyzeProgress = iaQuota && iaQuota.analyzeLimit ? iaQuota.analyzeUsed / iaQuota.analyzeLimit : 0;
 
-  // Mes de referencia para la vista "Inicio" y presupuestos (no depende del filtro de la vista Movimientos)
-  const currentMonth = todayIso().slice(0, 7);
-
   useEffect(() => {
     const stored = localStorage.getItem('advisorMode');
     if (stored === 'amable' || stored === 'reganon') {
@@ -245,6 +245,23 @@ function App() {
     setTxPage(1);
     return () => unsubscribe();
   }, [filters, user]);
+
+  useEffect(() => {
+    if (!user) {
+      setHomeMonthTransactions([]);
+      return;
+    }
+    const start = monthStartIso(currentMonth);
+    const end = monthEndIso(currentMonth);
+    const unsubscribe = listenTransactions({
+      userId: user.uid,
+      startDate: start,
+      endDate: end,
+      onChange: (list) => setHomeMonthTransactions(list),
+      onError: (err) => console.error('No pudimos cargar movimientos del mes', err),
+    });
+    return () => unsubscribe();
+  }, [user, currentMonth]);
 
   useEffect(() => {
     const fetchBudgetData = async () => {
@@ -329,7 +346,7 @@ function App() {
   useEffect(() => {
     const loadPreviousMonth = async () => {
       if (!user) return;
-      const range = previousMonthRange();
+      const range = previousMonthRange(currentMonth);
       try {
         const prev = await fetchTransactionsRange({ userId: user.uid, startDate: range.start, endDate: range.end });
         const expense = prev.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
@@ -342,10 +359,7 @@ function App() {
     loadPreviousMonth();
   }, [currentMonth, user]);
 
-  const monthTransactions = useMemo(
-    () => transactions.filter((t) => t.date?.startsWith(currentMonth)),
-    [transactions, currentMonth],
-  );
+  const monthTransactions = useMemo(() => homeMonthTransactions, [homeMonthTransactions]);
   const paginatedTransactions = useMemo(() => {
     const start = (txPage - 1) * txPageSize;
     return transactions.slice(start, start + txPageSize);
@@ -1433,6 +1447,19 @@ function App() {
               />
             </div>
 
+            <div className="card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase text-[var(--text-muted)]">Mes de referencia</p>
+                <p className="text-sm text-[var(--text-muted)]">Cambia el mes para ver presupuestos y totales.</p>
+              </div>
+              <input
+                type="month"
+                value={currentMonth}
+                onChange={(e) => setCurrentMonth(e.target.value || defaultMonth)}
+                className="input w-full sm:w-auto sm:min-w-[180px]"
+              />
+            </div>
+
             <div className="card p-0">
               <BudgetCard
                 month={currentMonth}
@@ -2434,14 +2461,18 @@ function CardMini({
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
-const monthStartIso = () => {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+const monthStartIso = (month?: string) => {
+  const base = month ? new Date(`${month}-01T00:00:00`) : new Date();
+  return new Date(base.getFullYear(), base.getMonth(), 1).toISOString().slice(0, 10);
 };
-const previousMonthRange = () => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const end = new Date(now.getFullYear(), now.getMonth(), 0);
+const monthEndIso = (month?: string) => {
+  const base = month ? new Date(`${month}-01T00:00:00`) : new Date();
+  return new Date(base.getFullYear(), base.getMonth() + 1, 0).toISOString().slice(0, 10);
+};
+const previousMonthRange = (month?: string) => {
+  const base = month ? new Date(`${month}-01T00:00:00`) : new Date();
+  const start = new Date(base.getFullYear(), base.getMonth() - 1, 1);
+  const end = new Date(base.getFullYear(), base.getMonth(), 0);
   return {
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
@@ -2449,8 +2480,6 @@ const previousMonthRange = () => {
 };
 
 export default App;
-
-
 
 
 
