@@ -104,18 +104,14 @@ export function LoginHero() {
     const auth = getFirebaseAuth();
     setIsLoading(true);
     setLoadingStage(0);
+    const provider = new GoogleAuthProvider();
     try {
-      for (let i = 0; i < loadingStages.length; i++) {
-        const stage = loadingStages[i];
-        swapMessage(stage.text);
-        setLoadingStage(i);
-        await new Promise((resolve) => setTimeout(resolve, stage.duration));
-      }
-      const provider = new GoogleAuthProvider();
+      swapMessage(loadingStages[0].text);
       if (isIOSSafari()) {
         await signInWithRedirect(auth, provider);
         return;
       }
+      // Ejecutamos el popup inmediatamente tras el gesto del usuario para evitar bloqueos de Safari/iOS.
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error(error);
