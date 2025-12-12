@@ -25,11 +25,11 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-3"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-3"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-950 p-4 text-slate-50 shadow-2xl"
+        className="w-full max-w-3xl rounded-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] p-4 text-[var(--text)] shadow-2xl backdrop-blur"
         role="dialog"
         aria-modal="true"
         aria-label="Upgrade IA"
@@ -37,40 +37,45 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs uppercase text-slate-400">Upgrade</p>
-            <h3 className="text-lg font-semibold text-white">{contextTitle[context]}</h3>
-            <p className="text-sm text-slate-300">
+            <p className="text-[11px] uppercase text-[var(--text-muted)]">Upgrade</p>
+            <h3 className="text-lg font-semibold text-[var(--text)]">{contextTitle[context]}</h3>
+            <p className="text-sm text-[var(--text-muted)]">
               Sube de plan para tener más cuota semanal y funciones avanzadas de IA.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-xs text-white hover:border-primary"
+            className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text)] hover:border-[var(--primary)]"
           >
             Cerrar
           </button>
         </div>
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {visiblePlans.map((plan) => {
             const listPrice = plan.basePriceCents;
             const promoPrice = plan.promoActive && plan.promoPriceCents ? plan.promoPriceCents : null;
             return (
-              <div key={plan.id} className="rounded-xl border border-white/15 bg-white/5 p-3">
+              <div
+                key={plan.id}
+                className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3 shadow-sm"
+              >
                 <div className="mb-1 flex items-center justify-between">
-                  <h4 className="text-base font-semibold text-white">{plan.label}</h4>
-                  <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] text-white">
+                  <h4 className="text-base font-semibold text-[var(--text)]">{plan.label}</h4>
+                  <span className="rounded-full bg-[var(--input-bg)] px-2 py-1 text-[11px] text-[var(--text-muted)]">
                     {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}
                   </span>
                 </div>
                 {promoPrice ? (
-                  <div className="text-sm text-emerald-200">
-                    <span className="line-through text-slate-300">{formatCurrency(listPrice)}</span>{' '}
-                    <span className="font-semibold">{formatCurrency(promoPrice)}</span> / mes por 3 meses
+                  <div className="text-sm text-emerald-500 dark:text-emerald-200">
+                    <span className="line-through text-[var(--text-muted)]">{formatCurrency(listPrice)}</span>{' '}
+                    <span className="font-semibold text-[var(--text)]">{formatCurrency(promoPrice)}</span> / mes por 3
+                    meses
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-200">{formatCurrency(listPrice)} / mes</div>
+                  <div className="text-sm text-[var(--text)]">{formatCurrency(listPrice)} / mes</div>
                 )}
-                <p className="text-xs text-slate-300">
+                <p className="text-xs text-[var(--text-muted)]">
                   Promo de lanzamiento: disponible solo el primer mes. Luego de 3 meses, se renueva a precio lista.
                 </p>
                 <button
@@ -86,7 +91,7 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
             );
           })}
         </div>
-        <p className="mt-3 text-[11px] text-slate-300">
+        <p className="mt-3 text-[11px] text-[var(--text-muted)]">
           Mientras mantengas activa tu suscripción, conservas el precio promocional durante 3 meses.
         </p>
       </div>

@@ -1,0 +1,83 @@
+            </div>
+
+            <div className="card p-0" ref={categoryBudgetsRef}>
+              <CategoryBudgets perCategory={budget?.perCategory} onSave={handleSaveCategoryBudgets} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <TopExpensesChart data={topExpenses} />
+              <div className="card">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">Tarjetas inteligentes</h2>
+                  <span className="text-xs text-slate-400">Detectadas con datos reales</span>
+                </div>
+                <div className="space-y-3">
+                  {smartCards.length === 0 && <p className="text-sm text-slate-300">Sin alertas por ahora.</p>}
+                  {smartCards.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-300">
+                        <span>{smartCards.length > 1 ? 'Desliza para ver más' : 'Sugerencia destacada'}</span>
+                        {smartCards.length > 1 && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handlePrevInsight}
+                              className="h-7 w-7 rounded-full border border-white/15 bg-white/10 text-white hover:border-primary"
+                              aria-label="Anterior"
+                            >
+                              {'<'}
+                            </button>
+                            <button
+                              onClick={handleNextInsight}
+                              className="h-7 w-7 rounded-full border border-white/15 bg-white/10 text-white hover:border-primary"
+                              aria-label="Siguiente"
+                            >
+                              {'>'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative overflow-hidden rounded-xl">
+                        <div
+                          className="flex transition-transform duration-300 ease-out"
+                          style={{ transform: `translateX(-${smartCardIndex * 100}%)` }}
+                          onTouchStart={handleTouchStart}
+                          onTouchEnd={handleTouchEnd}
+                          >
+                            {smartCards.map((item) => (
+                              <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
+                                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                                  <p className="text-sm text-slate-200">{item.body}</p>
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
+                                      onClick={item.primaryAction.onClick}
+                                    >
+                                    {item.primaryAction.label}
+                                  </button>
+                                  {item.secondaryAction && (
+                                    <button
+                                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white"
+                                      onClick={item.secondaryAction.onClick}
+                                    >
+                                      {item.secondaryAction.label}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {smartCards.length > 1 && (
+                          <div className="mt-2 flex justify-center gap-1">
+                            {smartCards.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setSmartCardIndex(idx)}
+                                className={`h-2 w-2 rounded-full ${idx === smartCardIndex ? 'bg-white' : 'bg-white/30'}`}
+                                aria-label={`Ir a tarjeta ${idx + 1}`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>

@@ -427,12 +427,12 @@ function App() {
     const limit = iaQuota?.parseLimit ?? 0;
     const quotaText = limit ? ` (${totalUsed}/${limit})` : '';
     if (code.includes('permission-denied') || code.includes('failed-precondition')) {
-      return 'Configura tu API key en Configuracion o activa tu membresia para usar la IA.';
+      return 'Configura tu API key en Configuración o activa tu membresía para usar la IA.';
     }
     if (code.includes('resource-exhausted')) {
-      return `Alcanzaste el limite semanal de IA para tu plan${quotaText}.`;
+      return `Alcanzaste el límite semanal de IA para tu plan${quotaText}.`;
     }
-    return 'No pudimos consultar la IA. Intentalo de nuevo en unos minutos.';
+    return 'No pudimos consultar la IA. Inténtalo de nuevo en unos minutos.';
   };
 
   const formatCurrency = (cents?: number | null) => {
@@ -1356,18 +1356,21 @@ function App() {
 
   if (loaderMessage) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 text-slate-100">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_80%_25%,rgba(59,130,246,0.16),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.12),transparent_40%)]" />
-        <div className="relative flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-slate-900/80 px-8 py-6 shadow-2xl backdrop-blur-md">
+      <div
+        className="relative flex min-h-screen items-center justify-center overflow-hidden text-[var(--text)]"
+        style={{ backgroundColor: 'var(--bg)' }}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.14),transparent_35%),radial-gradient(circle_at_80%_25%,rgba(59,130,246,0.12),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.08),transparent_40%)]" />
+        <div className="relative flex flex-col items-center gap-4 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] px-8 py-6 shadow-2xl backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full border-4 border-emerald-400/30 border-t-transparent animate-spin" />
+            <div className="h-12 w-12 rounded-full border-4 border-[color-mix(in_srgb,var(--accent)_55%,transparent)] border-t-transparent animate-spin" />
             <div className="flex flex-col">
-              <p className="text-base font-semibold text-white">Preparando tu espacio</p>
-              <p className="text-sm text-slate-300">{loaderMessage}</p>
+              <p className="text-base font-semibold text-[var(--text)]">Preparando tu espacio</p>
+              <p className="text-sm text-[var(--text-muted)]">{loaderMessage}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-emerald-200">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+          <div className="flex items-center gap-2 text-xs text-[var(--text)]">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]/85" />
             <span>IA y finanzas listas en segundos</span>
           </div>
         </div>
@@ -1436,27 +1439,27 @@ function App() {
               <TopExpensesChart data={topExpenses} />
               <div className="card">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-white">Tarjetas inteligentes</h2>
-                  <span className="text-xs text-slate-400">Detectadas con datos reales</span>
+                  <h2 className="text-lg font-semibold text-[var(--text)]">Tarjetas inteligentes</h2>
+                  <span className="text-xs text-[var(--text-muted)]">Detectadas con datos reales</span>
                 </div>
                 <div className="space-y-3">
-                  {smartCards.length === 0 && <p className="text-sm text-slate-300">Sin alertas por ahora.</p>}
+                  {smartCards.length === 0 && <p className="text-sm text-[var(--text-muted)]">Sin alertas por ahora.</p>}
                   {smartCards.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs text-slate-300">
+                      <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                         <span>{smartCards.length > 1 ? 'Desliza para ver más' : 'Sugerencia destacada'}</span>
                         {smartCards.length > 1 && (
                           <div className="flex gap-2">
                             <button
                               onClick={handlePrevInsight}
-                              className="h-7 w-7 rounded-full border border-white/15 bg-white/10 text-white hover:border-primary"
+                              className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
                               aria-label="Anterior"
                             >
                               {'<'}
                             </button>
                             <button
                               onClick={handleNextInsight}
-                              className="h-7 w-7 rounded-full border border-white/15 bg-white/10 text-white hover:border-primary"
+                              className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
                               aria-label="Siguiente"
                             >
                               {'>'}
@@ -1473,9 +1476,9 @@ function App() {
                           >
                             {smartCards.map((item) => (
                               <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
-                                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
-                                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                                  <p className="text-sm text-slate-200">{item.body}</p>
+                                <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-3">
+                                  <p className="text-sm font-semibold text-[var(--text)]">{item.title}</p>
+                                  <p className="text-sm text-[var(--text-muted)]">{item.body}</p>
                                   <div className="mt-2 flex gap-2">
                                     <button
                                       className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
@@ -1485,7 +1488,7 @@ function App() {
                                   </button>
                                   {item.secondaryAction && (
                                     <button
-                                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white"
+                                      className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)]"
                                       onClick={item.secondaryAction.onClick}
                                     >
                                       {item.secondaryAction.label}
@@ -1502,7 +1505,11 @@ function App() {
                               <button
                                 key={idx}
                                 onClick={() => setSmartCardIndex(idx)}
-                                className={`h-2 w-2 rounded-full ${idx === smartCardIndex ? 'bg-white' : 'bg-white/30'}`}
+                                className={`h-2 w-2 rounded-full border ${
+                                  idx === smartCardIndex
+                                    ? 'bg-primary border-primary'
+                                    : 'bg-[var(--input-bg)] border-[var(--card-border)]'
+                                }`}
                                 aria-label={`Ir a tarjeta ${idx + 1}`}
                               />
                             ))}
@@ -1935,7 +1942,7 @@ function App() {
                     className={`rounded-full border px-3 py-1 ${
                       userProfile?.subscription?.status === 'active'
                         ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                        : 'border-amber-400/40 bg-amber-500/10 text-amber-200'
+                        : 'badge-warn'
                     }`}
                   >
                     {userProfile?.subscription?.status === 'active' ? 'Membresía activa' : 'Membresía inactiva'}

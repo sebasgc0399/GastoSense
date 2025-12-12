@@ -13,6 +13,15 @@
   --text-muted: #94a3b8;
   --primary: #0ea5e9;
   --accent: #22c55e;
+  --modal-surface: rgba(15, 23, 42, 0.92);
+  --modal-border: rgba(255, 255, 255, 0.18);
+  --modal-header: rgba(255, 255, 255, 0.08);
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-border: rgba(248, 113, 113, 0.35);
+  --danger-text: #fecdd3;
+  --warn-bg: rgba(251, 191, 36, 0.16);
+  --warn-border: rgba(251, 191, 36, 0.4);
+  --warn-text: #fef9c3;
   --input-bg: rgba(255, 255, 255, 0.08);
   --input-border: rgba(255, 255, 255, 0.18);
   --progress-bg: rgba(255, 255, 255, 0.1);
@@ -36,8 +45,17 @@
   --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --text: #1e293b;
   --text-muted: #64748b;
-  --primary: #0284c7;
+  --primary: #0ea5e9;
   --accent: #0f766e;
+  --modal-surface: #ffffff;
+  --modal-border: #e2e8f0;
+  --modal-header: #f8fafc;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecdd3;
+  --danger-text: #b91c1c;
+  --warn-bg: #fef3c7;
+  --warn-border: #fcd34d;
+  --warn-text: #92400e;
   --input-bg: #ffffff;
   --input-border: #cbd5e1;
   --progress-bg: #e2e8f0;
@@ -261,6 +279,12 @@ body {
 .bg-slate-900\/60,
 .bg-slate-900\/80 {
   background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+.badge-warn {
+  background-color: var(--warn-bg) !important;
+  border-color: var(--warn-border) !important;
+  color: var(--warn-text) !important;
 }
 
 .text-muted {
