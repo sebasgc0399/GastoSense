@@ -1411,12 +1411,6 @@ function App() {
           <div className="flex items-center gap-2">
             <button
               className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
-              onClick={() => setShowQuickAdd(true)}
-            >
-              + Registro rápido
-            </button>
-            <button
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
               onClick={logout}
             >
               Salir
