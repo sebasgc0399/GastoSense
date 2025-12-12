@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SVGProps } from 'react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { getFirebaseAuth, firebaseInitError } from '../config/firebase';
 import { RobotAvatar } from './RobotAvatar';
+import { isIOSSafari } from '../utils/isIOSSafari';
 
 const Loader2 = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -95,19 +96,32 @@ export function LoginHero() {
   };
 
   const handleGoogleLogin = async () => {
+    if (firebaseInitError) {
+      swapMessage('No pudimos iniciar la sesión porque falta configurar Firebase.');
+      return;
+    }
+
+    const auth = getFirebaseAuth();
     setIsLoading(true);
     setLoadingStage(0);
+    const provider = new GoogleAuthProvider();
     try {
-      for (let i = 0; i < loadingStages.length; i++) {
-        const stage = loadingStages[i];
-        swapMessage(stage.text);
-        setLoadingStage(i);
-        await new Promise((resolve) => setTimeout(resolve, stage.duration));
+      swapMessage(loadingStages[0].text);
+      if (isIOSSafari()) {
+        await signInWithRedirect(auth, provider);
+        return;
       }
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      // Ejecutamos el popup inmediatamente tras el gesto del usuario para evitar bloqueos de Safari/iOS.
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error(error);
-      swapMessage('No pudimos iniciar sesion, intenta de nuevo.');
+      const errorMessage = typeof error === 'object' && error !== null ? (error as { code?: string; message?: string }) : {};
+      const messageText =
+        errorMessage?.code === 'auth/missing-initial-state' ||
+        errorMessage?.message?.toLowerCase().includes('missing initial state')
+          ? 'Parece que el login se abrio en otra pestaña o navegador. Intenta de nuevo desde el mismo navegador.'
+          : 'No pudimos iniciar sesion, intenta de nuevo.';
+      swapMessage(messageText);
     } finally {
       setIsLoading(false);
     }
