@@ -15,6 +15,7 @@ import {
 } from '../services/users';
 import { useIaQuota } from './useIaQuota';
 import type { IaQuota, KeyPreference, PlanInfo, PlanPeriod, UserProfile, UserRole } from '../types';
+import { formatCurrency, formatDate, formatUsdApprox } from '../utils/format';
 
 type PlanId = 'plan_byok' | 'plan_pro';
 type AdminSubscriptionSource = 'manual' | 'stripe' | 'promo' | 'wompi';
@@ -225,27 +226,6 @@ export function useSettingsController({ userUid, logout }: UseSettingsController
   const canUseManaged =
     !!userProfile && ['paid_managed', 'gifted_managed', 'admin', 'paid_byok', 'free'].includes(userProfile.role);
   const showKeySettings = userProfile?.role === 'paid_byok' || userProfile?.role === 'admin';
-
-  const formatCurrency = useCallback((cents?: number | null) => {
-    if (!cents && cents !== 0) return '--';
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
-      cents / 100,
-    );
-  }, []);
-
-  const formatUsdApprox = useCallback((cents?: number | null) => {
-    if (!cents && cents !== 0) return '';
-    // Aproximación rápida: 1 USD = 4000 COP; ajusta si quieres un tipo de cambio distinto.
-    const usd = cents / 100 / 4000;
-    return `(≈ ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(usd)})`;
-  }, []);
-
-  const formatDate = useCallback((ts?: number | null) => {
-    if (!ts) return null;
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toISOString().slice(0, 10);
-  }, []);
 
   const handleCheckout = useCallback(
     async (planId: PlanId) => {

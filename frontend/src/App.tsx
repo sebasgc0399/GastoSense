@@ -13,12 +13,14 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { callParseTransactionPhrase } from './services/functions';
 import { trackEvent } from './services/analytics';
-import { useAdvisorController } from './hooks/useAdvisorController';
-import { useBudgetController } from './hooks/useBudgetController';
-import { useSettingsController } from './hooks/useSettingsController';
-import { useTemplatesController } from './hooks/useTemplatesController';
-import { useTransactionsController } from './hooks/useTransactionsController';
-import { useHomeMonthController } from './hooks/useHomeMonthController';
+import {
+  useAdvisorController,
+  useBudgetController,
+  useHomeMonthController,
+  useSettingsController,
+  useTemplatesController,
+  useTransactionsController,
+} from './hooks';
 import {
   createTransaction,
   deleteTransaction,
@@ -31,6 +33,8 @@ import type {
   UserRole,
 } from './types';
 import { monthStartIso, todayIso } from './utils/dates';
+import { isResourceExhausted as isResourceExhaustedError, mapAiError as mapAiErrorMessage } from './utils/aiErrors';
+import { formatPesos } from './utils/format';
 function App() {
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useThemeMode();
@@ -122,47 +126,12 @@ function App() {
     };
   }, [showUpgradeModal]);
 
-  const isResourceExhausted = useCallback((err: unknown) => {
-    const codeRaw = (err as { code?: unknown } | null)?.code;
-    const code =
-      typeof codeRaw === 'string'
-        ? codeRaw
-        : typeof codeRaw === 'number'
-          ? codeRaw.toString()
-          : codeRaw && typeof (codeRaw as { toString?: () => string }).toString === 'function'
-            ? (codeRaw as { toString: () => string }).toString()
-            : '';
-    return code.includes('resource-exhausted');
-  }, []);
+  const isResourceExhausted = isResourceExhaustedError;
 
-  const mapAiError = useCallback((err: unknown, kind: 'parse' | 'analyze' = 'parse') => {
-    const codeRaw = (err as { code?: unknown } | null)?.code;
-    const code =
-      typeof codeRaw === 'string'
-        ? codeRaw
-        : typeof codeRaw === 'number'
-          ? codeRaw.toString()
-          : codeRaw && typeof (codeRaw as { toString?: () => string }).toString === 'function'
-            ? (codeRaw as { toString: () => string }).toString()
-            : '';
-    const totalUsed = kind === 'analyze' ? (iaQuota?.analyzeUsed ?? 0) : (iaQuota?.parseUsed ?? 0);
-    const limit = kind === 'analyze' ? (iaQuota?.analyzeLimit ?? 0) : (iaQuota?.parseLimit ?? 0);
-    const quotaText = limit ? ` (${totalUsed}/${limit})` : '';
-    if (code.includes('permission-denied') || code.includes('failed-precondition')) {
-      return 'Configura tu API key en Configuración o activa tu membresía para usar la IA.';
-    }
-    if (code.includes('resource-exhausted')) {
-      return `Alcanzaste el límite semanal de IA para tu plan${quotaText}.`;
-    }
-    return 'No pudimos consultar la IA. Inténtalo de nuevo en unos minutos.';
-  }, [iaQuota?.analyzeLimit, iaQuota?.analyzeUsed, iaQuota?.parseLimit, iaQuota?.parseUsed]);
-
-  const formatPesos = useCallback((value?: number | null) => {
-    if (!value && value !== 0) return '--';
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
-      value,
-    );
-  }, []);
+  const mapAiError = useCallback(
+    (err: unknown, kind: 'parse' | 'analyze' = 'parse') => mapAiErrorMessage(err, kind, iaQuota),
+    [iaQuota],
+  );
 
   const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
   const scrollToPlans = useCallback(

@@ -75,6 +75,16 @@ Para que el redirect funcione en `web.app` y `firebaseapp.com`:
 2) Crear `frontend/.env` (ver arriba)
 3) `npm run dev`
 
+## Smoke test checklist (8 flujos críticos)
+- [ ] **Login**: Google en desktop + Safari iOS (redirect) y vuelve autenticado a la app.
+- [ ] **Tabs**: navegar Inicio/Movimientos/Asesor IA/Config sin errores y con UI estable.
+- [ ] **Quick Add**: abrir `QuickAddSheet`, guardar gasto/ingreso y ver reflejo en listas/métricas.
+- [ ] **Interpretar (IA parse)**: pegar frase, recibir sugerencia y guardar la transacción.
+- [ ] **Editar/Eliminar**: abrir `TransactionEditModal`, editar una transacción y borrar otra.
+- [ ] **Presupuesto**: guardar presupuesto total + por categoría y ver alertas/indicadores.
+- [ ] **Asesor IA (2 acciones)**: ejecutar 2 quick actions (p.ej. “Resumen semanal” + “Gastos hormiga”) y validar respuesta + decremento de cuota.
+- [ ] **Planes/Checkout/Admin**: ver planes/periodos, iniciar checkout Wompi; (si rol admin) listar usuarios, cambiar rol/estado y guardar.
+
 ## Notas
 - Usa Firebase Auth (Google) y Firestore; las callable functions requieren que el proyecto y secretos estén configurados.
 - Las cuotas de IA se actualizan tras cada llamada (parse/analyze) mediante `fetchUsageQuota`.
