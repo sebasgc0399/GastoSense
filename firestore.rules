@@ -34,7 +34,7 @@ service cloud.firestore {
         && (!('paymentMethod' in request.resource.data) || request.resource.data.paymentMethod in ['efectivo','debito','credito','digital','otro'])
         && (!('type' in request.resource.data) || request.resource.data.type in ['expense','income'])
         && (!('recurring' in request.resource.data) || request.resource.data.recurring is bool)
-        && (!('frequency' in request.resource.data) || request.resource.data.frequency in ['weekly','monthly','yearly']);
+        && (!('frequency' in request.resource.data) || request.resource.data.frequency in ['weekly','biweekly','monthly','yearly']);
     }
 
     function validBudget() {
