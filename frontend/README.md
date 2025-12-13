@@ -20,6 +20,8 @@ React + TypeScript + Vite + Tailwind. Interfaz mobile-first para registrar gasto
 - `npm run build` — build producción
 - `npm run preview` — servir el build
 - `npm run lint` — ESLint (TS/React)
+- `npm run test` — Vitest (watch)
+- `npm run test:coverage` — tests + coverage report
 
 ## Login (Firebase Auth + Google)
 El login usa Firebase Auth con Google, con un flujo adaptado para Safari iOS:

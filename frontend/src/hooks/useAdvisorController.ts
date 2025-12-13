@@ -319,7 +319,12 @@ export function useAdvisorController({
               totalIncome: monthlyIncome,
               topCategories: topCategories.slice(0, 3),
               budget: budgetTotal ?? undefined,
-              lastTransactions: lastTransactions.slice(0, 3),
+              lastTransactions: lastTransactions.slice(0, 3).map((tx) => ({
+                amount: tx.amount,
+                category: tx.category,
+                type: tx.type,
+                date: tx.date,
+              })),
               previousMonthExpense: previousMonth?.expense,
               previousMonthIncome: previousMonth?.income,
             },
