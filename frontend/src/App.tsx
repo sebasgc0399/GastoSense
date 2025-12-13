@@ -15,6 +15,7 @@ import { callAnalyzeSummary, callAnalyzeMonthlyDeep, callParseTransactionPhrase 
 import { trackEvent } from './services/analytics';
 import { useIaQuota } from './hooks/useIaQuota';
 import { useBudgetController } from './hooks/useBudgetController';
+import { useTemplatesController } from './hooks/useTemplatesController';
 import { useTransactionsController } from './hooks/useTransactionsController';
 import { useHomeMonthController } from './hooks/useHomeMonthController';
 import {
@@ -37,13 +38,11 @@ import {
   fetchTransactionsRange,
   updateTransaction,
 } from './services/transactions';
-import { deleteTemplate, fetchTemplates, saveTemplate, updateTemplate } from './services/templates';
 import type {
   AdvisorMode,
   ParsedTransactionSuggestion,
   Transaction,
   TransactionInput,
-  Template,
   UserProfile,
   KeyPreference,
   UserRole,
@@ -68,6 +67,7 @@ function App() {
   const { theme, toggleTheme } = useThemeMode();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const openQuickAddSheet = useCallback(() => setShowQuickAdd(true), []);
   const [advisorMode, setAdvisorMode] = useState<AdvisorMode>('amable');
   const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
   const {
@@ -113,8 +113,16 @@ function App() {
   const [planPeriods, setPlanPeriods] = useState<Record<string, PlanPeriod>>({});
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const {
+    templates,
+    recurringTemplates,
+    selectedTemplate,
+    clearSelectedTemplate,
+    saveTemplate: handleSaveTemplate,
+    updateTemplate: handleUpdateTemplate,
+    deleteTemplate: handleDeleteTemplate,
+    handleUseTemplate,
+  } = useTemplatesController({ userId: user?.uid, onOpenQuickAdd: openQuickAddSheet });
   const [advisorLoading, setAdvisorLoading] = useState(false);
   const { quota: iaQuotaFresh } = useIaQuota();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -207,19 +215,6 @@ function App() {
       document.body.classList.remove('overflow-hidden');
     };
   }, [showUpgradeModal]);
-
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        if (!user) return;
-        const data = await fetchTemplates(user.uid);
-        setTemplates(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    loadTemplates();
-  }, [user]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -388,15 +383,10 @@ function App() {
     setShowQuickAdd(true);
     trackEvent('smart_card_click', { action: 'quick_add', mode });
     if (mode === 'income') {
-      setSelectedTemplate(null);
+      clearSelectedTemplate();
       // Podrías setear un estado para preseleccionar tipo ingreso si el formulario lo soporta
     }
-  }, []);
-
-  const handleUseTemplate = useCallback((tpl: Template) => {
-    setSelectedTemplate(tpl);
-    setShowQuickAdd(true);
-  }, []);
+  }, [clearSelectedTemplate]);
 
   const openAdvisor = useCallback((context?: Record<string, unknown>) => {
     setActiveTab('advisor');
@@ -417,7 +407,6 @@ function App() {
     topExpenses,
     categorySpendMap,
     previousMonth,
-    recurringTemplates,
     smartCards,
     smartCardIndex,
     setSmartCardIndex,
@@ -780,13 +769,6 @@ function App() {
     user,
   ]);
 
-  const handleSaveTemplate = async (name: string, payload: TransactionInput) => {
-    if (!user) return;
-    await saveTemplate(name, payload, user.uid);
-    const data = await fetchTemplates(user.uid);
-    setTemplates(data);
-  };
-
   const handleCheckout = useCallback(async (planId: 'plan_byok' | 'plan_pro') => {
     if (!user) {
       setSettingsMessage('Inicia sesión para pagar.');
@@ -805,23 +787,6 @@ function App() {
       setCheckoutLoading(null);
     }
   }, [planPeriods, user]);
-
-  const handleDeleteTemplate = useCallback(async (id: string) => {
-    if (!user) return;
-    await deleteTemplate(id);
-    const data = await fetchTemplates(user.uid);
-    setTemplates(data);
-  }, [user]);
-
-  const handleUpdateTemplate = async (
-    id: string,
-    payload: TransactionInput & { name?: string; recurring?: boolean; frequency?: Template['frequency'] },
-  ) => {
-    if (!user) return;
-    await updateTemplate(id, payload, user.uid);
-    const data = await fetchTemplates(user.uid);
-    setTemplates(data);
-  };
 
   const handleSaveApiKey = useCallback(async () => {
     if (!user) return;
@@ -1142,7 +1107,7 @@ function App() {
         onDeleteTemplate={handleDeleteTemplate}
         onUpdateTemplate={handleUpdateTemplate}
         selectedTemplate={selectedTemplate}
-        onClearSelectedTemplate={() => setSelectedTemplate(null)}
+        onClearSelectedTemplate={clearSelectedTemplate}
       />
 
       <TransactionEditModal
