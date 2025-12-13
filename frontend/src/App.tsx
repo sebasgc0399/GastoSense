@@ -15,6 +15,7 @@ import { TransactionsPage } from './pages/TransactionsPage';
 import { callAnalyzeSummary, callAnalyzeMonthlyDeep, callParseTransactionPhrase } from './services/functions';
 import { trackEvent } from './services/analytics';
 import { useIaQuota } from './hooks/useIaQuota';
+import { useTransactionsController } from './hooks/useTransactionsController';
 import { getBudget, saveBudget } from './services/budgets';
 import {
   adminSetUserRole,
@@ -79,17 +80,24 @@ function App() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [advisorMode, setAdvisorMode] = useState<AdvisorMode>('amable');
   const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filters, setFilters] = useState({ startDate: monthStartIso(), endDate: todayIso(), category: 'all' });
+  const {
+    filters,
+    handleFiltersChange: txHandleFiltersChange,
+    transactions,
+    transactionsReady,
+    error,
+    txPage,
+    setTxPage,
+    txPageSize,
+    paginatedTransactions,
+    totalTxPages,
+  } = useTransactionsController({ userId: user?.uid });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [budgetSaving, setBudgetSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const userRoleRef = useRef<UserRole | undefined>(undefined);
-  const [transactionsReady, setTransactionsReady] = useState(false);
-  const transactionsUserRef = useRef<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
   const [keySaving, setKeySaving] = useState(false);
@@ -127,8 +135,6 @@ function App() {
   );
   const [showLimitsHelp, setShowLimitsHelp] = useState(false);
   const plansRef = useRef<HTMLDivElement | null>(null);
-  const [txPage, setTxPage] = useState(1);
-  const txPageSize = 8;
   const formatAdminUsers = (
     list: Awaited<ReturnType<typeof fetchUsersList>>,
   ): {
@@ -213,35 +219,6 @@ function App() {
       document.body.classList.remove('overflow-hidden');
     };
   }, [showUpgradeModal]);
-
-  useEffect(() => {
-    if (!user) {
-      setTransactions([]);
-      setTransactionsReady(false);
-      transactionsUserRef.current = null;
-      return;
-    }
-    if (transactionsUserRef.current !== user.uid) {
-      setTransactionsReady(false);
-      transactionsUserRef.current = user.uid;
-    }
-    const unsubscribe = listenTransactions({
-      userId: user.uid,
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-      category: filters.category,
-      onChange: (list) => {
-        setTransactions(list);
-        setTransactionsReady(true);
-      },
-      onError: (err) => {
-        setError(err.message);
-        setTransactionsReady(true);
-      },
-    });
-    setTxPage(1);
-    return () => unsubscribe();
-  }, [filters, user]);
 
   useEffect(() => {
     if (!user) {
@@ -357,11 +334,6 @@ function App() {
   }, [currentMonth, user]);
 
   const monthTransactions = useMemo(() => homeMonthTransactions, [homeMonthTransactions]);
-  const paginatedTransactions = useMemo(() => {
-    const start = (txPage - 1) * txPageSize;
-    return transactions.slice(start, start + txPageSize);
-  }, [transactions, txPage]);
-  const totalTxPages = Math.max(1, Math.ceil(transactions.length / txPageSize));
 
   const monthlyExpense = useMemo(
     () => monthTransactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
@@ -424,7 +396,7 @@ function App() {
     return code.includes('resource-exhausted');
   }, []);
 
-  const mapAiError = useCallback((err: unknown) => {
+  const mapAiError = useCallback((err: unknown, kind: 'parse' | 'analyze' = 'parse') => {
     const codeRaw = (err as { code?: unknown } | null)?.code;
     const code =
       typeof codeRaw === 'string'
@@ -434,8 +406,8 @@ function App() {
           : codeRaw && typeof (codeRaw as { toString?: () => string }).toString === 'function'
             ? (codeRaw as { toString: () => string }).toString()
             : '';
-    const totalUsed = iaQuota?.parseUsed ?? 0;
-    const limit = iaQuota?.parseLimit ?? 0;
+    const totalUsed = kind === 'analyze' ? (iaQuota?.analyzeUsed ?? 0) : (iaQuota?.parseUsed ?? 0);
+    const limit = kind === 'analyze' ? (iaQuota?.analyzeLimit ?? 0) : (iaQuota?.parseLimit ?? 0);
     const quotaText = limit ? ` (${totalUsed}/${limit})` : '';
     if (code.includes('permission-denied') || code.includes('failed-precondition')) {
       return 'Configura tu API key en Configuración o activa tu membresía para usar la IA.';
@@ -444,7 +416,7 @@ function App() {
       return `Alcanzaste el límite semanal de IA para tu plan${quotaText}.`;
     }
     return 'No pudimos consultar la IA. Inténtalo de nuevo en unos minutos.';
-  }, [iaQuota?.parseLimit, iaQuota?.parseUsed]);
+  }, [iaQuota?.analyzeLimit, iaQuota?.analyzeUsed, iaQuota?.parseLimit, iaQuota?.parseUsed]);
 
   const formatCurrency = useCallback((cents?: number | null) => {
     if (!cents && cents !== 0) return '--';
@@ -482,13 +454,29 @@ function App() {
     return map;
   }, [monthTransactions]);
 
-  const dayOfMonth = new Date().getDate();
+  const [dayTick, setDayTick] = useState(0);
+
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    // Re-render una vez al día para recalcular cards si la app quedó abierta.
+    nextMidnight.setHours(24, 0, 5, 0);
+    const waitMs = Math.max(0, nextMidnight.getTime() - now.getTime());
+    const timeoutId = window.setTimeout(() => setDayTick((t) => t + 1), waitMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [dayTick]);
+
+  const dayOfMonth = useMemo(() => {
+    void dayTick;
+    return new Date().getDate();
+  }, [dayTick]);
   const daysElapsed = dayOfMonth;
   const todayStart = useMemo(() => {
+    void dayTick;
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
-  }, []);
+  }, [dayTick]);
 
   const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
   const scrollToPlans = useCallback(
@@ -508,10 +496,10 @@ function App() {
   }, [scrollToBudgets]);
 
   const openMovements = useCallback((category?: string) => {
-    setFilters({ startDate: monthStartIso(), endDate: todayIso(), category: category || 'all' });
+    txHandleFiltersChange({ startDate: monthStartIso(), endDate: todayIso(), category: category || 'all' });
     setActiveTab('transactions');
     trackEvent('smart_card_click', { action: 'movements', category });
-  }, []);
+  }, [txHandleFiltersChange]);
 
   const openQuickAdd = useCallback((mode?: 'income' | 'expense') => {
     setShowQuickAdd(true);
@@ -894,12 +882,12 @@ function App() {
       const { startDate, endDate, category } = next;
       // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
       if (startDate && endDate && startDate > endDate) {
-        setFilters({ startDate: endDate, endDate: startDate, category });
+        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category });
       } else {
-        setFilters(next);
+        txHandleFiltersChange(next);
       }
     },
-    [],
+    [txHandleFiltersChange],
   );
 
   const iaRole: UserRole = (userProfile?.role as UserRole) || (iaQuota?.role as UserRole) || 'free';
@@ -995,7 +983,7 @@ function App() {
       if (isResourceExhausted(err)) {
         triggerUpgradeOnce('parse_exhausted');
       }
-      throw new Error(mapAiError(err));
+      throw new Error(mapAiError(err, 'parse'));
     }
   };
 
@@ -1158,7 +1146,7 @@ function App() {
       console.error(err);
       pushFeedItem({
         from: 'ia',
-        text: mapAiError(err),
+        text: mapAiError(err, 'analyze'),
         tone: advisorMode,
         kind: 'ia',
       });
