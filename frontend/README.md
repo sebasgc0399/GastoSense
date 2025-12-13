@@ -54,13 +54,92 @@ Para que el redirect funcione en `web.app` y `firebaseapp.com`:
 
 ## Estructura rápida
 - `src/main.tsx` — arranque con `AuthProvider` y `ThemeProvider`.
-- `src/App.tsx` — orquesta pestañas (Inicio, Movimientos, Asesor IA, Config), presupuestos, planes y admin.
+- `src/App.tsx` — **AppShell**: compone hooks por dominio, controla tabs y monta modales globales.
+- `src/pages/` — UI por tab: `HomePage`, `TransactionsPage`, `AdvisorPage`, `SettingsPage` (sin React Router por ahora).
+- `src/hooks/` — lógica por dominio (controllers/hooks), exportada vía `src/hooks/index.ts`.
 - `src/context/` — `AuthContext` (login/logout), `ThemeContext` (tema claro/oscuro).
 - `src/components/` — `LoginHero`, `QuickAddSheet`, `BudgetCard`, `CategoryBudgets`, `TransactionEditModal`, `BottomNav`, `ResponsiveSelect`, etc.
 - `src/config/firebase.ts` — init de Firebase y configuración de Auth.
-- `src/utils/isIOSSafari.ts` — detección robusta de Safari iOS.
+- `src/utils/` — helpers reutilizables (`dates.ts`, `format.ts`, `aiErrors.ts`, `isIOSSafari.ts`).
 - `src/services/` — Firestore/Functions (transacciones, presupuestos, plantillas, usuarios, IA, planes/pagos).
 - `src/types/` — modelos compartidos (`Transaction`, `Budget`, `Template`, `UserProfile`, `PlanInfo`, etc.).
+- `tests/` — unit tests con Vitest + Testing Library (mocks de `src/services/*`).
+- `.github/workflows/frontend-ci.yml` — CI (lint + build + test:coverage).
+
+## Arquitectura (post-refactor de App.tsx)
+Este repo empezó con un `App.tsx` monolítico. El refactor lo dejó como **composición** de páginas + hooks, para que el proyecto pueda crecer sin volver al monolito.
+
+### AppShell (src/App.tsx)
+Responsabilidades:
+- **Auth gate**: si no hay sesión, renderiza `LoginHero`.
+- **Tabs**: estado `activeTab` (sin router) y render de `pages/*`.
+- **Cross-tab state**: estado global que cruza pantallas (ej. `selectedTx`, `showQuickAdd`, upgrade/limits modals).
+- **Modales globales** (persisten entre tabs):
+  - `QuickAddSheet` (crear + interpretar frase IA + templates)
+  - `TransactionEditModal` (editar/borrar)
+  - `UpgradeModal` (upgrade por cuota/feature lock)
+  - `LimitsHelpModal` (ayuda de límites)
+- **Acciones cross-tab**: helpers para “abrir” secciones desde smart cards (`openMovements`, `openBudgets`, `openPlans`, `openAdvisor`).
+
+### Pages (src/pages/*)
+Cada tab vive en su archivo y recibe props tipadas (contrato explícito):
+- `HomePage`: métricas del mes, smart cards, presupuesto, templates recurrentes.
+- `TransactionsPage`: lista, filtros, paginación, borrado/selección para editar.
+- `AdvisorPage`: chat del asesor IA, quick actions y locks.
+- `SettingsPage`: perfil, cuota IA, BYOK, planes/checkout y admin.
+
+### Hooks por dominio (src/hooks/*)
+La lógica “grande” se movió a hooks (sin cambiar UI/flows):
+- `useTransactionsController`: listener de movimientos + filtros + paginación + estados `ready/error`.
+- `useHomeMonthController`: listener del mes + derivados (income/expense/top/categories) + smart cards + handlers.
+- `useBudgetController`: cargar/guardar presupuesto total y por categoría.
+- `useTemplatesController`: CRUD de templates + selección + “usar template” (apertura de Quick Add).
+- `useAdvisorController`: estado del chat + acciones IA + locks por rol/cuota.
+  - Privacidad: payload a IA va **agregado**; `lastTransactions` se sanitiza (solo amount/category/type/date).
+- `useSettingsController`: perfil + quota refresh + BYOK/preference + planes/checkout + admin (incluye `plansRef`).
+- `useIaQuota`: fetch de cuota IA (fallback/cache por usuario).
+
+### Mapa rápido (qué vive dónde)
+- **Movimientos**: `useTransactionsController` + `TransactionsPage` + `src/services/transactions.ts` (listener + CRUD).
+- **Inicio (mes actual + insights)**: `useHomeMonthController` + `HomePage` + `src/services/transactions.ts` (listener del mes + fetch mes anterior).
+- **Presupuesto**: `useBudgetController` + `HomePage` + `src/services/budgets.ts`.
+- **Templates**: `useTemplatesController` + `HomePage`/`QuickAddSheet` + `src/services/templates.ts`.
+- **Asesor IA**: `useAdvisorController` + `AdvisorPage`/`QuickAddSheet` + `src/services/functions.ts` (callables) + cuota vía `useIaQuota`.
+- **Configuración/Admin/Planes/Keys**: `useSettingsController` + `SettingsPage` + `src/services/users.ts`/`src/services/functions.ts`.
+
+### Utils (src/utils/*)
+- `dates.ts`: helpers de fechas (ej. `todayIso`, `monthStartIso`, etc.).
+- `format.ts`: formatters (COP/USD/date) reutilizables.
+- `aiErrors.ts`: normalización de errores IA (`isResourceExhausted`, `mapAiError`, extractor de `code`).
+
+## Tests + coverage + CI
+Unit tests están pensados para ser **estables** (sin depender de Firebase/Auth ni UI) y se enfocan en hooks/utils.
+
+### Cómo correr tests
+- `npm run test` (watch)
+- `npm run test:coverage` (genera `coverage/` con HTML; está ignorado por git)
+
+### Tipado en IDE (tests)
+Los tests tienen su propio `tsconfig` para que TypeScript resuelva módulos y tipos correctamente:
+- `tests/tsconfig.json`
+
+Si el IDE muestra `Cannot find module ...` en archivos dentro de `tests/`:
+- Ejecuta `npm install` dentro de `frontend/` (para instalar `vitest`/Testing Library).
+- Reinicia TypeScript Server (VS Code: “TypeScript: Restart TS server”) para que detecte `tests/tsconfig.json`.
+
+### Mocks (sin Firebase)
+Los tests mockean `src/services/*` con `vi.mock(...)` para simular listeners/callables.
+
+### Coverage “real” (solo hooks/utils)
+`vite.config.ts` configura coverage para medir solo:
+- `src/hooks/**` y `src/utils/**`
+y excluir UI/servicios/context para que el % refleje lo que estamos testeando en esta etapa.
+
+### CI
+GitHub Actions corre en PRs:
+- lint
+- build
+- test:coverage
 
 ## Funcionalidad clave
 - **Quick Add**: formulario rápido, plantillas recurrentes, modo frase IA y grabación voz (<=10s) para transcribir y clasificar.
