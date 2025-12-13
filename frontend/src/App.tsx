@@ -1,4 +1,3 @@
-﻿import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
 import { QuickAddSheet } from './components/QuickAddSheet';
@@ -15,8 +14,9 @@ import { TransactionsPage } from './pages/TransactionsPage';
 import { callAnalyzeSummary, callAnalyzeMonthlyDeep, callParseTransactionPhrase } from './services/functions';
 import { trackEvent } from './services/analytics';
 import { useIaQuota } from './hooks/useIaQuota';
+import { useBudgetController } from './hooks/useBudgetController';
 import { useTransactionsController } from './hooks/useTransactionsController';
-import { getBudget, saveBudget } from './services/budgets';
+import { useHomeMonthController } from './hooks/useHomeMonthController';
 import {
   adminSetUserRole,
   clearUserOpenAIKey,
@@ -35,13 +35,11 @@ import {
   createTransaction,
   deleteTransaction,
   fetchTransactionsRange,
-  listenTransactions,
   updateTransaction,
 } from './services/transactions';
 import { deleteTemplate, fetchTemplates, saveTemplate, updateTemplate } from './services/templates';
 import type {
   AdvisorMode,
-  Budget,
   ParsedTransactionSuggestion,
   Transaction,
   TransactionInput,
@@ -52,7 +50,7 @@ import type {
   PlanInfo,
   PlanPeriod,
 } from './types';
-import { monthEndIso, monthStartIso, previousMonthRange, todayIso } from './utils/dates';
+import { monthStartIso, todayIso } from './utils/dates';
 type PlanId = 'plan_byok' | 'plan_pro';
 
 type ChatItem = {
@@ -63,14 +61,6 @@ type ChatItem = {
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
   chartTop?: { category: string; amount: number }[];
-};
-type SmartCard = {
-  id: string;
-  slot: 1 | 2 | 3 | 4;
-  title: string;
-  body: string;
-  primaryAction: { label: string; onClick: () => void };
-  secondaryAction?: { label: string; onClick: () => void };
 };
 type AdminSubscriptionSource = 'manual' | 'stripe' | 'promo' | 'wompi';
 function App() {
@@ -93,8 +83,6 @@ function App() {
     totalTxPages,
   } = useTransactionsController({ userId: user?.uid });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [budget, setBudget] = useState<Budget | null>(null);
-  const [budgetSaving, setBudgetSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const userRoleRef = useRef<UserRole | undefined>(undefined);
@@ -115,19 +103,19 @@ function App() {
   >([]);
   const defaultMonth = todayIso().slice(0, 7);
   const [currentMonth, setCurrentMonth] = useState(defaultMonth);
+  const { budget, budgetSaving, handleSaveBudget, handleSaveCategoryBudgets } = useBudgetController({
+    userId: user?.uid,
+    currentMonth,
+  });
   const [adminSearch, setAdminSearch] = useState('');
   const [aiQuota, setAiQuota] = useState<UsageQuota | null>(null);
   const [plans, setPlans] = useState<PlanInfo[]>([]);
   const [planPeriods, setPlanPeriods] = useState<Record<string, PlanPeriod>>({});
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
-  const [previousMonth, setPreviousMonth] = useState<{ expense: number; income: number } | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [advisorLoading, setAdvisorLoading] = useState(false);
-  const [smartCards, setSmartCards] = useState<SmartCard[]>([]);
-  const [smartCardIndex, setSmartCardIndex] = useState(0);
-  const [homeMonthTransactions, setHomeMonthTransactions] = useState<Transaction[]>([]);
   const { quota: iaQuotaFresh } = useIaQuota();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
@@ -221,36 +209,6 @@ function App() {
   }, [showUpgradeModal]);
 
   useEffect(() => {
-    if (!user) {
-      setHomeMonthTransactions([]);
-      return;
-    }
-    const start = monthStartIso(currentMonth);
-    const end = monthEndIso(currentMonth);
-    const unsubscribe = listenTransactions({
-      userId: user.uid,
-      startDate: start,
-      endDate: end,
-      onChange: (list) => setHomeMonthTransactions(list),
-      onError: (err) => console.error('No pudimos cargar movimientos del mes', err),
-    });
-    return () => unsubscribe();
-  }, [user, currentMonth]);
-
-  useEffect(() => {
-    const fetchBudgetData = async () => {
-      try {
-        if (!user) return;
-        const data = await getBudget(user.uid, currentMonth);
-        setBudget(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchBudgetData();
-  }, [currentMonth, user]);
-
-  useEffect(() => {
     const loadTemplates = async () => {
       try {
         if (!user) return;
@@ -316,49 +274,6 @@ function App() {
     };
     loadProfile();
   }, [logout, refreshAdminUsers, user]);
-
-  useEffect(() => {
-    const loadPreviousMonth = async () => {
-      if (!user) return;
-      const range = previousMonthRange(currentMonth);
-      try {
-        const prev = await fetchTransactionsRange({ userId: user.uid, startDate: range.start, endDate: range.end });
-        const expense = prev.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-        const income = prev.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-        setPreviousMonth({ expense, income });
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    loadPreviousMonth();
-  }, [currentMonth, user]);
-
-  const monthTransactions = useMemo(() => homeMonthTransactions, [homeMonthTransactions]);
-
-  const monthlyExpense = useMemo(
-    () => monthTransactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
-    [monthTransactions],
-  );
-  const monthlyIncome = useMemo(
-    () => monthTransactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-    [monthTransactions],
-  );
-  const availableBalance = useMemo(() => monthlyIncome - monthlyExpense, [monthlyIncome, monthlyExpense]);
-
-  const topExpenses = useMemo(() => {
-    const byCat: Record<string, number> = {};
-    monthTransactions
-      .filter((t) => t.type === 'expense')
-      .forEach((tx) => {
-        byCat[tx.category] = (byCat[tx.category] || 0) + tx.amount;
-      });
-    return Object.entries(byCat)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([category, amount]) => ({ category, amount }));
-  }, [monthTransactions]);
-
-  const recurringTemplates = useMemo(() => templates.filter((t) => t.recurring), [templates]);
   const roleLabel = useMemo(() => {
     if (!userProfile) return 'Sin rol';
     return (
@@ -446,38 +361,6 @@ function App() {
     return d.toISOString().slice(0, 10);
   }, []);
 
-  const categorySpendMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    monthTransactions.forEach((tx) => {
-      map[tx.category] = (map[tx.category] || 0) + tx.amount;
-    });
-    return map;
-  }, [monthTransactions]);
-
-  const [dayTick, setDayTick] = useState(0);
-
-  useEffect(() => {
-    const now = new Date();
-    const nextMidnight = new Date(now);
-    // Re-render una vez al día para recalcular cards si la app quedó abierta.
-    nextMidnight.setHours(24, 0, 5, 0);
-    const waitMs = Math.max(0, nextMidnight.getTime() - now.getTime());
-    const timeoutId = window.setTimeout(() => setDayTick((t) => t + 1), waitMs);
-    return () => window.clearTimeout(timeoutId);
-  }, [dayTick]);
-
-  const dayOfMonth = useMemo(() => {
-    void dayTick;
-    return new Date().getDate();
-  }, [dayTick]);
-  const daysElapsed = dayOfMonth;
-  const todayStart = useMemo(() => {
-    void dayTick;
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [dayTick]);
-
   const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
   const scrollToPlans = useCallback(
     () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
@@ -526,6 +409,38 @@ function App() {
     setTimeout(() => scrollToPlans(), 120);
   }, [scrollToPlans]);
 
+  const {
+    monthTransactions,
+    monthlyExpense,
+    monthlyIncome,
+    availableBalance,
+    topExpenses,
+    categorySpendMap,
+    previousMonth,
+    recurringTemplates,
+    smartCards,
+    smartCardIndex,
+    setSmartCardIndex,
+    handlePrevInsight,
+    handleNextInsight,
+    handleTouchStart,
+    handleTouchEnd,
+  } = useHomeMonthController({
+    userId: user?.uid,
+    currentMonth,
+    budget,
+    templates,
+    transactions,
+    iaQuota,
+    formatPesos,
+    openBudgets,
+    openMovements,
+    openQuickAdd,
+    openPlans,
+    openAdvisor,
+    handleUseTemplate,
+  });
+
   const getWeekKey = useCallback(() => {
     if (iaQuota?.week) return iaQuota.week;
     if (iaQuota?.resetAt) return iaQuota.resetAt.slice(0, 10);
@@ -568,315 +483,6 @@ function App() {
     [hasShownUpgrade, markUpgradeShown, openUpgrade],
   );
 
-  const addPeriod = useCallback((date: Date, frequency: Template['frequency']) => {
-    const next = new Date(date);
-    if (frequency === 'weekly') next.setDate(next.getDate() + 7);
-    else if (frequency === 'biweekly') next.setDate(next.getDate() + 14);
-    else if (frequency === 'monthly') {
-      const day = next.getDate();
-      next.setMonth(next.getMonth() + 1);
-      // Clamp to end of month if needed
-      if (next.getDate() < day) {
-        next.setDate(0);
-      }
-    } else if (frequency === 'yearly') next.setFullYear(next.getFullYear() + 1);
-    else next.setDate(next.getDate() + 30);
-    return next;
-  }, []);
-
-  const calcNextDue = useCallback(
-    (tpl: Template, reference: Date) => {
-      if (!tpl.recurring) return null;
-      const freq = tpl.frequency ?? 'monthly';
-      const baseIso = tpl.lastUsedAt ?? tpl.createdAt;
-      if (!baseIso) return null;
-      let next = addPeriod(new Date(baseIso), freq);
-      next.setHours(0, 0, 0, 0);
-      // avanzar hasta alcanzar hoy o futuro cercano
-      while (next < reference) {
-        next = addPeriod(next, freq);
-        next.setHours(0, 0, 0, 0);
-      }
-      return next;
-    },
-    [addPeriod],
-  );
-
-  useEffect(() => {
-    const cards: SmartCard[] = [];
-    const today = new Date();
-
-    const categoryPercents =
-      budget?.perCategory && Object.keys(budget.perCategory).length
-        ? Object.entries(budget.perCategory).map(([cat, limit]) => {
-            const spent = categorySpendMap[cat] || 0;
-            const percent = limit ? (spent / limit) * 100 : 0;
-            return { cat, spent, limit, percent };
-          })
-        : [];
-
-    // Slot 1: alerta presupuesto
-    const overCat = categoryPercents
-      .filter((c) => c.percent > 100)
-      .sort((a, b) => b.percent - a.percent)[0];
-    const nearCat = categoryPercents
-      .filter((c) => c.percent >= 80 && c.percent <= 100)
-      .sort((a, b) => b.percent - a.percent)[0];
-
-    if (overCat) {
-      cards.push({
-        id: 'budget_over_100',
-        slot: 1,
-        title: 'Presupuesto excedido',
-        body: `Te pasaste ${formatPesos(overCat.spent - overCat.limit)} en ${overCat.cat} este mes.`,
-        primaryAction: {
-          label: 'Ajustar tope',
-          onClick: () => openBudgets(overCat.cat),
-        },
-        secondaryAction: {
-          label: 'Ver movimientos',
-          onClick: () => openMovements(overCat.cat),
-        },
-      });
-    } else if (nearCat) {
-      cards.push({
-        id: 'budget_near_100',
-        slot: 1,
-        title: 'Presupuesto al límite',
-        body: `Vas en ${Math.round(nearCat.percent)}% de tu tope en ${nearCat.cat}. Te quedan ${formatPesos(
-          nearCat.limit - nearCat.spent,
-        )}.`,
-        primaryAction: {
-          label: 'Ajustar tope',
-          onClick: () => openBudgets(nearCat.cat),
-        },
-        secondaryAction: {
-          label: 'Ver movimientos',
-          onClick: () => openMovements(nearCat.cat),
-        },
-      });
-    } else if (!budget?.perCategory || Object.keys(budget.perCategory || {}).length === 0) {
-      cards.push({
-        id: 'create_budget',
-        slot: 1,
-        title: 'Crea tu primer presupuesto',
-        body: 'Elige 1–3 categorías clave y define un tope para este mes.',
-        primaryAction: {
-          label: 'Crear presupuesto',
-          onClick: () => openBudgets(),
-        },
-      });
-    }
-
-    // Slot 2: optimización presupuesto
-    const topWithoutBudget = topExpenses.find((t) => !(budget?.perCategory && budget.perCategory[t.category]));
-    if (topWithoutBudget) {
-      cards.push({
-        id: 'set_cap_top_category',
-        slot: 2,
-        title: `Fija un tope para ${topWithoutBudget.category}`,
-        body: `${topWithoutBudget.category} ya suma ${formatPesos(topWithoutBudget.amount)} este mes.`,
-        primaryAction: {
-          label: 'Ver presupuesto',
-          onClick: () => openBudgets(topWithoutBudget.category),
-        },
-      });
-    } else {
-      const surplus = categoryPercents.filter((c) => c.percent < 40).sort((a, b) => a.percent - b.percent)[0];
-      const deficit = categoryPercents.filter((c) => c.percent > 100).sort((a, b) => b.percent - a.percent)[0];
-      if (surplus && deficit) {
-        cards.push({
-          id: 'redistribute_budget',
-          slot: 2,
-          title: 'Redistribuye tu presupuesto',
-          body: `Te sobra ${formatPesos(surplus.limit - surplus.spent)} en ${surplus.cat} y falta en ${deficit.cat}.`,
-          primaryAction: {
-            label: 'Mover tope',
-            onClick: () => openBudgets(deficit.cat),
-          },
-        });
-      } else if (surplus && dayOfMonth > 15) {
-        cards.push({
-          id: 'lower_budget',
-          slot: 2,
-          title: 'Presupuesto holgado',
-          body: `En ${surplus.cat} usas menos del 40% del tope. ¿Bajamos para ahorrar más?`,
-          primaryAction: {
-            label: 'Ajustar tope',
-            onClick: () => openBudgets(surplus.cat),
-          },
-        });
-      }
-    }
-
-    // Slot 3: hábitos de registro
-    let lastTxDate: Date | null = null;
-    if (transactions.length > 0) {
-      const latest = transactions.reduce((a, b) => (a.date > b.date ? a : b));
-      lastTxDate = latest?.date ? new Date(latest.date) : null;
-    }
-    const daysSinceLast = lastTxDate ? Math.floor((today.getTime() - lastTxDate.getTime()) / 86_400_000) : Infinity;
-    if (daysSinceLast >= 3) {
-      cards.push({
-        id: 'add_recent',
-        slot: 3,
-        title: 'Registra tus últimos gastos',
-        body: `No registras nada hace ${daysSinceLast} días. Antes de que se te olviden 😉`,
-        primaryAction: {
-          label: 'Registrar ahora',
-          onClick: () => openQuickAdd(),
-        },
-      });
-    } else {
-      const monthExpenseCount = monthTransactions.filter((t) => t.type === 'expense').length;
-      const monthExpenseTotalValue = monthTransactions
-        .filter((t) => t.type === 'expense')
-        .reduce((acc, t) => acc + t.amount, 0);
-      const avgDailyExpense = daysElapsed ? monthExpenseTotalValue / daysElapsed : 0;
-      const bigIncome = monthTransactions.some(
-        (t) => t.type === 'income' && t.amount >= Math.max(2 * avgDailyExpense, 300_000),
-      );
-      if (monthExpenseCount >= 5 && !bigIncome) {
-        cards.push({
-          id: 'add_income',
-          slot: 3,
-          title: '¿Ya registraste tu ingreso?',
-          body: 'Veo varios gastos este mes pero ningún ingreso grande. Añádelo para ver el balance real.',
-          primaryAction: {
-            label: 'Registrar ingreso',
-            onClick: () => openQuickAdd('income'),
-          },
-        });
-      } else if (recurringTemplates[0]) {
-        const upcoming = recurringTemplates
-          .map((tpl) => {
-            const nextDue = calcNextDue(tpl, todayStart);
-            if (!nextDue) return null;
-            const daysUntil = Math.round((nextDue.getTime() - todayStart.getTime()) / 86_400_000);
-            return { tpl, nextDue, daysUntil };
-          })
-          .filter(Boolean)
-          .sort((a, b) => (a as { daysUntil: number }).daysUntil - (b as { daysUntil: number }).daysUntil) as {
-          tpl: Template;
-          nextDue: Date;
-          daysUntil: number;
-        }[];
-        const nextTemplate = upcoming.find((item) => item.daysUntil <= 3 && item.daysUntil >= -1) || upcoming[0];
-        if (nextTemplate) {
-          cards.push({
-            id: 'remind_recurring',
-            slot: 3,
-            title: 'Ahorra tiempo con plantillas',
-            body:
-              nextTemplate.daysUntil === 0
-                ? `Hoy suele cobrarse tu plantilla ${nextTemplate.tpl.name}. ¿Ya la registraste?`
-                : nextTemplate.daysUntil > 0
-                  ? `Pronto toca ${nextTemplate.tpl.name} (${nextTemplate.daysUntil} días).`
-                  : `Se cobró hace ${Math.abs(nextTemplate.daysUntil)} días la plantilla ${nextTemplate.tpl.name}.`,
-            primaryAction: {
-              label: 'Registrar ahora',
-              onClick: () => handleUseTemplate(nextTemplate.tpl),
-            },
-          });
-        }
-      }
-    }
-
-    // Slot 4: storytelling / IA / upsell
-    const analyzeLimitReached =
-      iaQuota?.analyzeLimit && iaQuota.analyzeLimit > 0 && iaQuota.analyzeUsed >= iaQuota.analyzeLimit;
-    if (analyzeLimitReached && (iaQuota?.analyzeUsed ?? 0) > 0) {
-      cards.push({
-        id: 'ia_limit',
-        slot: 4,
-        title: 'Te quedaste sin análisis IA',
-        body: `Ya usaste tus ${iaQuota?.analyzeLimit ?? 0} análisis de IA de esta semana. Desbloquea más en el plan PRO.`,
-        primaryAction: {
-          label: 'Ver planes',
-          onClick: openPlans,
-        },
-      });
-    } else if (previousMonth) {
-      const diff = monthlyExpense - previousMonth.expense;
-      const absDiff = Math.abs(diff);
-      const diffText = diff === 0 ? 'igual que el mes pasado.' : diff > 0 ? `${formatPesos(absDiff)} más que el mes pasado.` : `${formatPesos(absDiff)} menos que el mes pasado.`;
-      cards.push({
-        id: 'month_summary',
-        slot: 4,
-        title: 'Cómo vas este mes',
-        body: `Llevas ${formatPesos(monthlyExpense)} en gastos, ${diffText}`,
-        primaryAction: {
-          label: 'Ver análisis',
-          onClick: () => openAdvisor({ context: 'month_summary' }),
-        },
-      });
-    } else if (topExpenses[0]) {
-      cards.push({
-        id: 'top_category_story',
-        slot: 4,
-        title: 'Categoría que marca el mes',
-        body: `${topExpenses[0].category} es tu gasto principal: ${formatPesos(topExpenses[0].amount)} este mes.`,
-        primaryAction: {
-          label: 'Pedir consejo',
-          onClick: () => openAdvisor({ category: topExpenses[0].category }),
-        },
-      });
-    }
-
-    // Ordenar por slot y mantener máximo uno por slot
-    const bySlot: Record<number, SmartCard | undefined> = {};
-    cards.forEach((c) => {
-      if (!bySlot[c.slot]) bySlot[c.slot] = c;
-    });
-    const finalCards = [1, 2, 3, 4].map((slot) => bySlot[slot]).filter(Boolean) as SmartCard[];
-    setSmartCards(finalCards);
-  }, [
-    iaQuota?.analyzeLimit,
-    iaQuota?.analyzeUsed,
-    budget?.perCategory,
-    categorySpendMap,
-    dayOfMonth,
-    monthTransactions,
-    monthlyExpense,
-    previousMonth,
-    recurringTemplates,
-    topExpenses,
-    transactions,
-    daysElapsed,
-    formatPesos,
-    openAdvisor,
-    openBudgets,
-    openMovements,
-    openPlans,
-    openQuickAdd,
-    handleUseTemplate,
-    calcNextDue,
-    todayStart,
-  ]);
-
-  useEffect(() => {
-    setSmartCardIndex(0);
-  }, [smartCards.length]);
-  const handlePrevInsight = useCallback(() => {
-    if (smartCards.length === 0) return;
-    setSmartCardIndex((i) => (i - 1 + smartCards.length) % smartCards.length);
-  }, [smartCards.length]);
-  const handleNextInsight = useCallback(() => {
-    if (smartCards.length === 0) return;
-    setSmartCardIndex((i) => (i + 1) % smartCards.length);
-  }, [smartCards.length]);
-  const touchStartX = useRef<number | null>(null);
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    touchStartX.current = e.touches[0].clientX;
-  }, []);
-  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    if (Math.abs(delta) < 30) return;
-    if (delta < 0) handleNextInsight();
-    else handlePrevInsight();
-  }, [handleNextInsight, handlePrevInsight]);
   const handleFiltersChange = useCallback(
     (next: { startDate: string; endDate: string; category: string }) => {
       const { startDate, endDate, category } = next;
@@ -1173,34 +779,6 @@ function App() {
     triggerUpgradeOnce,
     user,
   ]);
-
-  const handleSaveBudget = useCallback(async (total: number) => {
-    setBudgetSaving(true);
-    try {
-      if (!user) return;
-      await saveBudget(user.uid, currentMonth, { total });
-      const updated = await getBudget(user.uid, currentMonth);
-      setBudget(updated);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setBudgetSaving(false);
-    }
-  }, [currentMonth, user]);
-
-  const handleSaveCategoryBudgets = useCallback(async (perCategory: Record<string, number>) => {
-    setBudgetSaving(true);
-    try {
-      if (!user) return;
-      await saveBudget(user.uid, currentMonth, { total: budget?.total || 0, perCategory });
-      const updated = await getBudget(user.uid, currentMonth);
-      setBudget(updated);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setBudgetSaving(false);
-    }
-  }, [budget?.total, currentMonth, user]);
 
   const handleSaveTemplate = async (name: string, payload: TransactionInput) => {
     if (!user) return;
