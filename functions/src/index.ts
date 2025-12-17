@@ -795,21 +795,24 @@ export const parseTransactionPhrase = onCall(
         "category transporte, type expense, paymentMethod credito, date hoy. " +
         "Si ves ingresos, usa type income.";
 
-      const completion = await client.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: [
-          {role: "system", content: system},
-          {role: "user", content: text},
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {name: "transaction", schema, strict: true},
+      // NOTE: `gpt-5-*` models are best used via the Responses API.
+      const response = await client.responses.create({
+        model: "gpt-5-mini",
+        instructions: system,
+        input: text,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "transaction",
+            schema,
+            strict: true,
+          },
         },
-        max_tokens: 200,
-        temperature: 0.2,
+        reasoning: {effort: "low"},
+        max_output_tokens: 400,
       });
 
-      const raw = completion.choices?.[0]?.message?.content;
+      const raw = response.output_text?.trim();
       const parsed = raw ? (JSON.parse(raw) as Partial<ParsedTransaction>) : {};
       const relativeDate = deriveRelativeDate(text, clientOffsetMinutes);
       const todayIsoStr = isoDateWithOffset(0, clientOffsetMinutes);
@@ -904,20 +907,23 @@ export const analyzeSummary = onCall(
       .join(" ");
 
     try {
-      const completion = await client.chat.completions.create({
-        model: "gpt-4.1-mini",
-        messages: [
-          {role: "system", content: systemPrompt},
-          {role: "user", content: userPrompt || "Genera consejos claros y cortos."},
-        ],
-        max_tokens: 350,
-        temperature: 0.6,
+      // NOTE: `gpt-5-*` models are best used via the Responses API.
+      const response = await client.responses.create({
+        model: "gpt-5-mini",
+        instructions: systemPrompt,
+        input: userPrompt || "Genera consejos claros y cortos.",
+        reasoning: {effort: "low"},
+        max_output_tokens: 700,
       });
 
-      const content = completion.choices?.[0]?.message?.content;
+      const content = response.output_text?.trim();
       return {message: content ?? buildFallbackFromData(summary)};
     } catch (error) {
-      console.error("[analyzeSummary] error", error);
+      const errAny = error as {response?: {data?: unknown}; message?: string; status?: number};
+      const detail =
+        (errAny?.response as {data?: {error?: {message?: string}}})?.data?.error?.message ||
+        errAny?.message;
+      console.error("[analyzeSummary] error", {status: errAny?.status, detail});
       return {message: buildFallbackFromData(summary)};
     }
   },
