@@ -14,7 +14,7 @@ function resolveAuthDomain() {
     hostname === '0.0.0.0' ||
     hostname.endsWith('.local') ||
     /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
-console.log(`Host: ${isLocalhost ? envAuthDomain : hostname}`);
+
   return isLocalhost ? envAuthDomain : hostname;
 }
 
