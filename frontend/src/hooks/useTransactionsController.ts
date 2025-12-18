@@ -7,6 +7,7 @@ export interface TransactionsFilters {
   startDate: string;
   endDate: string;
   category: string;
+  search: string;
 }
 
 export type TransactionsSortBy = 'date_desc' | 'amount_desc';
@@ -23,6 +24,7 @@ export function useTransactionsController({ userId, txPageSize = 8, sortBy = 'da
     startDate: monthStartIso(),
     endDate: todayIso(),
     category: 'all',
+    search: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [txPage, setTxPage] = useState(1);
@@ -30,11 +32,11 @@ export function useTransactionsController({ userId, txPageSize = 8, sortBy = 'da
   const loadedUserRef = useRef<string | null>(null);
 
   const handleFiltersChange = useCallback((next: TransactionsFilters) => {
-    const { startDate, endDate, category } = next;
+    const { startDate, endDate, category, search } = next;
     setTxPage(1);
     // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
     if (startDate && endDate && startDate > endDate) {
-      setFilters({ startDate: endDate, endDate: startDate, category });
+      setFilters({ startDate: endDate, endDate: startDate, category, search });
     } else {
       setFilters(next);
     }
@@ -70,18 +72,32 @@ export function useTransactionsController({ userId, txPageSize = 8, sortBy = 'da
       },
     });
     return () => unsubscribe();
-  }, [filters, userId]);
+  }, [filters.category, filters.endDate, filters.startDate, userId]);
 
   const transactionsReady = !!userId && loadedUserId === userId;
   const visibleTransactions = useMemo(() => {
     if (!transactionsReady) return [];
-    if (sortBy !== 'amount_desc') return transactions;
-    return [...transactions].sort((a, b) => {
+
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    const searchTerm = normalize(filters.search || '');
+    const filtered =
+      searchTerm.length > 0
+        ? transactions.filter((t) => normalize(`${t.note ?? ''} ${t.category ?? ''}`).includes(searchTerm))
+        : transactions;
+
+    if (sortBy !== 'amount_desc') return filtered;
+    return [...filtered].sort((a, b) => {
       const diff = b.amount - a.amount;
       if (diff !== 0) return diff;
       return b.date.localeCompare(a.date);
     });
-  }, [sortBy, transactions, transactionsReady]);
+  }, [filters.search, sortBy, transactions, transactionsReady]);
 
   const paginatedTransactions = useMemo(() => {
     const start = (txPage - 1) * txPageSize;

@@ -174,10 +174,10 @@ export function AdvisorPage({
                         const pct = Math.round((ct.amount / max) * 100);
                         return (
                           <div key={ct.category} className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] text-slate-200">
-                              <span>{ct.category}</span>
-                              <span className="font-semibold">{formatPesos(ct.amount)}</span>
-                            </div>
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                            <span className="truncate">{ct.category}</span>
+                            <span className="whitespace-nowrap font-semibold">{formatPesos(ct.amount)}</span>
+                          </div>
                             <div className="h-2 rounded-full bg-white/10">
                               <div
                                 className="h-full rounded-full bg-primary"

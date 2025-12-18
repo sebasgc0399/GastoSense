@@ -7,7 +7,7 @@ import { LimitsHelpModal } from './components/LimitsHelpModal';
 import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
-import { AdvisorPage } from './pages/AdvisorPage';
+import { AdvisorPage, type AdvisorPageProps } from './pages/AdvisorPage';
 import { HomePage } from './pages/HomePage';
 import { MetricsPage } from './pages/MetricsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -151,6 +151,7 @@ function App() {
   );
 
   const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
+  const [budgetFocusCategory, setBudgetFocusCategory] = useState<string | null>(null);
   const scrollToPlans = useCallback(
     () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     [plansRef],
@@ -165,7 +166,26 @@ function App() {
     setActiveTab('settings');
   }, []);
 
+  type AiActionData = Parameters<AdvisorPageProps['onActionClick']>[0];
+
+  const normalizeTextForMatch = useCallback((value: string) => {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }, []);
+
+  const subtractDaysIso = useCallback((iso: string, days: number) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+    const d = new Date(`${iso}T00:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return iso;
+    d.setUTCDate(d.getUTCDate() - days);
+    return d.toISOString().slice(0, 10);
+  }, []);
+
   const openBudgets = useCallback((category?: string) => {
+    setBudgetFocusCategory(category ?? null);
     setActiveTab('home');
     trackEvent('smart_card_click', { action: 'budgets', category });
     // Scroll al bloque de presupuestos; si ya está en pantalla, hará scroll suave
@@ -176,11 +196,79 @@ function App() {
     (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
       const { startDate, endDate } = monthRangeIso(selectedMonth);
       setTxSortBy(opts?.sortBy ?? 'date_desc');
-      txHandleFiltersChange({ startDate, endDate, category: category || 'all' });
+      txHandleFiltersChange({ startDate, endDate, category: category || 'all', search: '' });
       setActiveTab('transactions');
       trackEvent('smart_card_click', { action: 'movements', category });
     },
     [selectedMonth, txHandleFiltersChange],
+  );
+
+  const handleAiActionClick = useCallback(
+    (actionData: AiActionData) => {
+      const fail = () => window.alert('No pudimos ejecutar esta acción automáticamente.');
+      if (!actionData) return;
+
+      try {
+        if (actionData.type === 'NAVIGATE_FILTER') {
+          const payload = (actionData.payload ?? {}) as Record<string, unknown>;
+          const period = typeof payload.period === 'string' ? payload.period : null;
+          const categoryRaw = typeof payload.category === 'string' ? payload.category : null;
+          const noteRaw = typeof payload.note === 'string' ? payload.note : null;
+
+          const nowIso = todayIso();
+          const { startDate: monthStart, endDate: monthEnd } = monthRangeIso(selectedMonth, nowIso);
+
+          const startDate =
+            period === 'last_7_days'
+              ? (() => {
+                  const candidate = subtractDaysIso(monthEnd, 6);
+                  return candidate < monthStart ? monthStart : candidate;
+                })()
+              : monthStart;
+
+          const categoryNormalized = categoryRaw ? normalizeTextForMatch(categoryRaw) : 'all';
+          const search = noteRaw ? noteRaw.trim() : '';
+
+          setTxSortBy('date_desc');
+          txHandleFiltersChange({
+            startDate,
+            endDate: monthEnd,
+            category: categoryNormalized || 'all',
+            search,
+          });
+          setActiveTab('transactions');
+          trackEvent('advisor_action_click', {
+            type: actionData.type,
+            period: period ?? 'current_month',
+            category: categoryNormalized || 'all',
+            hasSearch: Boolean(search),
+          });
+          return;
+        }
+
+        if (actionData.type === 'OPEN_BUDGET') {
+          const payload = (actionData.payload ?? {}) as Record<string, unknown>;
+          const categoryRaw = typeof payload.category === 'string' ? payload.category : undefined;
+          const category = categoryRaw ? normalizeTextForMatch(categoryRaw) : undefined;
+          openBudgets(category);
+          trackEvent('advisor_action_click', { type: actionData.type, category: category ?? null });
+          return;
+        }
+
+        if (actionData.type === 'OPEN_MODAL') {
+          window.alert('Esta acción aún no está disponible.');
+          trackEvent('advisor_action_click', { type: actionData.type });
+          return;
+        }
+
+        console.warn('Acción de IA no soportada:', actionData);
+        fail();
+      } catch (err) {
+        console.error('Error ejecutando acción de IA', err);
+        fail();
+      }
+    },
+    [normalizeTextForMatch, openBudgets, selectedMonth, subtractDaysIso, txHandleFiltersChange],
   );
 
   const openQuickAdd = useCallback((mode?: 'income' | 'expense') => {
@@ -310,11 +398,11 @@ function App() {
   );
 
   const handleFiltersChange = useCallback(
-    (next: { startDate: string; endDate: string; category: string }) => {
-      const { startDate, endDate, category } = next;
+    (next: { startDate: string; endDate: string; category: string; search: string }) => {
+      const { startDate, endDate, category, search } = next;
       // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
       if (startDate && endDate && startDate > endDate) {
-        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category });
+        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category, search });
       } else {
         txHandleFiltersChange(next);
       }
@@ -471,6 +559,7 @@ function App() {
             handleSaveBudget={handleSaveBudget}
             budgetSaving={budgetSaving}
             categoryBudgetsRef={categoryBudgetsRef}
+            budgetFocusCategory={budgetFocusCategory}
             handleSaveCategoryBudgets={handleSaveCategoryBudgets}
             topExpenses={topExpenses}
             smartCards={smartCards}
@@ -527,7 +616,7 @@ function App() {
             analyzeExhausted={analyzeExhausted}
             openUpgrade={openUpgrade}
             handleAdvisorAction={handleAdvisorAction}
-            onActionClick={(actionData) => console.log('Action Click:', actionData)}
+            onActionClick={handleAiActionClick}
             featureLocks={featureLocks}
             chatFeed={chatFeed}
             advisorLoading={advisorLoading}

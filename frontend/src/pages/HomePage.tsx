@@ -25,6 +25,7 @@ export interface HomePageProps {
   handleSaveBudget: (total: number) => Promise<void>;
   budgetSaving: boolean;
   categoryBudgetsRef: React.RefObject<HTMLDivElement | null>;
+  budgetFocusCategory?: string | null;
   handleSaveCategoryBudgets: (perCategory: Record<string, number>) => Promise<void>;
   topExpenses: { category: string; amount: number }[];
   smartCards: SmartCard[];
@@ -50,6 +51,7 @@ export function HomePage({
   handleSaveBudget,
   budgetSaving,
   categoryBudgetsRef,
+  budgetFocusCategory,
   handleSaveCategoryBudgets,
   topExpenses,
   smartCards,
@@ -100,7 +102,11 @@ export function HomePage({
       </div>
 
       <div className="card p-0" ref={categoryBudgetsRef}>
-        <CategoryBudgets perCategory={budget?.perCategory} onSave={handleSaveCategoryBudgets} />
+        <CategoryBudgets
+          perCategory={budget?.perCategory}
+          onSave={handleSaveCategoryBudgets}
+          focusCategory={budgetFocusCategory}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

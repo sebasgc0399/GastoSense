@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { frequentCategories } from '../data/frequentCategories';
 
 interface Props {
   perCategory?: Record<string, number>;
   onSave: (perCategory: Record<string, number>) => Promise<void>;
+  focusCategory?: string | null;
 }
 
-export function CategoryBudgets({ perCategory, onSave }: Props) {
+export function CategoryBudgets({ perCategory, onSave, focusCategory }: Props) {
   const [values, setValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     // Sincroniza el formulario local cuando cambia el presupuesto entrante.
@@ -20,6 +22,14 @@ export function CategoryBudgets({ perCategory, onSave }: Props) {
       return next;
     });
   }, [perCategory]);
+
+  useEffect(() => {
+    if (!focusCategory || focusCategory === 'all') return;
+    const el = inputRefs.current[focusCategory];
+    if (!el) return;
+    el.focus();
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusCategory]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -42,6 +52,9 @@ export function CategoryBudgets({ perCategory, onSave }: Props) {
             <label className="mb-1 block text-xs font-semibold text-[var(--muted)]">{cat.label}</label>
             <input
               type="number"
+              ref={(el) => {
+                inputRefs.current[cat.id] = el;
+              }}
               value={values[cat.id] ?? ''}
               placeholder="Ej. 200000"
               onChange={(e) => setValues((prev) => ({ ...prev, [cat.id]: Number(e.target.value) || 0 }))}

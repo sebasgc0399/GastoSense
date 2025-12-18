@@ -5,8 +5,8 @@ import type { Budget, Transaction } from '../types';
 
 export interface TransactionsPageProps {
   transactions: Transaction[];
-  filters: { startDate: string; endDate: string; category: string };
-  handleFiltersChange: (next: { startDate: string; endDate: string; category: string }) => void;
+  filters: { startDate: string; endDate: string; category: string; search: string };
+  handleFiltersChange: (next: { startDate: string; endDate: string; category: string; search: string }) => void;
   error: string | null;
   paginatedTransactions: Transaction[];
   txPageSize: number;
@@ -64,6 +64,7 @@ export function TransactionsPage({
         startDate={filters.startDate}
         endDate={filters.endDate}
         category={filters.category}
+        search={filters.search}
         onChange={handleFiltersChange}
       />
 

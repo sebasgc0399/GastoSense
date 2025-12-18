@@ -612,11 +612,21 @@ function wompiSignature(amountInCents: number, currency: string, reference: stri
 
 const advisorPrompts: Record<AdvisorMode, string> = {
   "amable":
-    "Eres un asesor financiero empatico y motivador. Habla en 4-6 viñetas cortas " +
-    "y propone 1 accion concreta. Usa lenguaje sencillo, positivo y cercano.",
+    "Eres un 'Coach de Bienestar Financiero' cálido y paciente. " +
+    "Tu prioridad es reducir la ansiedad financiera del usuario. " +
+    "Usa un tono suave, celebra los pequeños logros y usa el 'nosotros' (ej. 'lo vamos a arreglar'). " +
+    "Usa emojis positivos (🌱, ✨, 💪) pero sin saturar. " +
+    "Estructura: 4-6 viñetas alentadoras y claras. " +
+    "Cierra siempre con una acción pequeña y manejable para generar confianza.",
+
   "reganon":
-    "Eres un asesor financiero sarcastico estilo roast (sin insultos personales). " +
-    "Maximo 2-3 viñetas y una accion clara al final. Se directo e incisivo.",
+    "Eres un Asesor Financiero estilo 'Roast' (Sarcástico y Brutalmente Honesto). " +
+    "Tu trabajo es ofender al mal hábito financiero, no a la persona. " +
+    "Usa ironía afilada, metáforas exageradas (ej. 'tu billetera está en la UCI') y preguntas retóricas dolorosas. " +
+    "No saludes amablemente, ve directo al problema. " +
+    "Si ves gastos hormiga, ridiculízalos. Si ves deuda, sé alarmista. " +
+    "Estructura: Máximo 2-3 frases cortantes y directas a la yugular. " +
+    "Cierra con una acción imperativa, casi una orden.",
 };
 
 const maxAudioDurationMs = 10_000;
@@ -829,7 +839,7 @@ const advisorActionPlaybook: Record<string, string> = {
     "- Busca patrones de gastos <$20k (comida, transporte, snacks).\n" +
     "- Usa la psicología: proyecta ese gasto a 1 año (multiplica x 12) para generar impacto.\n" +
     "- Acción final: Sugiere reemplazar un hábito específico (ej. 'Lleva café de casa mañana').\n" +
-    "- Si detectas candidatos, finaliza con el bloque [CHART_DATA] con los 3 gastos hormiga principales para graficar su impacto.\n" +
+    "- Si detectas candidatos, finaliza con el bloque [CHART_DATA]. En [CHART_DATA], asegúrate de que el array esté ordenado de mayor a menor \"value\" para que el gráfico se vea coherente. Usa etiquetas descriptivas (ej. \"Desayuno 18/12\").\n" +
     "- Finaliza con [ACTION_DATA] tipo \"NAVIGATE_FILTER\" filtrando por la categoría detectada y, si aplica, por una nota sugerida (ej. \"Desayuno\").",
 
   "Resumen semanal":
@@ -852,7 +862,7 @@ const advisorActionPlaybook: Record<string, string> = {
     "- Si la deuda es >40%, lanza la alerta aquí.\n" +
     "- Acción final: Ajuste de presupuesto macro (ej. 'Ajusta el presupuesto de Comida -10% para compensar la Deuda').\n" +
     "- Finaliza con el bloque [CHART_DATA] conteniendo las 3 categorías principales y sus montos para graficar.\n" +
-    "- Finaliza con [ACTION_DATA] tipo \"OPEN_BUDGET\" con payload {\"category\":\"<categoria_a_ajustar>\"} para ajustar presupuesto en esa categoría.",
+    "- OBLIGATORIO: Finaliza con [ACTION_DATA] {\"type\":\"OPEN_BUDGET\",\"payload\":{\"category\":\"comida\"},\"label\":\"Ajustar Comida\"}. Debe incluir \"label\" y \"payload.category\" con el id exacto de la categoría VARIABLE que recomiendes ajustar (sin placeholders y evitando \"deuda\"/\"renta\").",
 };
 
 function safeParseDateYYYYMMDD(input?: string): Date | null {
@@ -1354,14 +1364,14 @@ export const analyzeSummary = onCall(
         input: userPrompt || "Genera consejos claros y cortos.",
         reasoning: {effort: "low"},
         max_output_tokens: 2000,
-        text: {verbosity: mode === "reganon" ? "low" : "medium"},
+        text: {verbosity: "medium"},
       });
 
       const content = response.output_text?.trim() || "";
       if (!content) {
         const reason = response.incomplete_details?.reason ?? null;
         const apiError = response.error?.message ?? null;
-        console.warn("[analyzeSummary] empty output_text", {reason, apiError});
+        console.warn("[analyzeSummary] empty output_text", {action, mode, reason, apiError});
         return {message: buildFallbackFromData(summary)};
       }
       return {message: content};
@@ -1370,7 +1380,7 @@ export const analyzeSummary = onCall(
       const detail =
         (errAny?.response as {data?: {error?: {message?: string}}})?.data?.error?.message ||
         errAny?.message;
-      console.error("[analyzeSummary] error", {status: errAny?.status, detail});
+      console.error("[analyzeSummary] error", {action, mode, status: errAny?.status, detail});
       return {message: buildFallbackFromData(summary)};
     }
   },
