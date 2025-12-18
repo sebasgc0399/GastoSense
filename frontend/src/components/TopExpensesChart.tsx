@@ -1,42 +1,78 @@
+import { CategorySpendChart } from './charts/CategorySpendChart';
+import type { CategorySpendItem, CategorySpendMode } from './charts/CategorySpendChart';
+
 interface Props {
-  data: { category: string; amount: number }[];
+  items: CategorySpendItem[];
+  mode: CategorySpendMode;
+  onModeChange: (mode: CategorySpendMode) => void;
+  budgetModeAvailable: boolean;
+  budgetModeHelperText?: string;
+  limit?: number;
+  showViewAll?: boolean;
+  onViewAll?: () => void;
+  showModeToggle?: boolean;
 }
 
-const colors = ['#0F766E', '#0EA5E9', '#F97316', '#EF4444', '#8B5CF6'];
-
-export function TopExpensesChart({ data }: Props) {
-  const max = Math.max(...data.map((d) => d.amount), 1);
-
+export function TopExpensesChart({
+  items,
+  mode,
+  onModeChange,
+  budgetModeAvailable,
+  budgetModeHelperText = 'Define presupuestos por categor\u00EDa para comparar.',
+  limit = 3,
+  showViewAll,
+  onViewAll,
+  showModeToggle = true,
+}: Props) {
   return (
     <div className="card">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Top categorías de gasto</h3>
-        <span className="text-xs text-[var(--muted)]">Barras proporcionales</span>
-      </div>
-      <div className="space-y-3">
-        {data.map((item, idx) => {
-          const pct = Math.round((item.amount / max) * 100);
-          const color = colors[idx % colors.length];
-          return (
-            <div key={item.category}>
-              <div className="flex items-center justify-between text-sm text-white">
-                <span className="font-semibold capitalize">{item.category}</span>
-                <span className="text-[var(--muted)]">${item.amount.toLocaleString()}</span>
-              </div>
-              <div className="mt-1 h-3 w-full rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${pct}%`,
-                    backgroundColor: color,
-                  }}
-                />
-              </div>
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-white">{'Top categor\u00EDas de gasto'}</h3>
+          {showModeToggle && !budgetModeAvailable && (
+            <p className="mt-1 text-xs text-[var(--muted)]">{budgetModeHelperText}</p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
+          {showViewAll && onViewAll && (
+            <button className="text-xs font-semibold text-primary hover:underline" onClick={onViewAll}>
+              Ver todas
+            </button>
+          )}
+
+          {showModeToggle ? (
+            <div className="flex rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-1 text-xs">
+              <button
+                type="button"
+                aria-pressed={mode === 'spent'}
+                onClick={() => onModeChange('spent')}
+                className={`rounded-md px-3 py-2 font-semibold ${
+                  mode === 'spent' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                }`}
+              >
+                Barras
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === 'budget'}
+                disabled={!budgetModeAvailable}
+                title={!budgetModeAvailable ? budgetModeHelperText : undefined}
+                onClick={() => onModeChange('budget')}
+                className={`rounded-md px-3 py-2 font-semibold ${
+                  mode === 'budget' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                } ${!budgetModeAvailable ? 'cursor-not-allowed opacity-50' : ''}`}
+              >
+                Presupuesto
+              </button>
             </div>
-          );
-        })}
-        {data.length === 0 && <p className="text-sm text-[var(--muted)]">Aún no hay gastos para graficar.</p>}
+          ) : (
+            <span className="text-xs text-[var(--muted)]">Barras proporcionales</span>
+          )}
+        </div>
       </div>
+
+      <CategorySpendChart items={items} mode={mode} limit={limit} />
     </div>
   );
 }

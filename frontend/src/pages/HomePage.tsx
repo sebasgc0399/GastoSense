@@ -104,7 +104,13 @@ export function HomePage({
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <TopExpensesChart data={topExpenses} />
+        <TopExpensesChart
+          items={topExpenses.map((item) => ({ category: item.category, spent: item.amount }))}
+          mode="spent"
+          onModeChange={() => {}}
+          budgetModeAvailable={false}
+          showModeToggle={false}
+        />
         <div className="card">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Tarjetas inteligentes</h2>

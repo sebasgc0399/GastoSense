@@ -9,6 +9,7 @@ import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
 import { AdvisorPage } from './pages/AdvisorPage';
 import { HomePage } from './pages/HomePage';
+import { MetricsPage } from './pages/MetricsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { callParseTransactionPhrase } from './services/functions';
@@ -21,6 +22,7 @@ import {
   useTemplatesController,
   useTransactionsController,
 } from './hooks';
+import { topCategories } from './utils/txAgg';
 import {
   createTransaction,
   deleteTransaction,
@@ -32,14 +34,19 @@ import type {
   TransactionInput,
   UserRole,
 } from './types';
-import { monthStartIso, todayIso } from './utils/dates';
+import { monthRangeIso, todayIso } from './utils/dates';
 import { isResourceExhausted as isResourceExhaustedError, mapAiError as mapAiErrorMessage } from './utils/aiErrors';
 import { formatPesos } from './utils/format';
 function App() {
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useThemeMode();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
+  type SettingsOpenSource = 'header' | 'upgrade_modal' | 'other';
+  const prevTabRef = useRef<TabKey>('home');
+  const settingsOpenSourceRef = useRef<SettingsOpenSource>('other');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  type TransactionsSortBy = 'date_desc' | 'amount_desc';
+  const [txSortBy, setTxSortBy] = useState<TransactionsSortBy>('date_desc');
   const openQuickAddSheet = useCallback(() => setShowQuickAdd(true), []);
   const {
     filters,
@@ -52,13 +59,23 @@ function App() {
     txPageSize,
     paginatedTransactions,
     totalTxPages,
-  } = useTransactionsController({ userId: user?.uid });
+  } = useTransactionsController({ userId: user?.uid, sortBy: txSortBy });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const defaultMonth = todayIso().slice(0, 7);
-  const [currentMonth, setCurrentMonth] = useState(defaultMonth);
+  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+
+  const setSelectedMonthFromMetrics = useCallback((next: string | ((prev: string) => string)) => {
+    setSelectedMonth((prev) => {
+      const nextMonth = typeof next === 'function' ? next(prev) : next;
+      if (prev !== nextMonth) {
+        trackEvent('metrics_month_changed', { fromMonth: prev, toMonth: nextMonth });
+      }
+      return nextMonth;
+    });
+  }, []);
   const { budget, budgetSaving, handleSaveBudget, handleSaveCategoryBudgets } = useBudgetController({
     userId: user?.uid,
-    currentMonth,
+    currentMonth: selectedMonth,
   });
   const {
     templates,
@@ -143,6 +160,11 @@ function App() {
     [categoryBudgetsRef],
   );
 
+  const openSettings = useCallback((source: SettingsOpenSource = 'other') => {
+    settingsOpenSourceRef.current = source;
+    setActiveTab('settings');
+  }, []);
+
   const openBudgets = useCallback((category?: string) => {
     setActiveTab('home');
     trackEvent('smart_card_click', { action: 'budgets', category });
@@ -150,11 +172,16 @@ function App() {
     setTimeout(() => scrollToBudgets(), 100);
   }, [scrollToBudgets]);
 
-  const openMovements = useCallback((category?: string) => {
-    txHandleFiltersChange({ startDate: monthStartIso(), endDate: todayIso(), category: category || 'all' });
-    setActiveTab('transactions');
-    trackEvent('smart_card_click', { action: 'movements', category });
-  }, [txHandleFiltersChange]);
+  const openMovements = useCallback(
+    (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
+      const { startDate, endDate } = monthRangeIso(selectedMonth);
+      setTxSortBy(opts?.sortBy ?? 'date_desc');
+      txHandleFiltersChange({ startDate, endDate, category: category || 'all' });
+      setActiveTab('transactions');
+      trackEvent('smart_card_click', { action: 'movements', category });
+    },
+    [selectedMonth, txHandleFiltersChange],
+  );
 
   const openQuickAdd = useCallback((mode?: 'income' | 'expense') => {
     setShowQuickAdd(true);
@@ -170,11 +197,11 @@ function App() {
     trackEvent('smart_card_click', { action: 'advisor', ...context });
   }, []);
 
-  const openPlans = useCallback(() => {
-    setActiveTab('settings');
+  const openPlans = useCallback((source: SettingsOpenSource = 'other') => {
+    openSettings(source);
     trackEvent('smart_card_click', { action: 'plans' });
     setTimeout(() => scrollToPlans(), 120);
-  }, [scrollToPlans]);
+  }, [openSettings, scrollToPlans]);
 
   const {
     monthTransactions,
@@ -193,7 +220,7 @@ function App() {
     handleTouchEnd,
   } = useHomeMonthController({
     userId: user?.uid,
-    currentMonth,
+    currentMonth: selectedMonth,
     budget,
     templates,
     transactions,
@@ -206,6 +233,39 @@ function App() {
     openAdvisor,
     handleUseTemplate,
   });
+
+  const expenseCategories = useMemo(() => topCategories(categorySpendMap, Number.POSITIVE_INFINITY), [categorySpendMap]);
+
+  const metricsViewedPayload = useMemo(
+    () => ({
+      month: selectedMonth,
+      selectedMonth,
+      txCount: monthTransactions.length,
+      hasIncome: monthlyIncome > 0 || monthTransactions.some((t) => t.type === 'income'),
+      hasBudget: (budget?.total ?? 0) > 0,
+      expense: monthlyExpense,
+      income: monthlyIncome,
+    }),
+    [budget?.total, monthTransactions, monthlyExpense, monthlyIncome, selectedMonth],
+  );
+
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    if (prev === activeTab) return;
+
+    trackEvent('tab_changed', { from: prev, to: activeTab });
+
+    if (activeTab === 'metrics') {
+      trackEvent('metrics_viewed', metricsViewedPayload);
+    }
+
+    if (activeTab === 'settings') {
+      trackEvent('settings_opened', { source: settingsOpenSourceRef.current });
+      settingsOpenSourceRef.current = 'other';
+    }
+
+    prevTabRef.current = activeTab;
+  }, [activeTab, metricsViewedPayload]);
 
   const getWeekKey = useCallback(() => {
     if (iaQuota?.week) return iaQuota.week;
@@ -288,7 +348,7 @@ function App() {
     profileAdvisorMode: userProfile?.advisorMode,
     userRole: userProfile?.role,
     iaQuota,
-    currentMonth,
+    currentMonth: selectedMonth,
     monthlyExpense,
     monthlyIncome,
     topCategories: topExpenses,
@@ -381,6 +441,13 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
+              onClick={() => openSettings('header')}
+            >
+              <img src="/icons/Gear_64.svg" alt="" aria-hidden="true" className="h-4 w-4 opacity-90" />
+              <span>Config</span>
+            </button>
+            <button
               className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
               onClick={logout}
             >
@@ -396,9 +463,9 @@ function App() {
             monthlyExpense={monthlyExpense}
             monthlyIncome={monthlyIncome}
             availableBalance={availableBalance}
-            currentMonth={currentMonth}
+            currentMonth={selectedMonth}
             defaultMonth={defaultMonth}
-            setCurrentMonth={setCurrentMonth}
+            setCurrentMonth={setSelectedMonth}
             budget={budget}
             handleSaveBudget={handleSaveBudget}
             budgetSaving={budgetSaving}
@@ -432,6 +499,23 @@ function App() {
             categorySpendMap={categorySpendMap}
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
+          />
+        )}
+        {activeTab === 'metrics' && (
+          <MetricsPage
+            currentMonth={selectedMonth}
+            defaultMonth={defaultMonth}
+            setCurrentMonth={setSelectedMonthFromMetrics}
+            monthTransactions={monthTransactions}
+            monthlyExpense={monthlyExpense}
+            monthlyIncome={monthlyIncome}
+            availableBalance={availableBalance}
+            budget={budget}
+            expenseCategories={expenseCategories}
+            previousMonth={previousMonth}
+            onOpenQuickAdd={() => openQuickAdd('expense')}
+            onViewMovements={() => openMovements()}
+            onAdjustBudget={() => openBudgets()}
           />
         )}
         {activeTab === 'advisor' && (
@@ -495,12 +579,14 @@ function App() {
         )}
       </main>
 
-      <button
-        onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
-      >
-        <span className="text-lg">+</span> Registrar gasto
-      </button>
+      {!(activeTab === 'metrics' && monthTransactions.length === 0) && (
+        <button
+          onClick={() => setShowQuickAdd(true)}
+          className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
+        >
+          <span className="text-lg">+</span> Registrar gasto
+        </button>
+      )}
 
       <BottomNav value={activeTab} onChange={setActiveTab} />
 
@@ -533,7 +619,7 @@ function App() {
         context={upgradeContext}
         role={(iaQuota?.role as UserRole) || userProfile?.role || 'free'}
         plans={plans}
-        onGoToPlans={openPlans}
+        onGoToPlans={() => openPlans('upgrade_modal')}
       />
 
       <LimitsHelpModal open={showLimitsHelp} onClose={() => setShowLimitsHelp(false)} />

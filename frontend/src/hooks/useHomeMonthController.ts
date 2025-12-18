@@ -2,7 +2,8 @@ import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchTransactionsRange, listenTransactions } from '../services/transactions';
 import type { Budget, IaQuota, Template, Transaction } from '../types';
-import { monthEndIso, monthStartIso, previousMonthRange } from '../utils/dates';
+import { monthRangeIso, previousMonthRange } from '../utils/dates';
+import { buildCategorySpendMap, sumByType, topCategories } from '../utils/txAgg';
 
 export type SmartCard = {
   id: string;
@@ -75,8 +76,7 @@ export function useHomeMonthController({
 
   useEffect(() => {
     if (!userId) return;
-    const start = monthStartIso(currentMonth);
-    const end = monthEndIso(currentMonth);
+    const { startDate: start, endDate: end } = monthRangeIso(currentMonth);
     const unsubscribe = listenTransactions({
       userId,
       startDate: start,
@@ -94,8 +94,8 @@ export function useHomeMonthController({
     fetchTransactionsRange({ userId, startDate: range.start, endDate: range.end })
       .then((prev) => {
         if (cancelled) return;
-        const expense = prev.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-        const income = prev.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+        const expense = sumByType(prev, 'expense');
+        const income = sumByType(prev, 'income');
         setPreviousMonth({ expense, income });
       })
       .catch((err) => console.error(err));
@@ -106,36 +106,13 @@ export function useHomeMonthController({
 
   const monthTransactions = useMemo(() => (userId ? homeMonthTransactions : []), [homeMonthTransactions, userId]);
 
-  const monthlyExpense = useMemo(
-    () => monthTransactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
-    [monthTransactions],
-  );
-  const monthlyIncome = useMemo(
-    () => monthTransactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-    [monthTransactions],
-  );
+  const monthlyExpense = useMemo(() => sumByType(monthTransactions, 'expense'), [monthTransactions]);
+  const monthlyIncome = useMemo(() => sumByType(monthTransactions, 'income'), [monthTransactions]);
   const availableBalance = useMemo(() => monthlyIncome - monthlyExpense, [monthlyIncome, monthlyExpense]);
 
-  const topExpenses = useMemo(() => {
-    const byCat: Record<string, number> = {};
-    monthTransactions
-      .filter((t) => t.type === 'expense')
-      .forEach((tx) => {
-        byCat[tx.category] = (byCat[tx.category] || 0) + tx.amount;
-      });
-    return Object.entries(byCat)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([category, amount]) => ({ category, amount }));
-  }, [monthTransactions]);
+  const categorySpendMap = useMemo(() => buildCategorySpendMap(monthTransactions), [monthTransactions]);
 
-  const categorySpendMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    monthTransactions.forEach((tx) => {
-      map[tx.category] = (map[tx.category] || 0) + tx.amount;
-    });
-    return map;
-  }, [monthTransactions]);
+  const topExpenses = useMemo(() => topCategories(categorySpendMap, 3), [categorySpendMap]);
 
   const recurringTemplates = useMemo(() => templates.filter((t) => t.recurring), [templates]);
 

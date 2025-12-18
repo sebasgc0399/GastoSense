@@ -9,12 +9,15 @@ export interface TransactionsFilters {
   category: string;
 }
 
+export type TransactionsSortBy = 'date_desc' | 'amount_desc';
+
 export interface UseTransactionsControllerParams {
   userId: string | null | undefined;
   txPageSize?: number;
+  sortBy?: TransactionsSortBy;
 }
 
-export function useTransactionsController({ userId, txPageSize = 8 }: UseTransactionsControllerParams) {
+export function useTransactionsController({ userId, txPageSize = 8, sortBy = 'date_desc' }: UseTransactionsControllerParams) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filters, setFilters] = useState<TransactionsFilters>({
     startDate: monthStartIso(),
@@ -70,10 +73,15 @@ export function useTransactionsController({ userId, txPageSize = 8 }: UseTransac
   }, [filters, userId]);
 
   const transactionsReady = !!userId && loadedUserId === userId;
-  const visibleTransactions = useMemo(
-    () => (transactionsReady ? transactions : []),
-    [transactions, transactionsReady],
-  );
+  const visibleTransactions = useMemo(() => {
+    if (!transactionsReady) return [];
+    if (sortBy !== 'amount_desc') return transactions;
+    return [...transactions].sort((a, b) => {
+      const diff = b.amount - a.amount;
+      if (diff !== 0) return diff;
+      return b.date.localeCompare(a.date);
+    });
+  }, [sortBy, transactions, transactionsReady]);
 
   const paginatedTransactions = useMemo(() => {
     const start = (txPage - 1) * txPageSize;
