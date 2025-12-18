@@ -2,7 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { MetricsPage, shouldShowIncomeAndBalance } from '../src/pages/MetricsPage';
+import { MetricsPage } from '../src/pages/MetricsPage';
+import { shouldShowIncomeAndBalance } from '../src/pages/metricsRules';
 import type { Budget, Transaction } from '../src/types';
 
 describe('MetricsPage', () => {
@@ -322,7 +323,7 @@ describe('MetricsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Ver todas' }));
 
     const dialogHeading = screen.getByRole('heading', { name: 'Categor\u00EDas del mes' });
-    const dialog = dialogHeading.closest('[role=\"dialog\"]');
+    const dialog = dialogHeading.closest('[role="dialog"]');
     expect(dialog).not.toBeNull();
     const dialogScope = within(dialog as HTMLElement);
 

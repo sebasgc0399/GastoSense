@@ -5,16 +5,13 @@ import { EvolutionChart } from '../components/charts/EvolutionChart';
 import type { CategorySpendItem, CategorySpendMode } from '../components/charts/CategorySpendChart';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
+import { shouldShowIncomeAndBalance } from './metricsRules';
 import { trackEvent } from '../services/analytics';
 import type { Budget, Transaction } from '../types';
 import { monthRangeIso, todayIso } from '../utils/dates';
 import { buildCumulativeSeries, buildDailyExpenseSeries, buildIdealBudgetPaceSeries, hasType } from '../utils/txAgg';
 
-export function shouldShowIncomeAndBalance(monthTransactions: Transaction[], monthlyIncome: number) {
-  return monthlyIncome > 0 || hasType(monthTransactions, 'income');
-}
-
-export interface MetricsPageProps {
+interface MetricsPageProps {
   currentMonth: string;
   defaultMonth: string;
   setCurrentMonth: React.Dispatch<React.SetStateAction<string>>;
@@ -77,10 +74,7 @@ export function MetricsPage({
   }, [budget?.perCategory]);
 
   const [categoriesMode, setCategoriesMode] = useState<CategorySpendMode>('spent');
-
-  useEffect(() => {
-    if (!budgetModeAvailable && categoriesMode === 'budget') setCategoriesMode('spent');
-  }, [budgetModeAvailable, categoriesMode]);
+  const effectiveCategoriesMode: CategorySpendMode = budgetModeAvailable ? categoriesMode : 'spent';
 
   const spentCategoryItems = useMemo<CategorySpendItem[]>(
     () => expenseCategories.filter((c) => c.amount > 0).map((c) => ({ category: c.category, spent: c.amount })),
@@ -112,11 +106,12 @@ export function MetricsPage({
     return union;
   }, [budget?.perCategory, expenseCategories]);
 
-  const categoryItems = categoriesMode === 'spent' ? spentCategoryItems : budgetCategoryItems;
+  const categoryItems = effectiveCategoriesMode === 'spent' ? spentCategoryItems : budgetCategoryItems;
   const shouldShowViewAll = categoryItems.length > 3;
 
   type EvolutionView = 'daily' | 'cumulative';
   const [evolutionView, setEvolutionView] = useState<EvolutionView>('daily');
+  const effectiveEvolutionView: EvolutionView = hasBudget ? evolutionView : 'daily';
   const { startDate: monthStart, endDate: monthEnd } = useMemo(() => monthRangeIso(currentMonth), [currentMonth]);
   const dailyExpenses = useMemo(
     () => buildDailyExpenseSeries(monthTransactions, monthStart, monthEnd),
@@ -160,10 +155,6 @@ export function MetricsPage({
     if (!hasExpenses) return;
     trackEvent('metrics_evolution_viewed', { selectedMonth: currentMonth, hasBudget, hasExpenses });
   }, [currentMonth, hasBudget, hasExpenses]);
-
-  useEffect(() => {
-    if (!hasBudget && evolutionView === 'cumulative') setEvolutionView('daily');
-  }, [evolutionView, hasBudget]);
 
   const handleEvolutionToggle = (next: EvolutionView) => {
     if (next === evolutionView) return;
@@ -298,22 +289,22 @@ export function MetricsPage({
                 <div className="flex w-full rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-1 text-xs sm:w-auto">
                   <button
                     type="button"
-                    aria-pressed={evolutionView === 'daily'}
+                    aria-pressed={effectiveEvolutionView === 'daily'}
                     onClick={() => handleEvolutionToggle('daily')}
                     className={`flex-1 rounded-md px-3 py-2 font-semibold sm:flex-none ${
-                      evolutionView === 'daily' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                      effectiveEvolutionView === 'daily' ? 'bg-primary text-white' : 'text-[var(--text)]'
                     }`}
                   >
                     Diario
                   </button>
                   <button
                     type="button"
-                    aria-pressed={evolutionView === 'cumulative'}
+                    aria-pressed={effectiveEvolutionView === 'cumulative'}
                     disabled={!hasBudget}
                     title={!hasBudget ? 'Define presupuesto para ver el acumulado.' : undefined}
                     onClick={() => handleEvolutionToggle('cumulative')}
                     className={`flex-1 rounded-md px-3 py-2 font-semibold sm:flex-none ${
-                      evolutionView === 'cumulative' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                      effectiveEvolutionView === 'cumulative' ? 'bg-primary text-white' : 'text-[var(--text)]'
                     } ${!hasBudget ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     Acumulado
@@ -323,13 +314,13 @@ export function MetricsPage({
 
               <div>
                 <p className="text-xs uppercase text-[var(--muted)]">
-                  {evolutionView === 'daily' ? 'GASTO DIARIO DEL MES' : 'ACUMULADO VS PRESUPUESTO'}
+                  {effectiveEvolutionView === 'daily' ? 'GASTO DIARIO DEL MES' : 'ACUMULADO VS PRESUPUESTO'}
                 </p>
-                {evolutionView === 'cumulative' && paceDiffCopy && (
+                {effectiveEvolutionView === 'cumulative' && paceDiffCopy && (
                   <p className="mt-1 text-xs text-[var(--muted)]">{paceDiffCopy}</p>
                 )}
                 <EvolutionChart
-                  view={evolutionView}
+                  view={effectiveEvolutionView}
                   selectedMonth={currentMonth}
                   isCurrentMonth={isCurrentMonth}
                   daily={dailyChartData}
@@ -338,7 +329,7 @@ export function MetricsPage({
                   budgetTotal={hasBudget ? budgetTotal : undefined}
                   paceIdeal={paceIdeal}
                 />
-                {evolutionView === 'cumulative' && hasBudget && (
+                {effectiveEvolutionView === 'cumulative' && hasBudget && (
                   <p className="mt-2 text-xs text-[var(--muted)]">Presupuesto: ${budgetTotal.toLocaleString('es-CO')}</p>
                 )}
               </div>
@@ -348,7 +339,7 @@ export function MetricsPage({
           {hasExpenses && (
             <TopExpensesChart
               items={categoryItems}
-              mode={categoriesMode}
+              mode={effectiveCategoriesMode}
               onModeChange={handleCategoriesModeChange}
               budgetModeAvailable={budgetModeAvailable}
               showViewAll={shouldShowViewAll}
@@ -366,7 +357,7 @@ export function MetricsPage({
             open={showCategoriesModal}
             selectedMonth={currentMonth}
             items={categoryItems}
-            mode={categoriesMode}
+            mode={effectiveCategoriesMode}
             onModeChange={handleCategoriesModeChange}
             budgetModeAvailable={budgetModeAvailable}
             onClose={() => {

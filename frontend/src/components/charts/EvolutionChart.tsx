@@ -21,7 +21,6 @@ const fmtCOP = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}
 
 export function EvolutionChart({
   view,
-  selectedMonth: _selectedMonth,
   isCurrentMonth,
   daily,
   cumulative,
