@@ -324,9 +324,10 @@ function App() {
 
   const lastTransactionsSummary = useMemo(
     () =>
-      monthTransactions.slice(0, 3).map((t) => ({
+      monthTransactions.map((t) => ({
         amount: t.amount,
         category: t.category,
+        note: t.note,
         type: t.type,
         date: t.date,
       })),

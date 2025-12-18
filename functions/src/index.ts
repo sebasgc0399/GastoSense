@@ -199,41 +199,6 @@ interface PlanConfig {
   promoEndsAt?: number | null;
 }
 
-interface MonthlyDeepInput {
-  tone: AdvisorMode;
-  currency: string;
-  userLocale: string;
-  months: string[];
-  categories: {
-    id: string;
-    name: string;
-    last3Months: number[];
-    last3Budgets?: (number | null)[];
-    isIncome?: boolean;
-  }[];
-}
-
-interface MonthlyDeepOutput {
-  summary: string;
-  globalTrend: "sube" | "baja" | "estable";
-  keySignals: {
-    type: "alto_gasto" | "bajo_gasto" | "ingreso_cae" | "ingreso_sube";
-    categoryName?: string;
-    description: string;
-  }[];
-  categoryPlans: {
-    categoryName: string;
-    lastMonthLabel: string;
-    lastMonthAmount: number;
-    avgPrev2Amount: number;
-    changePctVsAvg: number;
-    overBudgetPct?: number | null;
-    priority: "alta" | "media" | "baja";
-    advice: string;
-  }[];
-  top3Actions: string[];
-}
-
 async function ensureUserCapacity() {
   if (!maxUsers || Number.isNaN(maxUsers)) return;
   const countSnap = await firestore.collection("users").count().get();
@@ -647,11 +612,11 @@ function wompiSignature(amountInCents: number, currency: string, reference: stri
 
 const advisorPrompts: Record<AdvisorMode, string> = {
   "amable":
-    "Eres un asesor financiero empatico y motivador. Habla en 2-4 frases cortas " +
+    "Eres un asesor financiero empatico y motivador. Habla en 4-6 viñetas cortas " +
     "y propone 1 accion concreta. Usa lenguaje sencillo, positivo y cercano.",
   "reganon":
-    "Eres un asesor financiero sarcastico estilo roast. Maximo 40 palabras. " +
-    "Se directo, incisivo y un poco burla, pero siempre con una accion clara al final.",
+    "Eres un asesor financiero sarcastico estilo roast (sin insultos personales). " +
+    "Maximo 2-3 viñetas y una accion clara al final. Se directo e incisivo.",
 };
 
 const maxAudioDurationMs = 10_000;
@@ -844,13 +809,379 @@ export const parseTransactionPhrase = onCall(
 /**
  * Callable: genera recomendaciones del asesor IA según modo y resumen.
  */
+const advisorActionPlaybook: Record<string, string> = {
+  "Espejo diario":
+    "Objetivo: Foto instantánea del 'Ahora'. Enfócate SOLO en el ritmo de gasto vs días del mes.\n" +
+    "Reglas de Exclusividad:\n" +
+    "- NO menciones el acumulado total de deuda ni categorías grandes (eso es para 'En qué se va').\n" +
+    "- NO hagas comparaciones semanales.\n" +
+    "Instrucciones:\n" +
+    "- Compara el día actual vs el % de presupuesto consumido (ej. 'Día 18 y ya vas al 88%').\n" +
+    "- Menciona SOLO el movimiento más reciente de las últimas 24h.\n" +
+    "- Acción final: Algo rápido para hacer HOY (ej. 'No gastes nada en las próximas 12h' o 'Revisa el gasto de ayer').",
+
+  "Gastos hormiga":
+    "Objetivo: Detectar micro-fugas de comportamiento.\n" +
+    "Reglas de Exclusividad:\n" +
+    "- PROHIBIDO mencionar Renta, Deudas, Servicios o gastos mayores a $50k.\n" +
+    "- Ignora el presupuesto total.\n" +
+    "Instrucciones:\n" +
+    "- Busca patrones de gastos <$20k (comida, transporte, snacks).\n" +
+    "- Usa la psicología: proyecta ese gasto a 1 año (multiplica x 12) para generar impacto.\n" +
+    "- Acción final: Sugiere reemplazar un hábito específico (ej. 'Lleva café de casa mañana').",
+
+  "Resumen semanal":
+    "Objetivo: Análisis de Tendencia y Volatilidad.\n" +
+    "Reglas de Exclusividad:\n" +
+    "- No listes gastos individuales pequeños.\n" +
+    "Instrucciones:\n" +
+    "- Explica el 'Por qué' del cambio (Delta). ¿Fue una semana atípica?\n" +
+    "- Si el gasto subió por un pago único de deuda, aclara que fue 'puntual' y no 'estructural'.\n" +
+    "- Acción final: Planificación para la próxima semana (ej. 'La próxima semana será más suave, mantén el perfil bajo').",
+
+  "En qué se va la plata":
+    "Objetivo: Auditoría Estructural (The Big Picture).\n" +
+    "Reglas de Exclusividad:\n" +
+    "- Este es el ÚNICO lugar donde debes analizar a fondo la Deuda y la Renta.\n" +
+    "- No hables de gastos hormiga aquí.\n" +
+    "Instrucciones:\n" +
+    "- Desglosa Fijos (Deuda/Renta) vs Variables (Comida/Ocio).\n" +
+    "- Si la deuda es >40%, lanza la alerta aquí.\n" +
+    "- Acción final: Ajuste de presupuesto macro (ej. 'Ajusta el presupuesto de Comida -10% para compensar la Deuda').",
+};
+
+function safeParseDateYYYYMMDD(input?: string): Date | null {
+  if (!input || typeof input !== "string") return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) return null;
+  const d = new Date(`${input}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function pctRounded(n: number, d: number): number | null {
+  if (!Number.isFinite(n) || !Number.isFinite(d) || d <= 0) return null;
+  return Math.round((n / d) * 100);
+}
+
+type BudgetState = "sin_presupuesto" | "ok" | "alerta_80" | "excedido_100";
+type DebtPlan = "unico" | "cuota" | "unknown";
+type DebtMismatchExample = {date: string; amount: number; category: string};
+type WeekMovementExample = {date: string; amount: number; category: string};
+type WeekProxyFacts = {
+  endDate: string;
+  last7: number;
+  prev7: number;
+  last7Tx: number;
+  prev7Tx: number;
+  delta: number;
+  deltaPct: number | null;
+  topMovements: WeekMovementExample[];
+};
+type HormigaCandidate = {category: string; count: number; total: number; avg: number};
+type AdvisorFacts = {
+  budgetRemaining: number | null;
+  budgetPct: number | null;
+  budgetState: BudgetState;
+  deltaExpense: number | null;
+  deltaExpensePct: number | null;
+  topCatsText: string | null;
+  debtHint: boolean;
+  debtPlan: DebtPlan;
+  debtCategoryTxCount: number;
+  debtMismatchTxCount: number;
+  debtMismatchExamples: DebtMismatchExample[];
+  weekProxy: WeekProxyFacts | null;
+  hormigaCandidates: HormigaCandidate[];
+  validDatedExpenseTxCount: number;
+  totalExpenseTxCount: number;
+};
+
+type SummaryTx = NonNullable<SpendingSummary["lastTransactions"]>[number];
+
+function amountBucketRelative(amount: number, anchor: number): string {
+  if (!Number.isFinite(anchor) || anchor <= 0) return "S?";
+  const r = amount / anchor;
+  if (r <= 0.25) return "S1";
+  if (r <= 0.5) return "S2";
+  if (r <= 0.75) return "S3";
+  return "S4";
+}
+
+function normalizeForMatch(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function includesAny(haystack: string, needles: string[]): boolean {
+  return needles.some((n) => haystack.includes(n));
+}
+
+function detectDebtPlan(noteNormalized: string): DebtPlan {
+  const tokens = noteNormalized.split(/[^a-z0-9]+/).filter(Boolean);
+  const hasToken = (t: string) => tokens.includes(t);
+  const hasTokenPrefix = (p: string) => tokens.some((t) => t.startsWith(p));
+
+  const cuotaKeywords = ["cuota fija", "mensualidad", "mensual", "installment"];
+  if (includesAny(noteNormalized, cuotaKeywords) || hasToken("cuota") || hasToken("cuotas")) return "cuota";
+
+  const hasUnicoPhrase = includesAny(noteNormalized, ["pago unico", "one-time", "one time", "una vez"]);
+  const hasPagoUnicoSplit =
+    (hasToken("pago") || noteNormalized.includes("pago")) && (hasToken("unico") || hasTokenPrefix("unic"));
+  if (hasUnicoPhrase || hasPagoUnicoSplit) return "unico";
+  return "unknown";
+}
+
+function computeAdvisorFacts(summary?: SpendingSummary): AdvisorFacts {
+  const budget = typeof summary?.budget === "number" ? summary.budget : null;
+  const totalExpense = typeof summary?.totalExpense === "number" ? summary.totalExpense : null;
+  const budgetRemaining =
+    totalExpense !== null && budget !== null ? Math.round(budget - totalExpense) : null;
+  const budgetPct = totalExpense !== null && budget !== null ? pctRounded(totalExpense, budget) : null;
+  const budgetState: BudgetState =
+    budgetPct === null ? "sin_presupuesto" : budgetPct >= 100 ? "excedido_100" : budgetPct >= 80 ? "alerta_80" : "ok";
+
+  const prevExpense = typeof summary?.previousMonthExpense === "number" ? summary.previousMonthExpense : null;
+  const deltaExpense =
+    totalExpense !== null && prevExpense !== null ? Math.round(totalExpense - prevExpense) : null;
+  const deltaExpensePct =
+    deltaExpense !== null && prevExpense !== null && prevExpense > 0
+      ? Math.round((deltaExpense / prevExpense) * 100)
+      : null;
+
+  const topCatsText = (() => {
+    const items = summary?.topCategories ?? [];
+    if (!Array.isArray(items) || !items.length) return null;
+    if (totalExpense === null || totalExpense <= 0) {
+      return items
+        .slice(0, 3)
+        .map((c) => `${c.category}: ${c.amount}`)
+        .join(", ");
+    }
+    return items
+      .slice(0, 3)
+      .map((c) => {
+        const share = pctRounded(c.amount, totalExpense);
+        return `${c.category}: ${c.amount}${share !== null ? ` (${share}%)` : ""}`;
+      })
+      .join(", ");
+  })();
+
+  const txs = Array.isArray(summary?.lastTransactions) ? summary?.lastTransactions ?? [] : [];
+  const expenseTxs = txs.filter(
+    (t) =>
+      t &&
+      t.type === "expense" &&
+      typeof t.amount === "number" &&
+      Number.isFinite(t.amount) &&
+      t.amount > 0 &&
+      typeof t.category === "string" &&
+      typeof t.date === "string",
+  );
+
+  const totalExpenseTxCount = expenseTxs.length;
+  const datedExpenseTxs = expenseTxs
+    .map((t) => ({t, d: safeParseDateYYYYMMDD(t.date)}))
+    .filter((x): x is {t: SummaryTx; d: Date} => Boolean(x.d));
+  const validDatedExpenseTxCount = datedExpenseTxs.length;
+
+  const {debtHint, debtPlan, debtCategoryTxCount, debtMismatchTxCount, debtMismatchExamples} = (() => {
+    const bankKeywords = ["falabella", "davivienda"];
+
+    const normalizeNote = (note?: string) => {
+      if (typeof note !== "string") return "";
+      const cleaned = note.replace(/\s+/g, " ").trim();
+      return cleaned ? normalizeForMatch(cleaned) : "";
+    };
+
+    const isDebtCategory = (category: string) => normalizeForMatch(category) === "deuda";
+
+    const noteSuggestsDebt = (noteNormalized: string) => {
+      if (!noteNormalized) return false;
+      const tokens = noteNormalized.split(/[^a-z0-9]+/).filter(Boolean);
+      const hasBank = includesAny(noteNormalized, bankKeywords);
+      const hasCreditCard =
+        noteNormalized.includes("tarjeta de credito") ||
+        noteNormalized.includes("tarjeta credito") ||
+        noteNormalized.includes("tarjeta de credi") ||
+        noteNormalized.includes("tarjeta credi") ||
+        (noteNormalized.includes("tarjeta") &&
+          (noteNormalized.includes("credito") ||
+            noteNormalized.includes("tarjeta de credi") ||
+            noteNormalized.includes("tarjeta credi") ||
+            noteNormalized.includes("banco") ||
+            hasBank));
+
+      if (hasBank) return true;
+      if (noteNormalized.includes("deuda")) return true;
+      if (noteNormalized.includes("prestamo")) return true;
+      if (hasCreditCard) return true;
+
+      // Señales débiles: requieren 2+ para evitar falsos positivos (ej. "tarjeta Metro").
+      let weak = 0;
+      if (tokens.includes("credito") || tokens.some((t) => t.startsWith("cred"))) weak += 1;
+      if (tokens.includes("banco")) weak += 1;
+      if (tokens.includes("cuota") || tokens.includes("cuotas")) weak += 1;
+      if (
+        noteNormalized.includes("pago unico") ||
+        (tokens.includes("pago") && tokens.some((t) => t.startsWith("unic")))
+      ) {
+        weak += 1;
+      }
+      if (tokens.includes("nomina")) weak += 1;
+      return weak >= 2;
+    };
+
+    const debtTxs = expenseTxs.filter((t) => isDebtCategory(t.category));
+    const debtCategoryTxCount = debtTxs.length;
+
+    let debtHint = false;
+    let cuotaCount = 0;
+    let unicoCount = 0;
+
+    for (const t of debtTxs) {
+      const noteNorm = normalizeNote(t.note);
+      const plan = detectDebtPlan(noteNorm);
+      if (plan === "cuota") cuotaCount += 1;
+      else if (plan === "unico") unicoCount += 1;
+      if (plan !== "unknown" || noteSuggestsDebt(noteNorm)) debtHint = true;
+    }
+
+    const debtPlan: DebtPlan =
+      cuotaCount === 0 && unicoCount === 0 ? "unknown" : cuotaCount >= unicoCount ? "cuota" : "unico";
+
+    let debtMismatchTxCount = 0;
+    const debtMismatchExamples: DebtMismatchExample[] = [];
+    for (const t of expenseTxs) {
+      if (isDebtCategory(t.category)) continue;
+      const noteNorm = normalizeNote(t.note);
+      if (!noteNorm) continue;
+      const isMismatch = noteSuggestsDebt(noteNorm);
+      if (!isMismatch) continue;
+      debtMismatchTxCount += 1;
+      if (debtMismatchExamples.length < 2) {
+        debtMismatchExamples.push({
+          date: t.date,
+          amount: Math.round(t.amount),
+          category: t.category,
+        });
+      }
+    }
+
+    return {debtHint, debtPlan, debtCategoryTxCount, debtMismatchTxCount, debtMismatchExamples};
+  })();
+
+  const weekProxy = (() => {
+    if (validDatedExpenseTxCount < 10) return null;
+    const maxMs = Math.max(...datedExpenseTxs.map((x) => x.d.getTime()));
+    const end = new Date(maxMs);
+    const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+    const start7 = new Date(endDay);
+    start7.setUTCDate(start7.getUTCDate() - 6);
+    const start14 = new Date(endDay);
+    start14.setUTCDate(start14.getUTCDate() - 13);
+
+    let last7 = 0;
+    let prev7 = 0;
+    let last7Tx = 0;
+    let prev7Tx = 0;
+    for (const x of datedExpenseTxs) {
+      const d = x.d;
+      if (d >= start7 && d <= endDay) {
+        last7 += x.t.amount;
+        last7Tx += 1;
+      } else if (d >= start14 && d < start7) {
+        prev7 += x.t.amount;
+        prev7Tx += 1;
+      }
+    }
+
+    if (last7Tx < 2 || prev7Tx < 2) return null;
+    const delta = last7 - prev7;
+    const deltaPct = prev7 > 0 ? Math.round((delta / prev7) * 100) : null;
+    const topMovements = datedExpenseTxs
+      .filter((x) => x.d >= start7 && x.d <= endDay)
+      .sort((a, b) => b.t.amount - a.t.amount)
+      .slice(0, 2)
+      .map((x) => ({date: x.t.date, amount: Math.round(x.t.amount), category: x.t.category}));
+    return {
+      endDate: endDay.toISOString().slice(0, 10),
+      last7: Math.round(last7),
+      prev7: Math.round(prev7),
+      last7Tx,
+      prev7Tx,
+      delta: Math.round(delta),
+      deltaPct,
+      topMovements,
+    };
+  })();
+
+  const hormigaCandidates = (() => {
+    if (totalExpenseTxCount < 10) return [] as HormigaCandidate[];
+    const amounts = expenseTxs.map((t) => t.amount).sort((a, b) => a - b);
+    const p33 = amounts.length ? amounts[Math.floor(amounts.length * 0.33)] : null;
+    if (p33 === null) return [] as HormigaCandidate[];
+    const small = expenseTxs.filter((t) => t.amount <= p33);
+    const freq = new Map<string, {category: string; bucket: string; count: number; total: number}>();
+    for (const t of small) {
+      const bucket = amountBucketRelative(t.amount, p33);
+      const k = `${t.category}::${bucket}`;
+      const cur = freq.get(k);
+      if (!cur) freq.set(k, {category: t.category, bucket, count: 1, total: t.amount});
+      else {
+        cur.count += 1;
+        cur.total += t.amount;
+      }
+    }
+    const sorted = [...freq.values()]
+      .filter((x) => x.count >= 2)
+      .sort((a, b) => b.total - a.total)
+      .map((x) => ({...x, total: Math.round(x.total)}));
+
+    const picked: HormigaCandidate[] = [];
+    const usedCategories = new Set<string>();
+    for (const x of sorted) {
+      if (usedCategories.has(x.category)) continue;
+      usedCategories.add(x.category);
+      picked.push({
+        category: x.category,
+        count: x.count,
+        total: x.total,
+        avg: Math.max(1, Math.round(x.total / x.count)),
+      });
+      if (picked.length >= 3) break;
+    }
+    return picked;
+  })();
+
+  return {
+    budgetRemaining,
+    budgetPct,
+    budgetState,
+    deltaExpense,
+    deltaExpensePct,
+    topCatsText,
+    debtHint,
+    debtPlan,
+    debtCategoryTxCount,
+    debtMismatchTxCount,
+    debtMismatchExamples,
+    weekProxy,
+    hormigaCandidates,
+    validDatedExpenseTxCount,
+    totalExpenseTxCount,
+  };
+}
+
 export const analyzeSummary = onCall(
   {secrets: [openAIApiKey]},
   async (request) => {
     if (!request.auth?.uid) {
       throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
     }
-    const {mode = "amable", summary, action} = request.data as {
+    const {mode = "amable", summary, action = "Espejo diario"} = request.data as {
       mode?: AdvisorMode;
       summary?: SpendingSummary;
       action?: string;
@@ -861,63 +1192,169 @@ export const analyzeSummary = onCall(
 
     const {client, profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
     await checkRateLimit(request.auth.uid, "analyze", profile, effectiveRoleForLimit);
-    const systemPrompt =
-      `${advisorPrompts[mode]} ` +
-      "Habla en viñetas cortas (máximo 4-6). Incluye siempre una línea " +
-      '"Acción principal: ...". Usa números concretos del resumen (gasto, ' +
-      "ingreso, presupuesto, categorías top). Si hay presupuesto, indica " +
-      "porcentaje usado. No incluyas textos de descargo; el cliente mostrará " +
-      "el aviso final.";
-
-    const topCategoriesText = summary?.topCategories
-      ?.map((item) => `${item.category}: ${item.amount}`)
-      .join(", ");
+    const systemPromptFinal = [
+      advisorPrompts[mode],
+      "Reglas:",
+      "- Máximo 2 focos por respuesta.",
+      "- No inventes datos ni porcentajes calculados (ej. % presupuesto, % categorias, variacion semanal): usa SOLO los provistos o derivados aqui.",
+      "- Si sugieres un ajuste relativo (no calculado), usa SOLO 10% (ej. 'reduce 10%' / 'ajusta ±10%') o '1 ocurrencia menos' (no 15%, 20%, etc.).",
+      "- No inventes funciones/acciones que la app no tiene (ej. 'marcar movimiento como prioridad', 'programar un movimiento', 'automatizar').",
+      "- Si propones una acción, debe ser ejecutable en GastoSense hoy: registra, edita un movimiento (categoría/nota/fecha/método), abre/filtra Movimientos, ajusta presupuesto mensual o por categoría.",
+      "- Evita lenguaje meta o de reglas internas (no digas 'según las reglas', 'no pidas', 'no debo'); habla como asesor directo.",
+      "- Si citas la nota, cítala tal cual (o menciona solo keywords presentes). Prohibido inventar texto de nota.",
+      "- No muestres campos internos ni tokens técnicos (ej. 'HECHOS_CALCULADOS', 'WEEK_PROXY', 'HORMIGA_CANDIDATES', 'N/D').",
+      "- No pegues el bloque de datos tal cual: integra los números en español simple.",
+      "- Moneda: usa siempre $ en el texto (no uses COP/₲/USD/MXN/EUR ni otros símbolos/códigos).",
+      "- Tiempo: evita decir 'hoy', 'ayer', 'esta mañana'. Usa fechas YYYY-MM-DD de los movimientos (ej. 2025-12-17) o di 'movimientos recientes'.",
+      "- Usa vocabulario alineado a la app: di 'edita/corrige' (no 'etiquetar' ni 'tags') y menciona 'movimientos'.",
+      "- No sugieras escribir en apps externas; si necesitas identificar algo, usa la nota del movimiento.",
+      "- Evita umbrales o topes fijos en dinero; si propones un limite, usa '1 ocurrencia menos' o un recorte pequeño por defecto (10%).",
+      "- Estructura (en este orden): 1) Numero clave. 2) Insight principal (con 1 dato). 3) Micro-habito/accion de hoy. (Opcional) 4) Solo si cabe, 1 frase para el segundo foco sin abrir temas nuevos.",
+      "- Solo habla de comparación semanal si la acción solicitada es 'Resumen semanal'. Si falta base con fecha, dilo y da un plan accionable de 7 días (2-3 micro-acciones).",
+      "- En 'Resumen semanal', si explicas la causa del cambio, dilo como probable (ej. 'parece venir de...') y cita 1-2 movimientos de 'Movimientos grandes ultimos 7 dias' si estan disponibles.",
+      "- Solo habla de 'gastos hormiga' si la acción solicitada es 'Gastos hormiga'. Si falta base, dilo y enfócate en cómo registrar esta semana para detectarlos.",
+      "- En 'Gastos hormiga', cuando sugieras una nota, no uses 'hormiga' como etiqueta. Usa ejemplos como 'Desayuno', 'Almuerzo', 'Snack', 'Bebida', 'Domicilio'.",
+      "- Si sugieres editar/corrige un movimiento específico, incluye su fecha (YYYY-MM-DD) y monto para que el usuario lo encuentre.",
+      "- Si Accion principal es 'Abre Movimientos y filtra...', incluye 1-2 ejemplos concretos (fecha+monto+categoria) tomados de 'Movimientos recientes' o 'Movimientos grandes ultimos 7 dias'.",
+      "- Regla de 'deuda fuera de categoría (por nota)': si el dato es 0, no sugieras corrección por deuda mal categorizada. Si es >0, cita 1 ejemplo exacto (fecha+monto+categoría) de los ejemplos listados.",
+      "- Si una categoría domina (ej. 'deuda'), NO asumas automáticamente que es deuda 'real' ni que está 'mal categorizado'.",
+      "  1) Primero, trátalo como una hipótesis: puede ser un pago real de deuda (según la nota) o un gasto clasificado de forma distinta.",
+      "  2) Si la nota sugiere deuda pero la categoría no es 'deuda', sugiere revisar y corregir categoría (solo si hay evidencia).",
+      "  3) Si la categoría es 'deuda' y la nota sugiere deuda, trátalo como deuda confirmada: no sugieras corregir esa categoría; pasa a la siguiente palanca (presupuesto/recortes en categorías variables).",
+      "  4) Si la nota ya indica si es 'pago único' o 'cuota', no lo preguntes: úsalo para orientar el consejo.",
+      "  Evita repetir este punto: menciona máximo una vez por respuesta.",
+      "- No asumas intencion ni digas 'planificado/a': si algo viene de la nota, di 'confirmado por nota' o 'segun la nota'.",
+      "- Accion principal: elige SOLO 1 patron valido: (A) 'Abre Movimientos y filtra por <categoria>'. (B) 'Edita/corrige el movimiento YYYY-MM-DD $MONTO (categoria/nota)'. (C) 'Ajusta el presupuesto (mensual o de <categoria>) en ±10%'.",
+      "- No recomiendes activos/tickers/productos de inversión ni prometas retornos.",
+      "- Termina SIEMPRE con: Acción principal: ... (imperativo, 1 sola acción).",
+      mode === "reganon" ? "Formato: máximo 2-3 viñetas cortas." : "Formato: máximo 4-6 viñetas cortas.",
+    ].join("\n");
 
     const lastTx = summary?.lastTransactions
       ?.slice(0, 5)
       .map((t) => {
         const label = t.type === "income" ? "Ingreso" : "Gasto";
-        return `${t.date} ${label} $${t.amount} ${t.category} (${t.note || ""})`;
+        const note =
+          typeof t.note === "string" ? t.note.replace(/\s+/g, " ").trim().slice(0, 60) : "";
+        return `${t.date} ${label} $${t.amount} ${t.category}${note ? ` (${note})` : ""}`;
       })
       .join(" | ");
 
+    const facts = computeAdvisorFacts(summary);
+    const latestTxDate = (() => {
+      const txs = Array.isArray(summary?.lastTransactions) ? summary.lastTransactions : [];
+      const ms = txs
+        .map((t) => (typeof t?.date === "string" ? safeParseDateYYYYMMDD(t.date)?.getTime() : null))
+        .filter((x): x is number => typeof x === "number" && Number.isFinite(x));
+      return ms.length ? new Date(Math.max(...ms)).toISOString().slice(0, 10) : null;
+    })();
+    const playbook =
+      advisorActionPlaybook[action] ??
+      advisorActionPlaybook[action.replace("qué", "que")] ??
+      "Objetivo: dar consejos claros y concretos segun la accion solicitada.";
+
+    const budgetStateLabel =
+      facts.budgetState === "sin_presupuesto"
+        ? "sin presupuesto"
+        : facts.budgetState === "alerta_80"
+          ? "alerta (>=80%)"
+          : facts.budgetState === "excedido_100"
+            ? "excedido (>=100%)"
+            : "ok";
+
+    const includeWeekFacts = action === "Resumen semanal";
+    const includeHormigaFacts = action === "Gastos hormiga";
+
+    if (includeWeekFacts || includeHormigaFacts) {
+      console.info("[analyzeSummary] context", {
+        action,
+        mode,
+        lastTransactions: summary?.lastTransactions?.length ?? 0,
+        totalExpenseTxCount: facts.totalExpenseTxCount,
+        validDatedExpenseTxCount: facts.validDatedExpenseTxCount,
+        hasWeekProxy: Boolean(facts.weekProxy),
+        hormigaCandidates: facts.hormigaCandidates.length,
+        debtCategoryTxCount: facts.debtCategoryTxCount,
+        debtMismatchTxCount: facts.debtMismatchTxCount,
+      });
+    }
+
     const userPrompt = [
-      action ? `Acción solicitada: ${action}.` : null,
-      summary?.month ? `Mes: ${summary.month}.` : null,
+      `Acción solicitada: ${action}.`,
+      `Guía: ${playbook}`,
+      "Datos disponibles (usa SOLO esto; no inventes):",
+      summary?.month ? `- Mes: ${summary.month}.` : "- Mes: no disponible.",
+      latestTxDate ? `- Fecha mas reciente en movimientos: ${latestTxDate}.` : "- Fecha mas reciente en movimientos: no disponible.",
       summary?.totalExpense !== undefined
-        ? `Total gasto mes: ${summary.totalExpense}.`
-        : null,
+        ? `- Gasto del mes: ${summary.totalExpense}.`
+        : "- Gasto del mes: no disponible.",
       summary?.totalIncome !== undefined
-        ? `Total ingreso mes: ${summary.totalIncome}.`
-        : null,
+        ? `- Ingreso del mes: ${summary.totalIncome}.`
+        : "- Ingreso del mes: no disponible.",
       summary?.budget !== undefined
-        ? `Presupuesto mensual: ${summary.budget}.`
+        ? `- Presupuesto mensual: ${summary.budget}. Usado: ${facts.budgetPct ?? "no disponible"}% (estado: ${budgetStateLabel})${
+          typeof facts.budgetRemaining === "number" ? `; restante: ${facts.budgetRemaining}.` : "."
+        }`
+        : "- Presupuesto mensual: no disponible.",
+      typeof facts.deltaExpense === "number"
+        ? `- Cambio vs mes anterior (gasto): ${facts.deltaExpense} (${facts.deltaExpensePct ?? "no disponible"}%).`
+        : "- Cambio vs mes anterior (gasto): no disponible.",
+      facts.topCatsText
+        ? `- Top categorías (con % si aplica): ${facts.topCatsText}.`
+        : "- Top categorías: no disponible.",
+      `- Deuda confirmada por nota (categoría 'deuda'): ${
+        facts.debtHint ? "sí" : "no"
+      }${facts.debtPlan !== "unknown" ? `; tipo=${facts.debtPlan}` : ""}.`,
+      `- Deuda fuera de categoría (por nota): ${facts.debtMismatchTxCount}${
+        facts.debtMismatchTxCount > 0
+          ? facts.debtMismatchExamples.length
+            ? ` (ej: ${facts.debtMismatchExamples
+              .map((m) => `${m.date} $${m.amount} ${m.category}`)
+              .join(" | ")})`
+            : ""
+          : " (no se detectaron ejemplos)."
+      }.`,
+      includeWeekFacts
+        ? facts.weekProxy
+          ? `- Comparación semanal (proxy con tus movimientos con fecha): ${facts.weekProxy.last7} vs ${facts.weekProxy.prev7} (delta ${facts.weekProxy.delta}${facts.weekProxy.deltaPct !== null ? `, ${facts.weekProxy.deltaPct}%` : ""}).`
+          : "- Comparación semanal: aún no hay suficientes movimientos con fecha para comparar con confianza."
         : null,
-      summary?.previousMonthExpense !== undefined
-        ? `Gasto mes anterior: ${summary.previousMonthExpense}.`
+      includeWeekFacts && facts.weekProxy?.topMovements.length
+        ? `- Movimientos grandes ultimos 7 dias: ${facts.weekProxy.topMovements
+          .map((m) => `${m.date} $${m.amount} ${m.category}`)
+          .join(" | ")}.`
         : null,
-      summary?.previousMonthIncome !== undefined
-        ? `Ingreso mes anterior: ${summary.previousMonthIncome}.`
+      includeHormigaFacts
+        ? facts.hormigaCandidates.length
+          ? `- Candidatos (subconjunto de gastos pequeños) que parecen repetirse: ${facts.hormigaCandidates
+            .map((h) => `${h.category} x${h.count} (total ${h.total}, promedio ${h.avg})`)
+            .join(" | ")}.`
+          : "- Candidatos (subconjunto de gastos pequeños): aún no hay base suficiente para confirmarlos."
         : null,
-      topCategoriesText ? `Top categorías (monto): ${topCategoriesText}.` : null,
-      lastTx ? `Últimos movimientos: ${lastTx}.` : null,
-      "Si no hay datos suficientes, dilo y pide registrar movimientos clave.",
+      lastTx ? `- Movimientos recientes: ${lastTx}.` : null,
     ]
       .filter(Boolean)
-      .join(" ");
+      .join("\n");
 
     try {
       // NOTE: `gpt-5-*` models are best used via the Responses API.
       const response = await client.responses.create({
-        model: "gpt-5-mini",
-        instructions: systemPrompt,
+        model: "o4-mini",
+        instructions: systemPromptFinal,
         input: userPrompt || "Genera consejos claros y cortos.",
         reasoning: {effort: "low"},
-        max_output_tokens: 700,
+        max_output_tokens: 1500,
+        text: {verbosity: mode === "reganon" ? "low" : "medium"},
       });
 
-      const content = response.output_text?.trim();
-      return {message: content ?? buildFallbackFromData(summary)};
+      const content = response.output_text?.trim() || "";
+      if (!content) {
+        const reason = response.incomplete_details?.reason ?? null;
+        const apiError = response.error?.message ?? null;
+        console.warn("[analyzeSummary] empty output_text", {reason, apiError});
+        return {message: buildFallbackFromData(summary)};
+      }
+      return {message: content};
     } catch (error) {
       const errAny = error as {response?: {data?: unknown}; message?: string; status?: number};
       const detail =
@@ -1553,103 +1990,6 @@ export const setAdvisorMode = onCall(async (request) => {
   await updateUserProfile(request.auth.uid, {advisorMode: mode});
   const profile = await getOrCreateUserProfile(request.auth.uid);
   return {advisorMode: profile.advisorMode};
-});
-
-export const analyzeMonthlyDeep = onCall({secrets: [openAIApiKey]}, async (request): Promise<MonthlyDeepOutput> => {
-  if (!request.auth?.uid) {
-    throw new HttpsError("unauthenticated", "Inicia sesión para usar IA.");
-  }
-  const {profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
-  if (!["paid_byok", "paid_managed", "gifted_managed", "admin", "free"].includes(profile.role)) {
-    throw new HttpsError("permission-denied", "No tienes permisos para este analisis.");
-  }
-  await checkRateLimit(request.auth.uid, "analyze", profile, effectiveRoleForLimit);
-
-  const input = (request.data as {input?: MonthlyDeepInput} | undefined)?.input;
-  if (!input || !Array.isArray(input.months) || input.months.length < 3) {
-    throw new HttpsError("invalid-argument", "Faltan meses o datos.");
-  }
-
-  const months = input.months;
-  const lastLabel = months[months.length - 1];
-  const categoryPlans = input.categories.map((cat) => {
-    const last = cat.last3Months?.[cat.last3Months.length - 1] ?? 0;
-    const prev = cat.last3Months?.slice(0, cat.last3Months.length - 1) ?? [];
-    const avgPrev = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
-    const changePct = avgPrev > 0 ? ((last - avgPrev) / avgPrev) * 100 : last > 0 ? 100 : 0;
-    const lastBudget = cat.last3Budgets?.[cat.last3Budgets.length - 1] ?? null;
-    const overBudgetPct =
-      lastBudget && lastBudget > 0 ? ((last - lastBudget) / lastBudget) * 100 : null;
-    let priority: "alta" | "media" | "baja" = "baja";
-    if (changePct > 30 || (overBudgetPct !== null && overBudgetPct > 20)) priority = "alta";
-    else if (changePct > 10 || (overBudgetPct !== null && overBudgetPct > 0)) priority = "media";
-
-    let advice = cat.isIncome
-      ? "Ajusta tu flujo con los ingresos recientes."
-      : "Mantén control y define un tope claro.";
-    if (!cat.isIncome) {
-      if (priority === "alta") advice = "Recorta 10-20% este mes y fija alertas.";
-      else if (priority === "media") advice = "Revisa compras frecuentes y baja frecuencia.";
-      else advice = "Sigue igual, sin cambios fuertes.";
-    }
-
-    return {
-      categoryName: cat.name,
-      lastMonthLabel: lastLabel,
-      lastMonthAmount: last,
-      avgPrev2Amount: Math.round(avgPrev),
-      changePctVsAvg: Math.round(changePct),
-      overBudgetPct: overBudgetPct !== null ? Math.round(overBudgetPct) : null,
-      priority,
-      advice,
-    };
-  });
-
-  const totalLast = input.categories.reduce(
-    (acc, c) => acc + (c.last3Months?.[c.last3Months.length - 1] ?? 0),
-    0,
-  );
-  const totalPrevAvg = input.categories.reduce((acc, c) => {
-    const prev = c.last3Months?.slice(0, c.last3Months.length - 1) ?? [];
-    const avgPrev = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
-    return acc + avgPrev;
-  }, 0);
-  const globalChange = totalPrevAvg > 0 ? ((totalLast - totalPrevAvg) / totalPrevAvg) * 100 : 0;
-  const globalTrend = globalChange > 5 ? "sube" : globalChange < -5 ? "baja" : "estable";
-
-  const keySignals: MonthlyDeepOutput["keySignals"] = categoryPlans
-    .filter((p) => Math.abs(p.changePctVsAvg) >= 20)
-    .slice(0, 4)
-    .map((p) => ({
-      type: p.changePctVsAvg >= 0 ? "alto_gasto" : "bajo_gasto",
-      categoryName: p.categoryName,
-      description: `${p.categoryName}: ${p.changePctVsAvg >= 0 ? "+" : ""}${p.changePctVsAvg}% vs prom.`,
-    }));
-
-  const sortedByPriority = [...categoryPlans].sort((a, b) => {
-    const rank = {alta: 3, media: 2, baja: 1};
-    return rank[b.priority] - rank[a.priority];
-  });
-  const top3Actions = sortedByPriority
-    .filter((p) => p.priority !== "baja")
-    .slice(0, 3)
-    .map((p) => `${p.categoryName}: ${p.advice}`);
-
-  const summaryParts: string[] = [];
-  if (globalTrend === "sube") summaryParts.push("Gasto del último mes sube vs promedio previo.");
-  else if (globalTrend === "baja") summaryParts.push("Gasto bajó frente a los 2 meses anteriores.");
-  else summaryParts.push("Gasto estable comparado con meses previos.");
-  if (sortedByPriority[0]) {
-    summaryParts.push(`Categoría clave: ${sortedByPriority[0].categoryName}.`);
-  }
-
-  return {
-    summary: summaryParts.join(" "),
-    globalTrend,
-    keySignals,
-    categoryPlans,
-    top3Actions,
-  };
 });
 
 function deriveRelativeDate(text: string, offsetMinutes?: number): string | null {
