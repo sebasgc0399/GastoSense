@@ -87,9 +87,11 @@ export function AdvisorPage({
             const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
             const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
             const badge = item.badge;
+            const disabled = locked || advisorLoading;
             return (
               <button
                 key={item.action}
+                disabled={disabled}
                 onClick={() =>
                   locked
                     ? openUpgrade(lockedByQuota ? 'analyze_exhausted' : 'feature_locked')
@@ -98,8 +100,8 @@ export function AdvisorPage({
                 className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
                   locked
                     ? 'border-dashed border-white/20 bg-white/5 opacity-80'
-                    : 'border-white/10 bg-white/5 hover:border-primary'
-                }`}
+                    : `border-white/10 bg-white/5 ${disabled ? '' : 'hover:border-primary'}`
+                } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-white">{item.label}</p>

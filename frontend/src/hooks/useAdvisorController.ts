@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { callAnalyzeSummary } from '../services/functions';
 import { setUserAdvisorMode } from '../services/users';
 import type { AdvisorMode, IaQuota, UserRole } from '../types';
@@ -134,6 +134,12 @@ export function useAdvisorController({
   });
   const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
   const [advisorLoading, setAdvisorLoading] = useState(false);
+  const activeModeRef = useRef<AdvisorMode>(advisorMode);
+  const requestSeqRef = useRef(0);
+
+  useEffect(() => {
+    activeModeRef.current = advisorMode;
+  }, [advisorMode]);
 
   useEffect(() => {
     if (profileAdvisorMode !== 'amable' && profileAdvisorMode !== 'reganon') return;
@@ -164,6 +170,9 @@ export function useAdvisorController({
   const handleToneChange = useCallback(
     async (mode: AdvisorMode) => {
       if (mode === advisorMode) return;
+      // Invalida cualquier respuesta en vuelo para evitar que aparezca en un modo distinto.
+      requestSeqRef.current += 1;
+      setAdvisorLoading(false);
       setAdvisorMode(mode);
       setChatFeed([]);
       try {
@@ -234,6 +243,8 @@ export function useAdvisorController({
 
   const handleAdvisorAction = useCallback(
     async (action: string) => {
+      const requestMode = advisorMode;
+      const requestSeq = (requestSeqRef.current += 1);
       if (analyzeExhausted) {
         openUpgrade('analyze_exhausted');
         return;
@@ -371,6 +382,12 @@ export function useAdvisorController({
 
         const cleanText = workingText.trim() || 'Sin respuesta de IA.';
 
+        if (activeModeRef.current !== requestMode || requestSeqRef.current !== requestSeq) {
+          console.log('Respuesta descartada por cambio de modo');
+          await refreshQuota();
+          return;
+        }
+
         pushFeedItem({
           from: 'ia',
           text: cleanText,
@@ -383,6 +400,10 @@ export function useAdvisorController({
         await refreshQuota();
       } catch (err) {
         console.error(err);
+        if (activeModeRef.current !== requestMode || requestSeqRef.current !== requestSeq) {
+          console.log('Error descartado por cambio de modo');
+          return;
+        }
         pushFeedItem({
           from: 'ia',
           text: mapAiError(err, 'analyze'),
@@ -393,7 +414,9 @@ export function useAdvisorController({
           triggerUpgradeOnce('analyze_exhausted');
         }
       } finally {
-        setAdvisorLoading(false);
+        if (requestSeqRef.current === requestSeq) {
+          setAdvisorLoading(false);
+        }
       }
     },
     [
