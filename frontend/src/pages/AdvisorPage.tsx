@@ -10,6 +10,11 @@ type ChatItem = {
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
   chartTop?: { category: string; amount: number }[];
+  actionData?: {
+    type: 'NAVIGATE_FILTER' | 'OPEN_BUDGET' | 'OPEN_MODAL';
+    label: string;
+    payload: Record<string, unknown>;
+  };
 };
 
 type AdvisorQuickAction = {
@@ -30,6 +35,7 @@ export interface AdvisorPageProps {
   analyzeExhausted: boolean;
   openUpgrade: (ctx: 'parse_exhausted' | 'analyze_exhausted' | 'feature_locked') => void;
   handleAdvisorAction: (action: string) => Promise<void>;
+  onActionClick: (actionData: NonNullable<ChatItem['actionData']>) => void;
   featureLocks: FeatureLock[];
   chatFeed: ChatItem[];
   advisorLoading: boolean;
@@ -43,6 +49,7 @@ export function AdvisorPage({
   analyzeExhausted,
   openUpgrade,
   handleAdvisorAction,
+  onActionClick,
   featureLocks,
   chatFeed,
   advisorLoading,
@@ -180,6 +187,17 @@ export function AdvisorPage({
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                  {item.actionData && item.from === 'ia' && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => onActionClick(item.actionData!)}
+                        className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-primary"
+                      >
+                        {item.actionData.label}
+                      </button>
                     </div>
                   )}
                   {item.tone && item.from === 'ia' && (

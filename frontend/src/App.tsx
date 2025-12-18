@@ -527,6 +527,7 @@ function App() {
             analyzeExhausted={analyzeExhausted}
             openUpgrade={openUpgrade}
             handleAdvisorAction={handleAdvisorAction}
+            onActionClick={(actionData) => console.log('Action Click:', actionData)}
             featureLocks={featureLocks}
             chatFeed={chatFeed}
             advisorLoading={advisorLoading}

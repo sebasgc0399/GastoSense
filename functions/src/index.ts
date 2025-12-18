@@ -828,7 +828,9 @@ const advisorActionPlaybook: Record<string, string> = {
     "Instrucciones:\n" +
     "- Busca patrones de gastos <$20k (comida, transporte, snacks).\n" +
     "- Usa la psicología: proyecta ese gasto a 1 año (multiplica x 12) para generar impacto.\n" +
-    "- Acción final: Sugiere reemplazar un hábito específico (ej. 'Lleva café de casa mañana').",
+    "- Acción final: Sugiere reemplazar un hábito específico (ej. 'Lleva café de casa mañana').\n" +
+    "- Si detectas candidatos, finaliza con el bloque [CHART_DATA] con los 3 gastos hormiga principales para graficar su impacto.\n" +
+    "- Finaliza con [ACTION_DATA] tipo \"NAVIGATE_FILTER\" filtrando por la categoría detectada y, si aplica, por una nota sugerida (ej. \"Desayuno\").",
 
   "Resumen semanal":
     "Objetivo: Análisis de Tendencia y Volatilidad.\n" +
@@ -837,7 +839,8 @@ const advisorActionPlaybook: Record<string, string> = {
     "Instrucciones:\n" +
     "- Explica el 'Por qué' del cambio (Delta). ¿Fue una semana atípica?\n" +
     "- Si el gasto subió por un pago único de deuda, aclara que fue 'puntual' y no 'estructural'.\n" +
-    "- Acción final: Planificación para la próxima semana (ej. 'La próxima semana será más suave, mantén el perfil bajo').",
+    "- Acción final: Planificación para la próxima semana (ej. 'La próxima semana será más suave, mantén el perfil bajo').\n" +
+    "- Finaliza con [ACTION_DATA] tipo \"NAVIGATE_FILTER\" con payload {\"period\":\"last_7_days\"} para ver los movimientos de los últimos 7 días.",
 
   "En qué se va la plata":
     "Objetivo: Auditoría Estructural (The Big Picture).\n" +
@@ -847,7 +850,9 @@ const advisorActionPlaybook: Record<string, string> = {
     "Instrucciones:\n" +
     "- Desglosa Fijos (Deuda/Renta) vs Variables (Comida/Ocio).\n" +
     "- Si la deuda es >40%, lanza la alerta aquí.\n" +
-    "- Acción final: Ajuste de presupuesto macro (ej. 'Ajusta el presupuesto de Comida -10% para compensar la Deuda').",
+    "- Acción final: Ajuste de presupuesto macro (ej. 'Ajusta el presupuesto de Comida -10% para compensar la Deuda').\n" +
+    "- Finaliza con el bloque [CHART_DATA] conteniendo las 3 categorías principales y sus montos para graficar.\n" +
+    "- Finaliza con [ACTION_DATA] tipo \"OPEN_BUDGET\" con payload {\"category\":\"<categoria_a_ajustar>\"} para ajustar presupuesto en esa categoría.",
 };
 
 function safeParseDateYYYYMMDD(input?: string): Date | null {
@@ -1226,7 +1231,12 @@ export const analyzeSummary = onCall(
       "- No asumas intencion ni digas 'planificado/a': si algo viene de la nota, di 'confirmado por nota' o 'segun la nota'.",
       "- Accion principal: elige SOLO 1 patron valido: (A) 'Abre Movimientos y filtra por <categoria>'. (B) 'Edita/corrige el movimiento YYYY-MM-DD $MONTO (categoria/nota)'. (C) 'Ajusta el presupuesto (mensual o de <categoria>) en ±10%'.",
       "- No recomiendes activos/tickers/productos de inversión ni prometas retornos.",
-      "- Termina SIEMPRE con: Acción principal: ... (imperativo, 1 sola acción).",
+      "- Incluye siempre una línea: Acción principal: ... (imperativo, 1 sola acción).",
+      "- Bloques ocultos (si aplica): al FINAL y sin texto después. Orden: [CHART_DATA] (opcional) y luego [ACTION_DATA] (opcional).",
+      "- [CHART_DATA] y [ACTION_DATA] deben ser JSON estricto (comillas dobles). No uses markdown, solo texto plano.",
+      "- Si la visualización de datos aporta valor (ej. en 'En qué se va la plata' o 'Gastos hormiga'), incluye al final: [CHART_DATA] [{\"label\":\"Nombre\",\"value\":100}, ...].",
+      "- Si sugieres una acción ejecutable en la app (filtrar movimientos, editar presupuesto), incluye AL FINAL (después de CHART_DATA si existe) un bloque: [ACTION_DATA] {\"type\":\"NAVIGATE_FILTER\",\"payload\":{\"category\":\"comida\",\"period\":\"current_month\"},\"label\":\"Ver gastos en comida\"}. Tipos validos: \"NAVIGATE_FILTER\", \"OPEN_BUDGET\", \"OPEN_MODAL\".",
+      "- El botón [ACTION_DATA] debe coincidir con la 'Acción principal' sugerida en el texto.",
       mode === "reganon" ? "Formato: máximo 2-3 viñetas cortas." : "Formato: máximo 4-6 viñetas cortas.",
     ].join("\n");
 
@@ -1343,7 +1353,7 @@ export const analyzeSummary = onCall(
         instructions: systemPromptFinal,
         input: userPrompt || "Genera consejos claros y cortos.",
         reasoning: {effort: "low"},
-        max_output_tokens: 1500,
+        max_output_tokens: 2000,
         text: {verbosity: mode === "reganon" ? "low" : "medium"},
       });
 

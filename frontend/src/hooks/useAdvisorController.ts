@@ -11,6 +11,11 @@ type ChatItem = {
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
   chartTop?: { category: string; amount: number }[];
+  actionData?: {
+    type: 'NAVIGATE_FILTER' | 'OPEN_BUDGET' | 'OPEN_MODAL';
+    label: string;
+    payload: Record<string, unknown>;
+  };
 };
 
 type AdvisorQuickAction = {
@@ -275,14 +280,104 @@ export function useAdvisorController({
           },
         });
         const data = resp.data as { message?: string };
+
+        const rawText = data?.message ?? 'Sin respuesta de IA.';
+        let workingText = rawText;
+
+        const actionRegex = /\[ACTION_DATA\]\s*(\{[\s\S]*\})\s*$/;
+        const actionMatch = workingText.match(actionRegex);
+
+        let dynamicActionData: ChatItem['actionData'];
+        let dynamicChartData: { category: string; amount: number }[] | undefined;
+
+        if (actionMatch && actionMatch[1]) {
+          workingText = workingText.replace(actionMatch[0], '').trim();
+          try {
+            const rawJson = actionMatch[1];
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(rawJson);
+            } catch {
+              parsed = JSON.parse(rawJson.replace(/'/g, '"'));
+            }
+
+            const obj = parsed as { type?: unknown; label?: unknown; payload?: unknown } | null;
+            const type = typeof obj?.type === 'string' ? obj.type : null;
+            const label = typeof obj?.label === 'string' ? obj.label.trim() : null;
+            const payload = obj?.payload;
+
+            const allowedTypes = ['NAVIGATE_FILTER', 'OPEN_BUDGET', 'OPEN_MODAL'] as const;
+            const isAllowedType = (t: string): t is (typeof allowedTypes)[number] =>
+              (allowedTypes as readonly string[]).includes(t);
+
+            if (
+              type &&
+              isAllowedType(type) &&
+              label &&
+              payload &&
+              typeof payload === 'object' &&
+              !Array.isArray(payload)
+            ) {
+              dynamicActionData = {
+                type,
+                label,
+                payload: payload as Record<string, unknown>,
+              };
+            }
+          } catch (e) {
+            console.error('Error parsing action data', e);
+          }
+        }
+
+        const chartRegex = /\[CHART_DATA\]\s*(\[[\s\S]*?\])\s*$/;
+        const chartMatch = workingText.match(chartRegex);
+
+        if (chartMatch && chartMatch[1]) {
+          workingText = workingText.replace(chartMatch[0], '').trim();
+          try {
+            const rawJson = chartMatch[1];
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(rawJson);
+            } catch {
+              parsed = JSON.parse(rawJson.replace(/'/g, '"'));
+            }
+
+            if (Array.isArray(parsed)) {
+              const mapped = parsed
+                .map((d) => {
+                  const item = (d ?? {}) as { label?: unknown; value?: unknown };
+                  const label = typeof item.label === 'string' ? item.label.trim() : '';
+                  const valueRaw = item.value;
+                  const value =
+                    typeof valueRaw === 'number'
+                      ? valueRaw
+                      : typeof valueRaw === 'string'
+                        ? Number(valueRaw)
+                        : NaN;
+                  if (!label || !Number.isFinite(value)) return null;
+                  return { category: label, amount: value };
+                })
+                .filter((x): x is { category: string; amount: number } => Boolean(x));
+
+              if (mapped.length) {
+                dynamicChartData = mapped;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing chart data', e);
+          }
+        }
+
+        const cleanText = workingText.trim() || 'Sin respuesta de IA.';
+
         pushFeedItem({
           from: 'ia',
-          text: data?.message ?? 'Sin respuesta de IA.',
+          text: cleanText,
           tone: advisorMode,
           kind: 'ia',
-          chartTop: action.toLowerCase().includes('plata')
-            ? topCategories.slice(0, 3).map((t) => ({ category: t.category, amount: t.amount }))
-            : undefined,
+          chartTop: dynamicChartData,
+          actionData: dynamicActionData,
         });
 
         await refreshQuota();
