@@ -81,11 +81,13 @@ function App() {
     templates,
     recurringTemplates,
     selectedTemplate,
+    selectedTemplateIntent,
     clearSelectedTemplate,
     saveTemplate: handleSaveTemplate,
     updateTemplate: handleUpdateTemplate,
     deleteTemplate: handleDeleteTemplate,
     handleUseTemplate,
+    handleEditTemplate,
   } = useTemplatesController({ userId: user?.uid, onOpenQuickAdd: openQuickAddSheet });
   const {
     userProfile,
@@ -571,6 +573,7 @@ function App() {
             handleTouchEnd={handleTouchEnd}
             recurringTemplates={recurringTemplates}
             handleUseTemplate={handleUseTemplate}
+            handleEditTemplate={handleEditTemplate}
             handleDeleteTemplate={handleDeleteTemplate}
           />
         )}
@@ -693,7 +696,9 @@ function App() {
         onDeleteTemplate={handleDeleteTemplate}
         onUpdateTemplate={handleUpdateTemplate}
         selectedTemplate={selectedTemplate}
+        selectedTemplateIntent={selectedTemplateIntent}
         onClearSelectedTemplate={clearSelectedTemplate}
+        onClearTemplate={clearSelectedTemplate}
       />
 
       <TransactionEditModal

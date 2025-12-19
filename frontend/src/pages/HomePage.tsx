@@ -1,6 +1,7 @@
 import type React from 'react';
 import { BudgetCard } from '../components/BudgetCard';
 import { CategoryBudgets } from '../components/CategoryBudgets';
+import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
 import type { Budget, Template } from '../types';
@@ -37,6 +38,7 @@ export interface HomePageProps {
   handleTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
   recurringTemplates: Template[];
   handleUseTemplate: (tpl: Template) => void;
+  handleEditTemplate: (tpl: Template) => void;
   handleDeleteTemplate: (id: string) => Promise<void>;
 }
 
@@ -63,6 +65,7 @@ export function HomePage({
   handleTouchEnd,
   recurringTemplates,
   handleUseTemplate,
+  handleEditTemplate,
   handleDeleteTemplate,
 }: HomePageProps) {
   return (
@@ -204,56 +207,15 @@ export function HomePage({
         </div>
       </div>
 
-      <div className="card">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Recordatorios recurrentes</h2>
-          <span className="text-xs text-[var(--text-muted)]">Plantillas marcadas como recurrentes</span>
-        </div>
-        {recurringTemplates.length === 0 && (
-          <p className="text-sm text-[var(--text-muted)]">A£n no tienes plantillas recurrentes.</p>
-        )}
-        <div className="space-y-3">
-          {recurringTemplates.map((tpl) => (
-            <div
-              key={tpl.id}
-              className="flex flex-col gap-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)]/60 px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-[var(--text)]">{tpl.name}</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                  <span className="rounded-full bg-[var(--input-bg)] px-2 py-1 capitalize">
-                    {tpl.frequency ?? 'mensual'}
-                  </span>
-                  {tpl.category && <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">Cat: {tpl.category}</span>}
-                  {tpl.amount ? (
-                    <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">${tpl.amount.toLocaleString()}</span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
-                  onClick={() => handleUseTemplate(tpl)}
-                >
-                  Registrar
-                </button>
-                <button
-                  className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
-                  onClick={() => handleUseTemplate(tpl)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="text-xs font-semibold text-[var(--error-text)] hover:underline"
-                  onClick={() => handleDeleteTemplate(tpl.id)}
-                >
-                  Borrar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RecurringTemplatesCard
+        templates={recurringTemplates}
+        title="Recordatorios recurrentes"
+        subtitle="Plantillas marcadas como recurrentes"
+        emptyState="A£n no tienes plantillas recurrentes."
+        onUseTemplate={handleUseTemplate}
+        onEditTemplate={handleEditTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+      />
     </section>
   );
 }

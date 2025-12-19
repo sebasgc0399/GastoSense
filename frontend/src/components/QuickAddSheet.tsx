@@ -9,6 +9,7 @@ import type { ParsedTransactionSuggestion, Template, TransactionInput } from '..
 
 type Mode = 'quick' | 'details' | 'ai';
 type KeypadKey = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' | '.' | 'backspace';
+type SelectedTemplateIntent = 'use' | 'edit';
 
 interface QuickAddFormState {
   mode: Mode;
@@ -47,7 +48,9 @@ interface QuickAddSheetProps {
   onDeleteTemplate?: (id: string) => Promise<void>;
   onUpdateTemplate?: (id: string, payload: TransactionInput & { name?: string; recurring?: boolean; frequency?: Template['frequency'] }) => Promise<void>;
   selectedTemplate?: Template | null;
+  selectedTemplateIntent?: SelectedTemplateIntent | null;
   onClearSelectedTemplate?: () => void;
+  onClearTemplate?: () => void;
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -135,7 +138,9 @@ export function QuickAddSheet({
   onDeleteTemplate,
   onUpdateTemplate,
   selectedTemplate,
+  selectedTemplateIntent,
   onClearSelectedTemplate,
+  onClearTemplate,
 }: QuickAddSheetProps) {
   const [formState, setFormState] = useState<QuickAddFormState>(() => createInitialState());
   const updateFormState = (updates: Partial<QuickAddFormState>) => {
@@ -201,6 +206,8 @@ export function QuickAddSheet({
   const skipTranscriptionRef = useRef(false);
   const lastNonAiModeRef = useRef<Mode>('quick');
   const noteInputRef = useRef<HTMLInputElement | null>(null);
+  const templateNameInputRef = useRef<HTMLInputElement | null>(null);
+  const focusTemplateNameRef = useRef(false);
 
   const isOpen = open;
 
@@ -513,7 +520,7 @@ export function QuickAddSheet({
     }
   };
 
-  const handleApplyTemplate = (tpl: Template) => {
+  const applyTemplateFields = (tpl: Template) => {
     if (tpl.amount) setAmount(tpl.amount.toString());
     if (tpl.category) setCategory(tpl.category);
     if (tpl.note) setNote(tpl.note);
@@ -521,13 +528,40 @@ export function QuickAddSheet({
     if (tpl.type) setType(tpl.type);
     if (tpl.recurring !== undefined) setRecurring(!!tpl.recurring);
     if (tpl.frequency) setFrequency(tpl.frequency);
+  };
+
+  const applyTemplateForUse = (tpl: Template) => {
+    applyTemplateFields(tpl);
+    setDate(todayIso());
+    setEditingTemplate(null);
+    setTemplateName('');
+    focusTemplateNameRef.current = false;
+    setShowDetails(false);
+  };
+
+  const applyTemplateForEdit = (tpl: Template, focusName: boolean) => {
+    applyTemplateFields(tpl);
     setEditingTemplate(tpl);
     setTemplateName(tpl.name);
+    if (focusName) {
+      if (showDetails) {
+        window.requestAnimationFrame(() => {
+          templateNameInputRef.current?.focus();
+        });
+      } else {
+        focusTemplateNameRef.current = true;
+      }
+    }
     setShowDetails(true);
+  };
+
+  const handleApplyTemplate = (tpl: Template) => {
+    applyTemplateForEdit(tpl, false);
   };
 
   const handleDeleteTemplate = async (id: string) => {
     if (!onDeleteTemplate) return;
+    if (!window.confirm('Eliminar esta plantilla? Esta accion no se puede deshacer.')) return;
     try {
       await onDeleteTemplate(id);
       setFeedback('Plantilla eliminada.');
@@ -590,9 +624,16 @@ export function QuickAddSheet({
   const handleLeftAction = () => {
     if (showDetails) {
       setShowDetails(false);
-    } else {
-      onClose();
+      return;
     }
+
+    if (editingTemplate) {
+      onClearTemplate?.();
+      resetForm();
+      return;
+    }
+
+    onClose();
   };
 
   const handleAiToggle = () => {
@@ -626,16 +667,25 @@ export function QuickAddSheet({
 
   // Aplica template preseleccionado desde recordatorios (efecto para evitar setState en render)
   useEffect(() => {
-    if (selectedTemplate) {
-      handleApplyTemplate(selectedTemplate);
-      onClearSelectedTemplate?.();
+    if (!selectedTemplate) return;
+    const intent = selectedTemplateIntent ?? 'use';
+    if (intent === 'edit') {
+      applyTemplateForEdit(selectedTemplate, true);
+    } else {
+      applyTemplateForUse(selectedTemplate);
     }
+    onClearSelectedTemplate?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTemplate]);
+  }, [selectedTemplate, selectedTemplateIntent]);
 
   useEffect(() => {
     if (!showDetails) return;
     window.requestAnimationFrame(() => {
+      if (focusTemplateNameRef.current) {
+        templateNameInputRef.current?.focus();
+        focusTemplateNameRef.current = false;
+        return;
+      }
       noteInputRef.current?.focus();
     });
   }, [showDetails]);
@@ -660,9 +710,9 @@ export function QuickAddSheet({
                 type="button"
                 onClick={handleLeftAction}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] text-[var(--text-muted)] transition hover:border-[var(--modal-border)] hover:text-[var(--text)]"
-                aria-label={showDetails ? 'Volver' : 'Cerrar'}
+                aria-label={showDetails || editingTemplate ? 'Volver' : 'Cerrar'}
               >
-                {showDetails ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                {showDetails || editingTemplate ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </button>
             </div>
             <div className="flex min-w-0 flex-col items-center justify-center overflow-hidden">
@@ -670,7 +720,7 @@ export function QuickAddSheet({
                 <span className="text-sm font-semibold text-[var(--text)]">Modo frase (IA)</span>
               ) : editingTemplate ? (
                 <>
-                  <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Editando</span>
+                  <span className="text-[10px] uppercase tracking-wider text-amber-400">Editando</span>
                   <span className="max-w-full truncate text-sm font-semibold text-[var(--text)]">{editingTemplate.name}</span>
                 </>
               ) : (
@@ -991,6 +1041,7 @@ export function QuickAddSheet({
                             <label className="mb-1 block text-xs font-semibold text-[var(--muted)]">Guardar como plantilla</label>
                             <div className="flex gap-2">
                               <input
+                                ref={templateNameInputRef}
                                 type="text"
                                 value={templateName}
                                 onChange={(e) => setTemplateName(e.target.value)}
@@ -1013,14 +1064,16 @@ export function QuickAddSheet({
 
                     {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
 
-                    <button
-                      type="button"
-                      onClick={() => handleSave(true)}
-                      disabled={saving || !formReady}
-                      className="h-12 w-full rounded-xl bg-[var(--primary)] text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
-                    >
-                      {saving ? 'Guardando...' : 'Guardar Gasto'}
-                    </button>
+                    {!editingTemplate && (
+                      <button
+                        type="button"
+                        onClick={() => handleSave(true)}
+                        disabled={saving || !formReady}
+                        className="h-12 w-full rounded-xl bg-[var(--primary)] text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
+                      >
+                        {saving ? 'Guardando...' : 'Guardar Gasto'}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex h-full flex-col p-3">
