@@ -698,8 +698,8 @@ export function QuickAddSheet({
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="absolute inset-0 bg-[var(--modal-overlay)] backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute inset-x-0 bottom-0 z-50 h-[90dvh] rounded-t-3xl bg-[var(--modal-surface)] shadow-2xl transition">
+      <div className="modal-overlay absolute inset-0 bg-[var(--modal-overlay)] backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-x-0 bottom-0 z-50 h-[90dvh] overflow-x-hidden overscroll-none touch-pan-y rounded-t-3xl bg-[var(--modal-surface)] shadow-2xl transition">
         <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-[var(--modal-surface)]">
           <div className="flex shrink-0 items-center justify-center py-1">
             <span className="h-1 w-12 rounded-full bg-[var(--card-border)]" />
