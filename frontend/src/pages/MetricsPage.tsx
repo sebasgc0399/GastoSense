@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { AllCategoriesModal } from '../components/AllCategoriesModal';
+import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { EvolutionChart } from '../components/charts/EvolutionChart';
 import type { CategorySpendItem, CategorySpendMode } from '../components/charts/CategorySpendChart';
 import { TopExpensesChart } from '../components/TopExpensesChart';
@@ -176,18 +177,12 @@ export function MetricsPage({
         <p className="text-xs text-slate-400">Visualiza tu mes en segundos.</p>
       </div>
 
-      <div className="card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs uppercase text-[var(--text-muted)]">Mes de referencia</p>
-          <p className="text-sm text-[var(--text-muted)]">Cambia el mes para ver totales y comparativos.</p>
-        </div>
-        <input
-          type="month"
-          value={currentMonth}
-          onChange={(e) => setCurrentMonth(e.target.value || defaultMonth)}
-          className="input w-full sm:w-auto sm:min-w-[180px]"
-        />
-      </div>
+      <ReferenceMonthCard
+        currentMonth={currentMonth}
+        defaultMonth={defaultMonth}
+        onChange={setCurrentMonth}
+        description="Cambia el mes para ver totales y comparativos."
+      />
 
       {txCount === 0 ? (
         <div className="card space-y-2">

@@ -2,6 +2,7 @@ import type React from 'react';
 import { BudgetCard } from '../components/BudgetCard';
 import { CategoryBudgets } from '../components/CategoryBudgets';
 import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
+import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
 import type { Budget, Template } from '../types';
@@ -81,18 +82,12 @@ export function HomePage({
         />
       </div>
 
-      <div className="card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs uppercase text-[var(--text-muted)]">Mes de referencia</p>
-          <p className="text-sm text-[var(--text-muted)]">Cambia el mes para ver presupuestos y totales.</p>
-        </div>
-        <input
-          type="month"
-          value={currentMonth}
-          onChange={(e) => setCurrentMonth(e.target.value || defaultMonth)}
-          className="input w-full sm:w-auto sm:min-w-[180px]"
-        />
-      </div>
+      <ReferenceMonthCard
+        currentMonth={currentMonth}
+        defaultMonth={defaultMonth}
+        onChange={setCurrentMonth}
+        description="Cambia el mes para ver presupuestos y totales."
+      />
 
       <div className="card p-0">
         <BudgetCard
