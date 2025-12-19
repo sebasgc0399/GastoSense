@@ -104,7 +104,7 @@ body {
   overscroll-behavior: none;
 }
 
-@media (orientation: landscape) and (max-width: 900px) {
+@media (orientation: landscape) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
   #root::before {
     content: 'Gira tu telefono para continuar';
     position: fixed;
