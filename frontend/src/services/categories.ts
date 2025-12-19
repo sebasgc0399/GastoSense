@@ -1,12 +1,15 @@
 import {
   collection,
+  deleteDoc,
   doc,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
   orderBy,
   query,
   setDoc,
+  where,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
@@ -118,4 +121,39 @@ export function subscribeToUserCategories(
       if (onError) onError(error as Error);
     },
   );
+}
+
+export async function deleteCategoryConditional(
+  userId: string,
+  id: string,
+  isSystem?: boolean,
+): Promise<void> {
+  const db = getFirestoreDb();
+  let systemFlag = isSystem;
+  if (systemFlag === undefined) {
+    const catRef = doc(db, 'users', userId, COLLECTION, id);
+    const snapshot = await getDoc(catRef);
+    systemFlag = (snapshot.data()?.isSystem as boolean) ?? false;
+  }
+
+  if (systemFlag) {
+    await updateCategory(userId, id, { isArchived: true });
+    return;
+  }
+
+  const transactionsRef = collection(db, 'transactions');
+  const usageQuery = query(
+    transactionsRef,
+    where('userId', '==', userId),
+    where('category', '==', id),
+    limit(1),
+  );
+  const usageSnapshot = await getDocs(usageQuery);
+  if (usageSnapshot.empty) {
+    const catRef = doc(db, 'users', userId, COLLECTION, id);
+    await deleteDoc(catRef);
+    return;
+  }
+
+  await updateCategory(userId, id, { isArchived: true });
 }

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Category } from '../types';
 import {
-  archiveCategory,
   createCategory,
+  deleteCategoryConditional,
   getUserCategories,
   seedDefaultCategories,
   subscribeToUserCategories,
@@ -126,10 +126,11 @@ export function useCategoriesController({
   const deleteCategory = useCallback(
     async (id: string) => {
       if (!userId) return;
-      await archiveCategory(userId, id);
+      const target = categories.find((cat) => cat.id === id);
+      await deleteCategoryConditional(userId, id, target?.isSystem);
       await refreshCategories();
     },
-    [refreshCategories, userId],
+    [categories, refreshCategories, userId],
   );
 
   return {

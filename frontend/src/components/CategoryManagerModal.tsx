@@ -259,9 +259,9 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
       return;
     }
     const confirmed = await confirm({
-      title: 'Archivar categoría?',
-      description: 'Esta acción no se puede deshacer.',
-      confirmText: 'Archivar',
+      title: 'Eliminar categoría?',
+      description: 'Si tiene movimientos, se archivará y podrás reactivarla. Si no tiene movimientos, se eliminará definitivamente.',
+      confirmText: 'Eliminar',
       cancelText: 'Cancelar',
       variant: 'destructive',
     });
@@ -275,7 +275,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
       }
     } catch (err) {
       console.error(err);
-      setFormError('No se pudo archivar la categoría.');
+      setFormError('No se pudo eliminar la categoría.');
     } finally {
       setSaving(false);
     }
@@ -451,7 +451,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                     type="button"
                                     onClick={() => handleArchive(cat)}
                                     className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--error-text)] hover:border-[var(--danger-border)] disabled:opacity-60"
-                                    title="Archivar categoría"
+                                    title="Eliminar categoría"
                                     disabled={saving}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -622,6 +622,14 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     </div>
   , document.body);
 }
+
+
+
+
+
+
+
+
 
 
 
