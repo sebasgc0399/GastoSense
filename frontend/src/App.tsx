@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
 import { QuickAddSheet } from './components/QuickAddSheet';
+import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { TransactionEditModal } from './components/TransactionEditModal';
 import { UpgradeModal } from './components/UpgradeModal';
 import { LimitsHelpModal } from './components/LimitsHelpModal';
@@ -45,6 +46,7 @@ function App() {
   const prevTabRef = useRef<TabKey>('home');
   const settingsOpenSourceRef = useRef<SettingsOpenSource>('other');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   type TransactionsSortBy = 'date_desc' | 'amount_desc';
   const [txSortBy, setTxSortBy] = useState<TransactionsSortBy>('date_desc');
   const openQuickAddSheet = useCallback(() => setShowQuickAdd(true), []);
@@ -695,10 +697,18 @@ function App() {
         onSaveTemplate={handleSaveTemplate}
         onDeleteTemplate={handleDeleteTemplate}
         onUpdateTemplate={handleUpdateTemplate}
+        userId={user?.uid}
+        onOpenSettings={() => setShowCategoryManager(true)}
         selectedTemplate={selectedTemplate}
         selectedTemplateIntent={selectedTemplateIntent}
         onClearSelectedTemplate={clearSelectedTemplate}
         onClearTemplate={clearSelectedTemplate}
+      />
+
+      <CategoryManagerModal
+        open={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        userId={user?.uid}
       />
 
       <TransactionEditModal

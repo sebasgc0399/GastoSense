@@ -1,10 +1,10 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronRight, Sparkles, X, type LucideIcon } from 'lucide-react';
-import * as Icons from 'lucide-react';
-import { frequentCategories, paymentMethods } from '../data/frequentCategories';
+import { ArrowLeft, ChevronRight, Settings, Sparkles, X } from 'lucide-react';
+import { paymentMethods } from '../data/frequentCategories';
+import { useCategoriesController } from '../hooks/useCategoriesController';
 import { callTranscribeAudio } from '../services/functions';
-import { CATEGORY_ICONS } from '../utils/categoryIcons';
 import { ResponsiveSelect } from './ResponsiveSelect';
+import { CategoryIcon } from './ui/CategoryIcon';
 import type { ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
 
 type Mode = 'quick' | 'details' | 'ai';
@@ -47,6 +47,8 @@ interface QuickAddSheetProps {
   onSaveTemplate?: (name: string, payload: TransactionInput & { recurring?: boolean; frequency?: Template['frequency'] }) => Promise<void>;
   onDeleteTemplate?: (id: string) => Promise<void>;
   onUpdateTemplate?: (id: string, payload: TransactionInput & { name?: string; recurring?: boolean; frequency?: Template['frequency'] }) => Promise<void>;
+  userId?: string | null;
+  onOpenSettings?: () => void;
   selectedTemplate?: Template | null;
   selectedTemplateIntent?: SelectedTemplateIntent | null;
   onClearSelectedTemplate?: () => void;
@@ -58,7 +60,7 @@ const MAX_RECORDING_SECONDS = 10;
 const createInitialState = (): QuickAddFormState => ({
   mode: 'quick',
   amount: '',
-  category: frequentCategories[0]?.id ?? 'comida',
+  category: '',
   note: '',
   type: 'expense',
   paymentMethod: 'debito',
@@ -137,15 +139,18 @@ export function QuickAddSheet({
   onSaveTemplate,
   onDeleteTemplate,
   onUpdateTemplate,
+  userId,
+  onOpenSettings,
   selectedTemplate,
   selectedTemplateIntent,
   onClearSelectedTemplate,
   onClearTemplate,
 }: QuickAddSheetProps) {
   const [formState, setFormState] = useState<QuickAddFormState>(() => createInitialState());
-  const updateFormState = (updates: Partial<QuickAddFormState>) => {
+  const updateFormState = useCallback((updates: Partial<QuickAddFormState>) => {
     setFormState((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
+  const { categories, loading: categoriesLoading } = useCategoriesController({ userId });
   const {
     mode,
     amount,
@@ -171,7 +176,7 @@ export function QuickAddSheet({
   const showDetails = mode === 'details';
   const setMode = (nextMode: Mode) => updateFormState({ mode: nextMode });
   const setAmount = (nextAmount: string) => updateFormState({ amount: nextAmount });
-  const setCategory = (nextCategory: string) => updateFormState({ category: nextCategory });
+  const setCategory = useCallback((nextCategory: string) => updateFormState({ category: nextCategory }), [updateFormState]);
   const setNote = (nextNote: string) => updateFormState({ note: nextNote });
   const setType = (nextType: TransactionInput['type']) => updateFormState({ type: nextType });
   const setPaymentMethod = (nextMethod: TransactionInput['paymentMethod']) =>
@@ -212,10 +217,27 @@ export function QuickAddSheet({
   const isOpen = open;
 
   const formReady = useMemo(() => !!amount && Number(amount) > 0, [amount]);
+  const visibleCategories = useMemo(() => categories.slice(0, 19), [categories]);
+  const defaultCategoryId = categories[0]?.id;
+  const expenseFallbackId = defaultCategoryId ?? 'comida';
+  const showCategorySkeleton = categoriesLoading && visibleCategories.length === 0;
 
   const resetForm = useCallback(() => {
     setFormState(createInitialState());
   }, []);
+
+  useEffect(() => {
+    if (type !== 'expense') return;
+    if (defaultCategoryId) {
+      if (!category || category === 'ingreso') {
+        setCategory(defaultCategoryId);
+      }
+      return;
+    }
+    if (!category || category === 'ingreso') {
+      setCategory('comida');
+    }
+  }, [category, defaultCategoryId, setCategory, type]);
 
   const handleSave = async (closeAfter: boolean) => {
     if (!formReady) {
@@ -891,8 +913,8 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => {
                         setType('expense');
-                        if (category === 'ingreso') {
-                          setCategory(frequentCategories[0]?.id ?? 'comida');
+                        if (category === 'ingreso' || !category) {
+                          setCategory(expenseFallbackId);
                         }
                       }}
                       className={`rounded-full px-3 py-1 ${type === 'expense' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
@@ -1077,29 +1099,45 @@ export function QuickAddSheet({
                   </div>
                 ) : (
                   <div className="flex h-full flex-col p-3">
-                    <div className="grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3">
-                      {frequentCategories.map((cat) => {
-                        const active = cat.id === category;
-                        const iconName = CATEGORY_ICONS[cat.id] ?? CATEGORY_ICONS.default;
-                        const iconMap = Icons as unknown as Record<string, LucideIcon>;
-                        const IconComponent = iconMap[iconName] ?? Icons.Tag;
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => setCategory(cat.id)}
-                            className={`flex h-16 flex-col items-center justify-center rounded-xl border px-1 text-center text-[11px] font-semibold leading-tight transition sm:text-xs ${
-                              active
-                                ? 'border-primary bg-primary/20 text-[var(--text)] shadow'
-                                : 'border-white/10 bg-white/5 text-[var(--text-muted)] hover:bg-white/10'
-                            }`}
-                          >
-                            <IconComponent size={18} />
-                            <span className="mt-1">{cat.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {showCategorySkeleton ? (
+                      <div className="grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3">
+                        {Array.from({ length: 8 }).map((_, idx) => (
+                          <div
+                            key={`category-skeleton-${idx}`}
+                            className="h-16 rounded-xl border border-white/10 bg-white/5 animate-pulse"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3">
+                        {visibleCategories.map((cat) => {
+                          const active = cat.id === category;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setCategory(cat.id)}
+                              className={`flex h-16 flex-col items-center justify-center rounded-xl border px-1 text-center text-[11px] font-semibold leading-tight transition sm:text-xs ${
+                                active
+                                  ? 'border-primary bg-primary/20 text-[var(--text)] shadow'
+                                  : 'border-white/10 bg-white/5 text-[var(--text-muted)] hover:bg-white/10'
+                              }`}
+                            >
+                              <CategoryIcon name={cat.icon} size={18} />
+                              <span className="mt-1">{cat.label}</span>
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => onOpenSettings?.()}
+                          className="flex h-16 flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-transparent px-1 text-center text-[10px] font-semibold text-white/50 transition hover:bg-white/5 hover:text-white"
+                        >
+                          <Settings size={18} />
+                          <span className="mt-1">Configurar</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

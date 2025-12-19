@@ -37,6 +37,16 @@ export interface Budget {
   updatedAt?: string;
 }
 
+export interface Category {
+  id: string; // Ej: 'comida' (mantiene compatibilidad)
+  label: string; // Ej: 'Alimentacion'
+  icon: string; // Nombre del icono Lucide (Ej: 'Utensils')
+  color?: string;
+  order: number;
+  isArchived?: boolean;
+  isSystem?: boolean;
+}
+
 export interface Template {
   id: string;
   name: string;

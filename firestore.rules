@@ -46,6 +46,18 @@ service cloud.firestore {
         && (!('perCategory' in request.resource.data) || request.resource.data.perCategory.size() <= 50);
     }
 
+    function validCategory() {
+      return request.resource.data.keys().hasAll(['label','icon','order'])
+        && request.resource.data.label is string
+        && request.resource.data.label.size() <= 120
+        && request.resource.data.icon is string
+        && request.resource.data.icon.size() <= 60
+        && request.resource.data.order is number
+        && (!('color' in request.resource.data) || (request.resource.data.color is string && request.resource.data.color.size() <= 12))
+        && (!('isArchived' in request.resource.data) || request.resource.data.isArchived is bool)
+        && (!('isSystem' in request.resource.data) || request.resource.data.isSystem is bool);
+    }
+
     // Budgets are stored as {uid}_{month}; enforce that the caller matches the prefix
     function budgetDocOwned(docId) {
       return isSignedIn() && docId.matches('^' + request.auth.uid + '_.+');
@@ -75,6 +87,13 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow write: if isAdmin();
+
+      match /categories/{categoryId} {
+        allow read, list: if isSignedIn() && request.auth.uid == uid;
+        allow create: if isSignedIn() && request.auth.uid == uid && validCategory();
+        allow update: if isSignedIn() && request.auth.uid == uid && validCategory();
+        allow delete: if isSignedIn() && request.auth.uid == uid;
+      }
     }
 
     // Deny everything else
