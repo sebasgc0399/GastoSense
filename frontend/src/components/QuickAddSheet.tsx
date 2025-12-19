@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronRight, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Sparkles, X, type LucideIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { frequentCategories, paymentMethods } from '../data/frequentCategories';
 import { callTranscribeAudio } from '../services/functions';
@@ -634,11 +634,11 @@ export function QuickAddSheet({
   }, [selectedTemplate]);
 
   useEffect(() => {
-    if (!showDetails || mode === 'ai') return;
+    if (!showDetails) return;
     window.requestAnimationFrame(() => {
       noteInputRef.current?.focus();
     });
-  }, [showDetails, mode]);
+  }, [showDetails]);
 
   const amountDisplay = amount ? amount : '0';
   const heroColorClass = type === 'expense' ? 'text-rose-400' : 'text-emerald-400';
@@ -1026,10 +1026,8 @@ export function QuickAddSheet({
                       {frequentCategories.map((cat) => {
                         const active = cat.id === category;
                         const iconName = CATEGORY_ICONS[cat.id] ?? CATEGORY_ICONS.default;
-                        const IconComponent =
-                          (Icons as Record<string, (props: { size?: number; className?: string }) => JSX.Element>)[
-                            iconName
-                          ] ?? Icons.Tag;
+                        const iconMap = Icons as unknown as Record<string, LucideIcon>;
+                        const IconComponent = iconMap[iconName] ?? Icons.Tag;
                         return (
                           <button
                             key={cat.id}
