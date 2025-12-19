@@ -11,8 +11,11 @@
   --card-shadow: none;
   --text: #e2e8f0;
   --text-muted: #94a3b8;
+  --muted: var(--text-muted);
+  --text-on-primary: #ffffff;
   --primary: #0ea5e9;
   --accent: #22c55e;
+  --modal-overlay: rgba(2, 6, 23, 0.6);
   --modal-surface: rgba(15, 23, 42, 0.92);
   --modal-border: rgba(255, 255, 255, 0.18);
   --modal-header: rgba(255, 255, 255, 0.08);
@@ -45,8 +48,11 @@
   --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --text: #1e293b;
   --text-muted: #64748b;
+  --muted: var(--text-muted);
+  --text-on-primary: #ffffff;
   --primary: #0ea5e9;
   --accent: #0f766e;
+  --modal-overlay: rgba(15, 23, 42, 0.35);
   --modal-surface: #ffffff;
   --modal-border: #e2e8f0;
   --modal-header: #f8fafc;

@@ -92,7 +92,7 @@ function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: CustomKey
             type="button"
             onClick={() => onInput(key)}
             disabled={disabled}
-            className="flex h-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl font-semibold text-white shadow-sm transition hover:bg-white/10 disabled:opacity-50 sm:h-20"
+            className="flex h-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl font-semibold text-[var(--text)] shadow-sm transition hover:bg-white/10 disabled:opacity-50 sm:h-20"
             aria-label={key === 'backspace' ? 'Borrar' : `Tecla ${key}`}
           >
             {key === 'backspace' ? (
@@ -111,7 +111,7 @@ function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: CustomKey
         type="button"
         onClick={onAction}
         disabled={actionDisabled}
-        className="flex w-24 flex-col items-center justify-center self-stretch rounded-2xl bg-primary px-2 py-4 text-white shadow-lg transition hover:bg-emerald-700 disabled:opacity-60 sm:w-28"
+        className="flex w-24 flex-col items-center justify-center self-stretch rounded-2xl bg-[var(--primary)] px-2 py-4 text-[var(--text-on-primary)] shadow-lg transition hover:opacity-90 disabled:opacity-60 sm:w-28"
         aria-label="Guardar"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -648,18 +648,18 @@ export function QuickAddSheet({
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute inset-x-0 bottom-0 z-50 h-[90dvh] rounded-t-3xl bg-black shadow-2xl transition">
-        <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-black">
-          <div className="flex shrink-0 items-center justify-center py-2">
-            <span className="h-1 w-12 rounded-full bg-slate-200" />
+      <div className="absolute inset-0 bg-[var(--modal-overlay)] backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-x-0 bottom-0 z-50 h-[90dvh] rounded-t-3xl bg-[var(--modal-surface)] shadow-2xl transition">
+        <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-[var(--modal-surface)]">
+          <div className="flex shrink-0 items-center justify-center py-1">
+            <span className="h-1 w-12 rounded-full bg-[var(--card-border)]" />
           </div>
-          <div className="grid h-16 shrink-0 grid-cols-[48px_1fr_48px] items-center border-b border-white/5 bg-black px-4">
+          <div className="grid h-14 shrink-0 grid-cols-[48px_1fr_48px] items-center border-b border-[var(--modal-border)] bg-[var(--modal-header)] px-4">
             <div className="flex justify-start">
               <button
                 type="button"
                 onClick={handleLeftAction}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] text-[var(--text-muted)] transition hover:border-[var(--modal-border)] hover:text-[var(--text)]"
                 aria-label={showDetails ? 'Volver' : 'Cerrar'}
               >
                 {showDetails ? <ArrowLeft className="h-5 w-5" /> : <X className="h-5 w-5" />}
@@ -667,24 +667,24 @@ export function QuickAddSheet({
             </div>
             <div className="flex min-w-0 flex-col items-center justify-center overflow-hidden">
               {mode === 'ai' ? (
-                <span className="text-sm font-semibold text-white">Modo frase (IA)</span>
+                <span className="text-sm font-semibold text-[var(--text)]">Modo frase (IA)</span>
               ) : editingTemplate ? (
                 <>
-                  <span className="text-[10px] uppercase tracking-wider text-white/50">Editando</span>
-                  <span className="max-w-full truncate text-sm font-semibold text-white">{editingTemplate.name}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Editando</span>
+                  <span className="max-w-full truncate text-sm font-semibold text-[var(--text)]">{editingTemplate.name}</span>
                 </>
               ) : (
-                <span className="text-sm font-semibold text-white">Nuevo Gasto</span>
+                <span className="text-sm font-semibold text-[var(--text)]">Nuevo Gasto</span>
               )}
             </div>
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={handleAiToggle}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${
                   mode === 'ai'
                     ? 'border-primary/60 bg-primary/10 text-primary'
-                    : 'border-white/10 text-white/70 hover:border-white/30 hover:text-white'
+                    : 'border-[var(--card-border)] text-[var(--text-muted)] hover:border-[var(--modal-border)] hover:text-[var(--text)]'
                 }`}
                 aria-label={mode === 'ai' ? 'Salir de modo frase' : 'Modo frase'}
               >
@@ -693,10 +693,10 @@ export function QuickAddSheet({
             </div>
           </div>
           {mode === 'ai' ? (
-            <div className="mt-4 flex flex-1 flex-col overflow-hidden">
-              <div className="flex-1 min-h-0 space-y-4 overflow-y-auto pr-1">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--muted)]">Describe el movimiento</label>
+            <div className="mt-2 flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-4 pb-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--muted)]">Describe el movimiento</label>
                   <textarea
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
@@ -706,70 +706,72 @@ export function QuickAddSheet({
                   />
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleMicToggle}
-                    disabled={transcribingAudio || parseLocked}
-                    className={`flex h-12 w-12 items-center justify-center rounded-full border text-white transition ${
-                      recording
-                        ? 'border-red-400 bg-red-500/20 hover:bg-red-500/30'
-                        : 'border-white/15 bg-white/5 hover:border-primary hover:text-primary'
-                    } disabled:opacity-60`}
-                    title="Grabar audio (max 10s)"
-                  >
-                    {recording ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
-                        <rect x="7" y="7" width="10" height="10" rx="2" ry="2" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
-                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                        <path d="M19 10v.5a7 7 0 1 1-14 0V10" />
-                        <path d="M12 21v-3" />
-                        <path d="M9 22h6" />
-                      </svg>
-                    )}
-                  </button>
-                  <div className="flex flex-col text-xs text-slate-300">
-                    <span className="font-semibold text-white">
-                      {parseLocked ? 'Limite alcanzado' : recording ? 'Grabando...' : 'Modo frase (voz)'}
-                    </span>
-                    <span>
-                      {recording
-                        ? `Pulsa para detener [] ${recordingDuration}s / ${MAX_RECORDING_SECONDS}s`
-                        : 'Toque para grabar - Max 10s'}
-                    </span>
-                    {recording && (
-                      <span className="flex items-center gap-2 text-red-300">
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
-                        Grabando
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleMicToggle}
+                      disabled={transcribingAudio || parseLocked}
+                      className={`flex h-12 w-12 items-center justify-center rounded-full border text-[var(--text)] transition ${
+                        recording
+                          ? 'border-red-400 bg-red-500/20 hover:bg-red-500/30'
+                          : 'border-white/15 bg-white/5 hover:border-primary hover:text-primary'
+                      } disabled:opacity-60`}
+                      title="Grabar audio (max 10s)"
+                    >
+                      {recording ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+                          <rect x="7" y="7" width="10" height="10" rx="2" ry="2" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+                          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                          <path d="M19 10v.5a7 7 0 1 1-14 0V10" />
+                          <path d="M12 21v-3" />
+                          <path d="M9 22h6" />
+                        </svg>
+                      )}
+                    </button>
+                    <div className="flex flex-col text-xs text-slate-300">
+                      <span className="font-semibold text-[var(--text)]">
+                        {parseLocked ? 'Limite alcanzado' : recording ? 'Grabando...' : 'Modo frase (voz)'}
                       </span>
-                    )}
+                      <span>
+                        {recording
+                          ? `Pulsa para detener [] ${recordingDuration}s / ${MAX_RECORDING_SECONDS}s`
+                          : 'Toque para grabar - Max 10s'}
+                      </span>
+                      {recording && (
+                        <span className="flex items-center gap-2 text-red-300">
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-red-400" />
+                          Grabando
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Detecta monto, fecha, categoria</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">Sugiere metodo de pago</span>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Detecta monto, fecha, categoria</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Sugiere metodo de pago</span>
                 </div>
 
-                {interpretError && <p className="text-sm text-red-600">{interpretError}</p>}
+                {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
 
                 <button
                   onClick={handleInterpret}
                   disabled={interpreting || transcribingAudio || parseLocked}
-                  className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800 disabled:opacity-60"
+                  className="w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
                 >
                   {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
                 </button>
 
                 {parsedSuggestion && (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white shadow-sm">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-[var(--text)] shadow-sm">
                     <div className="mb-2 flex items-center justify-between">
                       <h3 className="text-sm font-semibold">Revision rapida</h3>
                       {parsedSuggestion.confidence !== undefined && (
-                        <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-white">
+                        <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-[var(--text)]">
                           Confianza aprox. {(parsedSuggestion.confidence * 100).toFixed(0)}%
                         </span>
                       )}
@@ -814,14 +816,14 @@ export function QuickAddSheet({
                           setDate(parsedSuggestion.date);
                           setMode('quick');
                         }}
-                        className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20"
+                        className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-[var(--text)] hover:bg-white/20"
                       >
                         Editar antes de guardar
                       </button>
                       <button
                         onClick={handleSaveParsed}
                         disabled={saving}
-                        className="rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+                        className="rounded-xl bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
                       >
                         {saving ? 'Guardando...' : 'Confirmar y guardar'}
                       </button>
@@ -831,10 +833,10 @@ export function QuickAddSheet({
               </div>
             </div>
           ) : (
-            <div className="mt-2 flex flex-1 flex-col overflow-hidden">
-              <div className="shrink-0 px-4 py-2">
+            <div className="mt-1 flex flex-1 flex-col overflow-hidden">
+              <div className="shrink-0 px-4 py-1">
                 <div className="flex items-center justify-between">
-                  <div className="inline-flex rounded-full bg-white/10 p-1 text-xs font-semibold text-white">
+                  <div className="inline-flex rounded-full bg-white/10 p-1 text-xs font-semibold text-[var(--text)]">
                     <button
                       type="button"
                       onClick={() => {
@@ -843,7 +845,7 @@ export function QuickAddSheet({
                           setCategory(frequentCategories[0]?.id ?? 'comida');
                         }
                       }}
-                      className={`rounded-full px-3 py-1 ${type === 'expense' ? 'bg-white text-black' : 'text-white/70'}`}
+                      className={`rounded-full px-3 py-1 ${type === 'expense' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
                     >
                       Gasto
                     </button>
@@ -853,7 +855,7 @@ export function QuickAddSheet({
                         setType('income');
                         setCategory('ingreso');
                       }}
-                      className={`rounded-full px-3 py-1 ${type === 'income' ? 'bg-white text-black' : 'text-white/70'}`}
+                      className={`rounded-full px-3 py-1 ${type === 'income' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
                     >
                       Ingreso
                     </button>
@@ -862,14 +864,14 @@ export function QuickAddSheet({
                     <span className="text-xs text-[var(--muted)]">Editando plantilla</span>
                   )}
                 </div>
-                <div className={`mt-3 text-center ${showDetails ? 'text-5xl' : 'text-6xl'} font-semibold leading-none ${heroColorClass}`}>
+                <div className={`mt-2 text-center ${showDetails ? 'text-5xl' : 'text-6xl'} font-semibold leading-none ${heroColorClass}`}>
                   ${amountDisplay}
                 </div>
-                <div className="shrink-0 flex justify-center pb-4 pt-3">
+                <div className="shrink-0 flex justify-center pb-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowDetails(true)}
-                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white active:scale-95"
+                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition hover:bg-white/10 hover:text-[var(--text)] active:scale-95"
                   >
                     <span>Agregar nota o detalles</span>
                     <ChevronRight size={14} className="opacity-50" />
@@ -880,7 +882,7 @@ export function QuickAddSheet({
               <div className="flex-1 min-h-0 overflow-y-auto">
                 {showDetails ? (
                   <div className="space-y-4 p-4">
-                    <h3 className="text-sm font-semibold text-white">Detalles</h3>
+                    <h3 className="text-sm font-semibold text-[var(--text)]">Detalles</h3>
 
                     {templates.length > 0 && (
                       <div>
@@ -896,7 +898,7 @@ export function QuickAddSheet({
                             >
                               <button
                                 onClick={() => handleApplyTemplate(tpl)}
-                                className="text-sm font-semibold text-white hover:text-primary"
+                                className="text-sm font-semibold text-[var(--text)] hover:text-primary"
                                 title="Aplicar plantilla"
                               >
                                 {tpl.name}
@@ -999,7 +1001,7 @@ export function QuickAddSheet({
                                 type="button"
                                 onClick={handleSaveTemplate}
                                 disabled={saving || !templateName.trim()}
-                                className="rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white shadow disabled:opacity-60"
+                                className="rounded-xl bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
                               >
                                 Guardar
                               </button>
@@ -1015,14 +1017,14 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => handleSave(true)}
                       disabled={saving || !formReady}
-                      className="h-12 w-full rounded-xl bg-primary text-sm font-semibold text-white shadow disabled:opacity-60"
+                      className="h-12 w-full rounded-xl bg-[var(--primary)] text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
                     >
                       {saving ? 'Guardando...' : 'Guardar Gasto'}
                     </button>
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col p-4">
-                    <div className="grid flex-1 content-center grid-cols-4 gap-4">
+                  <div className="flex h-full flex-col p-3">
+                    <div className="grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3">
                       {frequentCategories.map((cat) => {
                         const active = cat.id === category;
                         const iconName = CATEGORY_ICONS[cat.id] ?? CATEGORY_ICONS.default;
@@ -1033,10 +1035,10 @@ export function QuickAddSheet({
                             key={cat.id}
                             type="button"
                             onClick={() => setCategory(cat.id)}
-                            className={`flex h-16 flex-col items-center justify-center rounded-xl border px-2 text-center text-[11px] font-semibold leading-tight transition ${
+                            className={`flex h-16 flex-col items-center justify-center rounded-xl border px-1 text-center text-[11px] font-semibold leading-tight transition sm:text-xs ${
                               active
-                                ? 'border-primary bg-primary/20 text-white shadow'
-                                : 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
+                                ? 'border-primary bg-primary/20 text-[var(--text)] shadow'
+                                : 'border-white/10 bg-white/5 text-[var(--text-muted)] hover:bg-white/10'
                             }`}
                           >
                             <IconComponent size={18} />
@@ -1050,7 +1052,7 @@ export function QuickAddSheet({
               </div>
 
               {!showDetails && (
-                <div className="shrink-0 mt-auto border-t border-white/10 bg-white/5 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+                <div className="shrink-0 mt-auto border-t border-white/10 bg-white/5 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
                   {feedback && <p className="mb-2 text-xs text-[var(--muted)]">{feedback}</p>}
                   <CustomKeypad
                     onInput={handleKeypadInput}
