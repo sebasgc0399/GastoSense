@@ -1,3 +1,4 @@
+import { useConfirm } from '../hooks/useConfirm';
 import type { Template } from '../types';
 
 interface Props {
@@ -19,8 +20,17 @@ export function RecurringTemplatesCard({
   onEditTemplate,
   onDeleteTemplate,
 }: Props) {
-  const handleDelete = (id: string) => {
-    if (!window.confirm('Eliminar esta plantilla? Esta accion no se puede deshacer.')) return;
+  const confirm = useConfirm();
+
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Eliminar plantilla?',
+      description: 'Esta accion no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     void onDeleteTemplate(id);
   };
 

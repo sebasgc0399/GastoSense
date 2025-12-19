@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCategoriesController } from '../hooks/useCategoriesController';
+import { useConfirm } from '../hooks/useConfirm';
 import { updateCategory as updateCategoryDoc } from '../services/categories';
 import type { Category } from '../types';
 import { CategoryIcon } from './ui/CategoryIcon';
@@ -29,6 +31,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     userId,
     includeArchived: true,
   });
+  const confirm = useConfirm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState({ label: '', icon: DEFAULT_ICON });
   const [view, setView] = useState<ViewMode>('list');
@@ -210,7 +213,13 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     if (saving) return;
     const nextArchived = !cat.isArchived;
     if (nextArchived) {
-      const confirmed = window.confirm('Desactivar categoría?');
+      const confirmed = await confirm({
+        title: 'Desactivar categoría?',
+        description: 'Puedes reactivarla cuando quieras.',
+        confirmText: 'Desactivar',
+        cancelText: 'Cancelar',
+        variant: 'default',
+      });
       if (!confirmed) return;
     }
 
@@ -236,7 +245,13 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
       setFormError('Las categorías base no se pueden borrar.');
       return;
     }
-    const confirmed = window.confirm('Archivar categoría?');
+    const confirmed = await confirm({
+      title: 'Archivar categoría?',
+      description: 'Esta acción no se puede deshacer.',
+      confirmText: 'Archivar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
     if (!confirmed) return;
     setSaving(true);
     setFormError(null);
@@ -253,17 +268,17 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     }
   };
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 sm:items-center sm:px-3">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 md:items-center md:px-3">
       <div
         className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="relative flex h-[92vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] text-[var(--text)] shadow-2xl backdrop-blur sm:h-auto sm:max-h-[85vh] sm:max-w-3xl sm:rounded-2xl"
+        className="relative flex h-[92vh] w-screen max-w-none flex-col overflow-hidden rounded-t-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] text-[var(--text)] shadow-2xl backdrop-blur md:h-auto md:max-h-[85vh] md:max-w-3xl md:rounded-2xl"
         role="dialog"
         aria-modal="true"
         aria-label="Administrar categorías"
@@ -331,24 +346,24 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                               key={cat.id}
                               onDragOver={handleDragOver(cat.id)}
                               onDrop={handleDrop(cat.id)}
-                              className={`flex flex-col gap-3 rounded-xl border px-3 py-3 transition sm:flex-row sm:items-center sm:justify-between ${
+                              className={`grid grid-cols-[auto,1fr,auto] items-center gap-2 rounded-xl border px-3 py-3 transition ${
                                 isEditing
                                   ? 'border-primary/60 bg-primary/10'
                                   : 'border-[var(--card-border)] bg-[var(--card)]/40 hover:border-primary/40'
                               } ${isDragOver ? 'border-primary/70 ring-1 ring-primary/30' : ''}`}
                             >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <button
-                                  type="button"
-                                  draggable={!saving}
-                                  onDragStart={handleDragStart(cat.id)}
-                                  onDragEnd={handleDragEnd}
-                                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                                  aria-label="Reordenar categoría"
-                                  disabled={saving}
-                                >
-                                  <GripVertical className="h-4 w-4" />
-                                </button>
+                              <button
+                                type="button"
+                                draggable={!saving}
+                                onDragStart={handleDragStart(cat.id)}
+                                onDragEnd={handleDragEnd}
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                aria-label="Reordenar categoría"
+                                disabled={saving}
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </button>
+                              <div className="flex min-w-0 items-center gap-2">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--input-bg)]">
                                   <CategoryIcon name={cat.icon} size={18} />
                                 </div>
@@ -361,19 +376,20 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                   )}
                                 </div>
                               </div>
-                              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                              <div className="flex items-center gap-2 justify-self-end">
                                 <button
                                   type="button"
                                   onClick={() => handleToggleActive(cat)}
-                                  className={`flex items-center gap-2 rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
+                                  className={`flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold transition ${
                                     cat.isArchived
                                       ? 'border-white/10 text-[var(--text-muted)]'
                                       : 'border-primary/40 text-[var(--text)]'
                                   }`}
                                   aria-pressed={!cat.isArchived}
+                                  aria-label={cat.isArchived ? 'Activar categoría' : 'Desactivar categoría'}
                                   disabled={saving}
                                 >
-                                  <span>Activa</span>
+                                  <span className="sr-only sm:not-sr-only">Activa</span>
                                   <span
                                     className={`relative inline-flex h-4 w-7 items-center rounded-full ${
                                       cat.isArchived ? 'bg-white/10' : 'bg-primary/70'
@@ -421,28 +437,27 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                         {inactiveCategories.map((cat) => (
                           <div
                             key={cat.id}
-                            className="flex flex-col gap-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)]/30 px-3 py-3 opacity-80 sm:flex-row sm:items-center sm:justify-between"
+                            className="grid grid-cols-[auto,1fr,auto] items-center gap-2 rounded-xl border border-[var(--card-border)] bg-[var(--card)]/30 px-3 py-3 opacity-80"
                           >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--input-bg)]">
-                                <CategoryIcon name={cat.icon} size={18} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-[var(--text)]">{cat.label}</p>
-                                <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                                  Inactiva
-                                </span>
-                              </div>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--input-bg)]">
+                              <CategoryIcon name={cat.icon} size={18} />
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-[var(--text)]">{cat.label}</p>
+                              <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                                Inactiva
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 justify-self-end">
                               <button
                                 type="button"
                                 onClick={() => handleToggleActive(cat)}
-                                className="flex items-center gap-2 rounded-full border border-white/10 px-2 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition"
+                                className="flex items-center gap-1 rounded-full border border-white/10 px-1.5 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition"
                                 aria-pressed={!cat.isArchived}
+                                aria-label="Activar categoría"
                                 disabled={saving}
                               >
-                                <span>Inactiva</span>
+                                <span className="sr-only sm:not-sr-only">Inactiva</span>
                                 <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-white/10">
                                   <span className="inline-block h-3 w-3 translate-x-1 transform rounded-full bg-white" />
                                 </span>
@@ -570,5 +585,6 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
         )}
       </div>
     </div>
-  );
+  , document.body);
 }
+

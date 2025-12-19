@@ -2,6 +2,7 @@
 import { ArrowLeft, ChevronRight, Settings, Sparkles, X } from 'lucide-react';
 import { paymentMethods } from '../data/frequentCategories';
 import { useCategoriesController } from '../hooks/useCategoriesController';
+import { useConfirm } from '../hooks/useConfirm';
 import { callTranscribeAudio } from '../services/functions';
 import { ResponsiveSelect } from './ResponsiveSelect';
 import { CategoryIcon } from './ui/CategoryIcon';
@@ -151,6 +152,7 @@ export function QuickAddSheet({
     setFormState((prev) => ({ ...prev, ...updates }));
   }, []);
   const { categories, loading: categoriesLoading } = useCategoriesController({ userId });
+  const confirm = useConfirm();
   const {
     mode,
     amount,
@@ -583,7 +585,14 @@ export function QuickAddSheet({
 
   const handleDeleteTemplate = async (id: string) => {
     if (!onDeleteTemplate) return;
-    if (!window.confirm('Eliminar esta plantilla? Esta accion no se puede deshacer.')) return;
+    const confirmed = await confirm({
+      title: 'Eliminar plantilla?',
+      description: 'Esta accion no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await onDeleteTemplate(id);
       setFeedback('Plantilla eliminada.');
