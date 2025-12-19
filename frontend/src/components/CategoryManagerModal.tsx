@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
 import { updateCategory as updateCategoryDoc } from '../services/categories';
@@ -139,6 +139,19 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
       }
     },
     [refreshCategories, userId],
+  );
+
+  const moveCategory = useCallback(
+    async (fromIndex: number, toIndex: number) => {
+      if (saving) return;
+      if (toIndex < 0 || toIndex >= orderedCategories.length) return;
+      const next = [...orderedCategories];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      setOrderedCategories(next);
+      await persistOrder(next);
+    },
+    [orderedCategories, persistOrder, saving],
   );
 
   const handleDragStart = (id: string) => (event: DragEvent<HTMLButtonElement>) => {
@@ -327,7 +340,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
               ) : (
                 <>
                   <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)]/30 px-3 py-2 text-xs text-[var(--text-muted)]">
-                    Arrastra para ordenar. Solo las primeras 19 activas aparecen en el acceso rápido.
+                    Arrastra para ordenar en desktop o usa las flechas en movil. Solo las primeras 19 activas aparecen en el acceso rapido.
                   </div>
 
                   <div className="space-y-3">
@@ -338,9 +351,11 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {orderedCategories.map((cat) => {
+                        {orderedCategories.map((cat, index) => {
                           const isEditing = editingId === cat.id;
                           const isDragOver = dragOverId === cat.id;
+                          const isFirst = index === 0;
+                          const isLast = index === orderedCategories.length - 1;
                           return (
                             <div
                               key={cat.id}
@@ -352,17 +367,37 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                   : 'border-[var(--card-border)] bg-[var(--card)]/40 hover:border-primary/40'
                               } ${isDragOver ? 'border-primary/70 ring-1 ring-primary/30' : ''}`}
                             >
-                              <button
-                                type="button"
-                                draggable={!saving}
-                                onDragStart={handleDragStart(cat.id)}
-                                onDragEnd={handleDragEnd}
-                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                                aria-label="Reordenar categoría"
-                                disabled={saving}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </button>
+                              <div className="flex flex-col items-center gap-1">
+                                <button
+                                  type="button"
+                                  draggable={!saving}
+                                  onDragStart={handleDragStart(cat.id)}
+                                  onDragEnd={handleDragEnd}
+                                  className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50 md:flex"
+                                  aria-label="Reordenar categoria"
+                                  disabled={saving}
+                                >
+                                  <GripVertical className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveCategory(index, index - 1)}
+                                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary disabled:opacity-50 md:hidden"
+                                  aria-label="Mover categoria arriba"
+                                  disabled={saving || isFirst}
+                                >
+                                  <ChevronUp className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveCategory(index, index + 1)}
+                                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary disabled:opacity-50 md:hidden"
+                                  aria-label="Mover categoria abajo"
+                                  disabled={saving || isLast}
+                                >
+                                  <ChevronDown className="h-4 w-4" />
+                                </button>
+                              </div>
                               <div className="flex min-w-0 items-center gap-2">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--input-bg)]">
                                   <CategoryIcon name={cat.icon} size={18} />
@@ -587,4 +622,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     </div>
   , document.body);
 }
+
+
+
 
