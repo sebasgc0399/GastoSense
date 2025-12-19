@@ -5,6 +5,7 @@ import {
   createCategory,
   getUserCategories,
   seedDefaultCategories,
+  subscribeToUserCategories,
   updateCategory as updateCategoryService,
 } from '../services/categories';
 
@@ -59,8 +60,49 @@ export function useCategoriesController({
   }, [includeArchived, userId]);
 
   useEffect(() => {
-    void refreshCategories();
-  }, [refreshCategories]);
+    if (!userId) {
+      setCategories([]);
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    let didSeed = false;
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = subscribeToUserCategories(
+      userId,
+      async (data) => {
+        if (!isMounted) return;
+        if (data.length === 0 && !didSeed) {
+          didSeed = true;
+          try {
+            await seedDefaultCategories(userId);
+          } catch (err) {
+            console.error(err);
+            setError('No se pudieron cargar las categorias.');
+            setLoading(false);
+          }
+          return;
+        }
+        const nextCategories = includeArchived ? data : data.filter((cat) => !cat.isArchived);
+        setCategories(nextCategories);
+        setLoading(false);
+      },
+      (err) => {
+        if (!isMounted) return;
+        console.error(err);
+        setError('No se pudieron cargar las categorias.');
+        setLoading(false);
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [includeArchived, userId]);
 
   const addCategory = useCallback(
     async (payload: CategoryDraft) => {

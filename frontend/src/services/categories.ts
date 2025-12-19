@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -98,4 +99,23 @@ export async function updateCategory(
 
 export async function archiveCategory(userId: string, id: string): Promise<void> {
   await updateCategory(userId, id, { isArchived: true });
+}
+
+export function subscribeToUserCategories(
+  userId: string,
+  onData: (categories: Category[]) => void,
+  onError?: (error: Error) => void,
+): () => void {
+  const db = getFirestoreDb();
+  const ref = collection(db, 'users', userId, COLLECTION);
+  const q = query(ref, orderBy('order', 'asc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      onData(snapshot.docs.map((docSnap) => mapCategoryDoc(docSnap.id, docSnap.data())));
+    },
+    (error) => {
+      if (onError) onError(error as Error);
+    },
+  );
 }
