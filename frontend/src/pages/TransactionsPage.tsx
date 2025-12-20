@@ -1,7 +1,9 @@
-import type React from 'react';
+﻿import type React from 'react';
 import { TransactionFilters } from '../components/TransactionFilters';
 import { CardMini } from '../components/stats/CardMini';
 import type { Budget, Transaction } from '../types';
+import type { CategoryResolver } from '../utils/categoryResolver';
+import { resolveCanonicalCategoryId, resolveCategoryLabel } from '../utils/categoryResolver';
 
 export interface TransactionsPageProps {
   transactions: Transaction[];
@@ -15,6 +17,7 @@ export interface TransactionsPageProps {
   setTxPage: React.Dispatch<React.SetStateAction<number>>;
   budget: Budget | null;
   categorySpendMap: Record<string, number>;
+  categoryResolver: CategoryResolver;
   setSelectedTx: React.Dispatch<React.SetStateAction<Transaction | null>>;
   handleDeleteTransaction: (id: string) => Promise<void>;
 }
@@ -31,6 +34,7 @@ export function TransactionsPage({
   setTxPage,
   budget,
   categorySpendMap,
+  categoryResolver,
   setSelectedTx,
   handleDeleteTransaction,
 }: TransactionsPageProps) {
@@ -76,66 +80,68 @@ export function TransactionsPage({
             Aún no hay movimientos en este rango. Agrega el primero.
           </p>
         )}
-        {paginatedTransactions.map((tx) => (
-          <div
-            key={tx.id}
-            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm"
-          >
-            <div>
-              <p className="text-sm font-semibold text-white">
-                {tx.note || tx.category} • {tx.category}
-              </p>
-              <p className="text-xs text-slate-400">
-                {tx.date} • {tx.paymentMethod}
-              </p>
-              {budget?.perCategory?.[tx.category] && (
-                <p className="text-[11px] text-slate-300">
-                  Presupuesto cat: ${budget.perCategory[tx.category].toLocaleString()} • Gastado:{' '}
-                  {(categorySpendMap[tx.category] || 0).toLocaleString()}
+        {paginatedTransactions.map((tx) => {
+          const canonicalCategoryId = resolveCanonicalCategoryId(tx.categoryId, categoryResolver);
+          const displayCategory = resolveCategoryLabel(canonicalCategoryId, categoryResolver) ?? tx.categoryId;
+          const budgetLimit = budget?.perCategory?.[canonicalCategoryId];
+          const spentInCategory = categorySpendMap[canonicalCategoryId] ?? 0;
+
+          return (
+            <div
+              key={tx.id}
+              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm"
+            >
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {tx.note || displayCategory} · {displayCategory}
                 </p>
-              )}
-            </div>
-            <div className="text-right">
-              <p className={`text-base font-bold ${tx.type === 'expense' ? 'text-red-300' : 'text-emerald-300'}`}>
-                {tx.type === 'expense' ? '-' : '+'}${tx.amount.toLocaleString()}
-              </p>
-              <div className="mt-1 flex items-center justify-end gap-2 text-[11px]">
-                <span
-                  className={`rounded-full px-2 py-1 ${
-                    tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-200' : 'bg-red-500/10 text-red-200'
-                  }`}
-                >
-                  {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
-                </span>
-                {budget?.perCategory?.[tx.category] && (
-                  <span
-                    className={`rounded-full px-2 py-1 ${
-                      categorySpendMap[tx.category] >= budget.perCategory[tx.category]
-                        ? 'bg-red-500/10 text-red-200'
-                        : categorySpendMap[tx.category] / budget.perCategory[tx.category] >= 0.8
-                          ? 'bg-amber-500/10 text-amber-200'
-                          : 'bg-emerald-500/10 text-emerald-200'
-                    }`}
-                  >
-                    Cat{' '}
-                    {Math.round(
-                      Math.min((categorySpendMap[tx.category] / budget.perCategory[tx.category]) * 100, 150),
-                    )}
-                    %
-                  </span>
+                <p className="text-xs text-slate-400">
+                  {tx.date} · {tx.paymentMethod}
+                </p>
+                {budgetLimit && (
+                  <p className="text-[11px] text-slate-300">
+                    Presupuesto cat: ${budgetLimit.toLocaleString()} · Gastado: {spentInCategory.toLocaleString()}
+                  </p>
                 )}
               </div>
-              <div className="mt-1 flex justify-end gap-2 text-[11px]">
-                <button className="text-primary" onClick={() => setSelectedTx(tx)}>
-                  Editar
-                </button>
-                <button className="text-red-300" onClick={() => handleDeleteTransaction(tx.id)}>
-                  Borrar
-                </button>
+              <div className="text-right">
+                <p className={`text-base font-bold ${tx.type === 'expense' ? 'text-red-300' : 'text-emerald-300'}`}>
+                  {tx.type === 'expense' ? '-' : '+'}${tx.amount.toLocaleString()}
+                </p>
+                <div className="mt-1 flex items-center justify-end gap-2 text-[11px]">
+                  <span
+                    className={`rounded-full px-2 py-1 ${
+                      tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-200' : 'bg-red-500/10 text-red-200'
+                    }`}
+                  >
+                    {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
+                  </span>
+                  {budgetLimit && (
+                    <span
+                      className={`rounded-full px-2 py-1 ${
+                        spentInCategory >= budgetLimit
+                          ? 'bg-red-500/10 text-red-200'
+                          : spentInCategory / budgetLimit >= 0.8
+                            ? 'bg-amber-500/10 text-amber-200'
+                            : 'bg-emerald-500/10 text-emerald-200'
+                      }`}
+                    >
+                      Cat {Math.round(Math.min((spentInCategory / budgetLimit) * 100, 150))}%
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 flex justify-end gap-2 text-[11px]">
+                  <button className="text-primary" onClick={() => setSelectedTx(tx)}>
+                    Editar
+                  </button>
+                  <button className="text-red-300" onClick={() => handleDeleteTransaction(tx.id)}>
+                    Borrar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {transactions.length > txPageSize && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
             <button
@@ -161,3 +167,5 @@ export function TransactionsPage({
     </section>
   );
 }
+
+

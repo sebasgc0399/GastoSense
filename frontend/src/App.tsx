@@ -25,6 +25,7 @@ import {
   useTransactionsController,
 } from './hooks';
 import { topCategories } from './utils/txAgg';
+import { resolveCanonicalCategoryId, resolveCategoryLabel, truncateCategoryId } from './utils/categoryResolver';
 import {
   createTransaction,
   deleteTransaction,
@@ -174,6 +175,9 @@ function App() {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/-{2,}/g, '-')
       .trim();
   }, []);
 
@@ -303,6 +307,7 @@ function App() {
     availableBalance,
     topExpenses,
     categorySpendMap,
+    categoryResolver,
     previousMonth,
     smartCards,
     smartCardIndex,
@@ -328,6 +333,27 @@ function App() {
   });
 
   const expenseCategories = useMemo(() => topCategories(categorySpendMap, Number.POSITIVE_INFINITY), [categorySpendMap]);
+  const topExpenseItems = useMemo(
+    () =>
+      topExpenses.map((item) => {
+        const label = resolveCategoryLabel(item.category, categoryResolver);
+        return {
+          categoryId: item.category,
+          label: label ?? 'Categoría eliminada',
+          fallbackId: label ? undefined : truncateCategoryId(item.category),
+          spent: item.amount,
+        };
+      }),
+    [categoryResolver, topExpenses],
+  );
+  const advisorTopCategories = useMemo(
+    () =>
+      topExpenseItems.map((item) => ({
+        category: item.label,
+        amount: item.spent,
+      })),
+    [topExpenseItems],
+  );
 
   const metricsViewedPayload = useMemo(
     () => ({
@@ -419,12 +445,12 @@ function App() {
     () =>
       monthTransactions.map((t) => ({
         amount: t.amount,
-        category: t.category,
+        category: resolveCategoryLabel(t.categoryId, categoryResolver) ?? t.categoryId,
         note: t.note,
         type: t.type,
         date: t.date,
       })),
-    [monthTransactions],
+    [categoryResolver, monthTransactions],
   );
 
   const {
@@ -445,7 +471,7 @@ function App() {
     currentMonth: selectedMonth,
     monthlyExpense,
     monthlyIncome,
-    topCategories: topExpenses,
+    topCategories: advisorTopCategories,
     budgetTotal: budget?.total,
     budgetPerCategory: budget?.perCategory,
     previousMonth,
@@ -479,7 +505,10 @@ function App() {
       });
       const data = resp.data as { parsed: ParsedTransactionSuggestion };
       await refreshQuota();
-      return data.parsed;
+      const raw = data.parsed as ParsedTransactionSuggestion & { category?: string; categoryId?: string };
+      const rawCategory = typeof raw.categoryId === 'string' ? raw.categoryId : typeof raw.category === 'string' ? raw.category : '';
+      const categoryId = resolveCanonicalCategoryId(rawCategory, categoryResolver);
+      return { ...raw, categoryId };
     } catch (err) {
       if (isResourceExhausted(err)) {
         triggerUpgradeOnce('parse_exhausted');
@@ -564,7 +593,7 @@ function App() {
             handleSaveBudget={handleSaveBudget}
             budgetSaving={budgetSaving}
             onEditCategoryBudgets={openBudgets}
-            topExpenses={topExpenses}
+            topExpenseItems={topExpenseItems}
             smartCards={smartCards}
             smartCardIndex={smartCardIndex}
             setSmartCardIndex={setSmartCardIndex}
@@ -591,6 +620,7 @@ function App() {
             setTxPage={setTxPage}
             budget={budget}
             categorySpendMap={categorySpendMap}
+            categoryResolver={categoryResolver}
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
           />
@@ -606,6 +636,7 @@ function App() {
             availableBalance={availableBalance}
             budget={budget}
             expenseCategories={expenseCategories}
+            categoryResolver={categoryResolver}
             previousMonth={previousMonth}
             onOpenQuickAdd={() => openQuickAdd('expense')}
             onViewMovements={() => openMovements()}

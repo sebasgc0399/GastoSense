@@ -252,7 +252,7 @@ export function QuickAddSheet({
 
     const payload: TransactionInput = {
       amount: Number(amount),
-      category,
+      categoryId: category,
       note,
       type,
       paymentMethod,
@@ -312,7 +312,7 @@ export function QuickAddSheet({
 
     return {
       amount: amountValue,
-      category: categoryGuess,
+      categoryId: categoryGuess,
       note: text,
       paymentMethod: 'debito',
       type: isIncome ? 'income' : 'expense',
@@ -546,7 +546,7 @@ export function QuickAddSheet({
 
   const applyTemplateFields = (tpl: Template) => {
     if (tpl.amount) setAmount(tpl.amount.toString());
-    if (tpl.category) setCategory(tpl.category);
+    if (tpl.categoryId) setCategory(tpl.categoryId);
     if (tpl.note) setNote(tpl.note);
     if (tpl.paymentMethod) setPaymentMethod(tpl.paymentMethod);
     if (tpl.type) setType(tpl.type);
@@ -610,7 +610,7 @@ export function QuickAddSheet({
     if (!onSaveTemplate || !templateName.trim()) return;
     const payload: TransactionInput & { recurring?: boolean; frequency?: Template['frequency'] } = {
       amount: Number(amount) || 0,
-      category,
+      categoryId: category,
       note,
       type,
       paymentMethod,
@@ -870,7 +870,7 @@ export function QuickAddSheet({
                       </div>
                       <div>
                         <dt className="text-[var(--muted)]">Categoria sugerida</dt>
-                        <dd className="font-semibold capitalize">{parsedSuggestion.category}</dd>
+                        <dd className="font-semibold capitalize">{parsedSuggestion.categoryId}</dd>
                       </div>
                       <div>
                         <dt className="text-[var(--muted)]">Fecha</dt>
@@ -890,7 +890,7 @@ export function QuickAddSheet({
                       <button
                         onClick={() => {
                           setAmount(parsedSuggestion.amount.toString());
-                          setCategory(parsedSuggestion.category);
+                          setCategory(parsedSuggestion.categoryId);
                           setNote(parsedSuggestion.note ?? '');
                           setType(parsedSuggestion.type);
                           setPaymentMethod(parsedSuggestion.paymentMethod);

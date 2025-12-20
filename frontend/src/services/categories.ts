@@ -22,6 +22,30 @@ const COLLECTION = 'categories';
 
 type CategoryDraft = Omit<Category, 'id'> & { id?: string };
 
+const slugifyLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+
+const getUniqueCategoryId = async (userId: string, label: string): Promise<string> => {
+  const db = getFirestoreDb();
+  const base = slugifyLabel(label) || `categoria-${Date.now()}`;
+  let candidate = base;
+  let suffix = 2;
+
+  // Ensure we don't overwrite existing category documents.
+  while ((await getDoc(doc(db, 'users', userId, COLLECTION, candidate))).exists()) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+};
+
 const mapCategoryDoc = (docId: string, data: Record<string, unknown>): Category => ({
   id: docId,
   label: (data.label as string) ?? docId,
@@ -75,9 +99,8 @@ export async function seedDefaultCategories(userId: string): Promise<void> {
 
 export async function createCategory(userId: string, payload: CategoryDraft): Promise<string> {
   const db = getFirestoreDb();
-  const ref = payload.id
-    ? doc(db, 'users', userId, COLLECTION, payload.id)
-    : doc(collection(db, 'users', userId, COLLECTION));
+  const categoryId = payload.id ?? (await getUniqueCategoryId(userId, payload.label));
+  const ref = doc(db, 'users', userId, COLLECTION, categoryId);
   await setDoc(ref, buildCategoryData(payload));
   return ref.id;
 }
@@ -142,14 +165,21 @@ export async function deleteCategoryConditional(
   }
 
   const transactionsRef = collection(db, 'transactions');
-  const usageQuery = query(
+  const usageByIdQuery = query(
     transactionsRef,
     where('userId', '==', userId),
-    where('category', '==', id),
+    where('categoryId', '==', id),
     limit(1),
   );
-  const usageSnapshot = await getDocs(usageQuery);
-  if (usageSnapshot.empty) {
+  const usageByIdSnapshot = await getDocs(usageByIdQuery);
+
+  const usageByLegacySnapshot = usageByIdSnapshot.empty
+    ? await getDocs(
+        query(transactionsRef, where('userId', '==', userId), where('category', '==', id), limit(1)),
+      )
+    : usageByIdSnapshot;
+
+  if (usageByLegacySnapshot.empty) {
     const catRef = doc(db, 'users', userId, COLLECTION, id);
     await deleteDoc(catRef);
     return;

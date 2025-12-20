@@ -1,17 +1,29 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+﻿import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MetricsPage } from '../src/pages/MetricsPage';
 import { shouldShowIncomeAndBalance } from '../src/pages/metricsRules';
 import type { Budget, Transaction } from '../src/types';
+import { buildCategoryResolver } from '../src/utils/categoryResolver';
+
+const makeCategoryResolver = (ids: string[]) =>
+  buildCategoryResolver(
+    ids.map((id, index) => ({
+      id,
+      label: id.charAt(0).toUpperCase() + id.slice(1),
+      icon: 'Tag',
+      order: index,
+    })),
+  );
+const baseResolver = makeCategoryResolver(['comida', 'transporte', 'hogar', 'ocio', 'renta', 'suscripciones', 'salario']);
 
 describe('MetricsPage', () => {
   it('shouldShowIncomeAndBalance is false with only expenses and true with income', () => {
     const baseExpense: Transaction = {
       id: 't1',
       amount: 12000,
-      category: 'comida',
+      categoryId: 'comida',
       type: 'expense',
       date: '2025-12-10',
       paymentMethod: 'efectivo',
@@ -19,7 +31,7 @@ describe('MetricsPage', () => {
 
     expect(shouldShowIncomeAndBalance([baseExpense], 0)).toBe(false);
 
-    const incomeTx: Transaction = { ...baseExpense, id: 't2', type: 'income', category: 'salario', amount: 100000 };
+    const incomeTx: Transaction = { ...baseExpense, id: 't2', type: 'income', categoryId: 'salario', amount: 100000 };
     expect(shouldShowIncomeAndBalance([baseExpense, incomeTx], 100000)).toBe(true);
   });
 
@@ -35,6 +47,7 @@ describe('MetricsPage', () => {
         availableBalance={0}
         budget={null}
         expenseCategories={[]}
+        categoryResolver={baseResolver}
         previousMonth={null}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -50,7 +63,7 @@ describe('MetricsPage', () => {
     const tx: Transaction = {
       id: 't1',
       amount: 5000,
-      category: 'transporte',
+      categoryId: 'transporte',
       type: 'expense',
       date: '2025-11-03',
       paymentMethod: 'debito',
@@ -68,6 +81,7 @@ describe('MetricsPage', () => {
         availableBalance={-5000}
         budget={budget}
         expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
         previousMonth={null}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -99,7 +113,7 @@ describe('MetricsPage', () => {
           {
             id: 't1',
             amount: 12000,
-            category: 'comida',
+            categoryId: 'comida',
             type: 'expense',
             date: '2025-11-01',
             paymentMethod: 'efectivo',
@@ -110,6 +124,7 @@ describe('MetricsPage', () => {
         availableBalance={-12000}
         budget={{ month: '2025-11', total: 100000 }}
         expenseCategories={[{ category: 'comida', amount: 12000 }]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 0 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -135,7 +150,7 @@ describe('MetricsPage', () => {
     const expenseTx: Transaction = {
       id: 't1',
       amount: 5000,
-      category: 'transporte',
+      categoryId: 'transporte',
       type: 'expense',
       date: '2025-11-03',
       paymentMethod: 'debito',
@@ -145,7 +160,7 @@ describe('MetricsPage', () => {
       ...expenseTx,
       id: 't2',
       type: 'income',
-      category: 'salario',
+      categoryId: 'salario',
       amount: 100000,
     };
 
@@ -160,6 +175,7 @@ describe('MetricsPage', () => {
         availableBalance={95000}
         budget={{ month: '2025-11', total: 200000 }}
         expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 100000 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -171,11 +187,11 @@ describe('MetricsPage', () => {
     expect(screen.getByText('Balance')).toBeInTheDocument();
   });
 
-  it('does not render Top categorías when there are only incomes', () => {
+  it('does not render Top categorÃ­as when there are only incomes', () => {
     const incomeTx: Transaction = {
       id: 't1',
       amount: 100000,
-      category: 'salario',
+      categoryId: 'salario',
       type: 'income',
       date: '2025-11-03',
       paymentMethod: 'debito',
@@ -192,6 +208,7 @@ describe('MetricsPage', () => {
         availableBalance={100000}
         budget={{ month: '2025-11', total: 200000 }}
         expenseCategories={[]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 100000 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -207,7 +224,7 @@ describe('MetricsPage', () => {
     const tx: Transaction = {
       id: 't1',
       amount: 5000,
-      category: 'transporte',
+      categoryId: 'transporte',
       type: 'expense',
       date: '2025-11-03',
       paymentMethod: 'debito',
@@ -224,6 +241,7 @@ describe('MetricsPage', () => {
         availableBalance={-5000}
         budget={{ month: '2025-11', total: 100000 }}
         expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 0, income: 0 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -238,7 +256,7 @@ describe('MetricsPage', () => {
     const tx: Transaction = {
       id: 't1',
       amount: 5000,
-      category: 'transporte',
+      categoryId: 'transporte',
       type: 'expense',
       date: '2025-11-03',
       paymentMethod: 'debito',
@@ -255,6 +273,7 @@ describe('MetricsPage', () => {
         availableBalance={-5000}
         budget={{ month: '2025-11', total: 0 }}
         expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 100000 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -287,7 +306,7 @@ describe('MetricsPage', () => {
           {
             id: 't1',
             amount: 12000,
-            category: 'comida',
+            categoryId: 'comida',
             type: 'expense',
             date: '2025-11-01',
             paymentMethod: 'efectivo',
@@ -305,6 +324,7 @@ describe('MetricsPage', () => {
           { category: 'comida', amount: 12000 }, // has budget
           { category: 'ocio', amount: 6000 }, // no budget -> "Sin presupuesto"
         ]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 0 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -355,7 +375,7 @@ describe('MetricsPage', () => {
           {
             id: 't1',
             amount: 1000,
-            category: 'comida',
+            categoryId: 'comida',
             type: 'expense',
             date: '2025-11-01',
             paymentMethod: 'efectivo',
@@ -371,6 +391,7 @@ describe('MetricsPage', () => {
           { category: 'transporte', amount: 12000 },
           { category: 'ocio', amount: 6000 },
         ]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 0 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={onViewMovements}
@@ -406,7 +427,7 @@ describe('MetricsPage', () => {
           {
             id: 't1',
             amount: 1000,
-            category: 'comida',
+            categoryId: 'comida',
             type: 'expense',
             date: '2025-11-01',
             paymentMethod: 'efectivo',
@@ -422,6 +443,7 @@ describe('MetricsPage', () => {
           { category: 'transporte', amount: 12000 },
           { category: 'ocio', amount: 6000 },
         ]}
+        categoryResolver={baseResolver}
         previousMonth={{ expense: 10000, income: 0 }}
         onOpenQuickAdd={vi.fn()}
         onViewMovements={vi.fn()}
@@ -436,3 +458,4 @@ describe('MetricsPage', () => {
     expect(screen.queryByText('Categor\u00EDas del mes')).not.toBeInTheDocument();
   });
 });
+

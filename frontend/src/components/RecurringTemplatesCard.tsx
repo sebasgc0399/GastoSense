@@ -53,8 +53,8 @@ export function RecurringTemplatesCard({
                 <span className="rounded-full bg-[var(--input-bg)] px-2 py-1 capitalize">
                   {tpl.frequency ?? 'mensual'}
                 </span>
-                {tpl.category && (
-                  <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">Cat: {tpl.category}</span>
+                {tpl.categoryId && (
+                  <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">Cat: {tpl.categoryId}</span>
                 )}
                 {tpl.amount ? (
                   <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">${tpl.amount.toLocaleString()}</span>

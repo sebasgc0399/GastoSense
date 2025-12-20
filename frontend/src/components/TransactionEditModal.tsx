@@ -20,7 +20,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
     if (transaction) {
       setForm({
         amount: transaction.amount,
-        category: transaction.category,
+        categoryId: transaction.categoryId,
         note: transaction.note ?? '',
         type: transaction.type,
         paymentMethod: transaction.paymentMethod,
@@ -97,8 +97,8 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
           <div>
             <label className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">Categoría</label>
             <ResponsiveSelect
-              value={form.category}
-              onChange={(val) => handleChange('category', val)}
+              value={form.categoryId}
+              onChange={(val) => handleChange('categoryId', val)}
               options={frequentCategories.map((cat) => ({ value: cat.id, label: cat.label }))}
               title="Categoría"
             />

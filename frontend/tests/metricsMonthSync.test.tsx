@@ -6,9 +6,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { MetricsPage } from '../src/pages/MetricsPage';
 import { TransactionsPage } from '../src/pages/TransactionsPage';
 import { monthRangeIso } from '../src/utils/dates';
+import { buildCategoryResolver } from '../src/utils/categoryResolver';
 import type { TransactionsFilters } from '../src/hooks/useTransactionsController';
 
 function MonthSyncHarness() {
+  const categoryResolver = buildCategoryResolver([]);
   const defaultMonth = '2025-12';
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
   const [activeTab, setActiveTab] = useState<'metrics' | 'transactions'>('metrics');
@@ -38,6 +40,7 @@ function MonthSyncHarness() {
         setTxPage={vi.fn()}
         budget={null}
         categorySpendMap={{}}
+        categoryResolver={categoryResolver}
         setSelectedTx={vi.fn()}
         handleDeleteTransaction={async () => {}}
       />
@@ -55,6 +58,7 @@ function MonthSyncHarness() {
       availableBalance={0}
       budget={null}
       expenseCategories={[]}
+      categoryResolver={categoryResolver}
       previousMonth={null}
       onOpenQuickAdd={vi.fn()}
       onViewMovements={openMovements}

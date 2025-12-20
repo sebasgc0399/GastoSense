@@ -4,6 +4,7 @@ import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
+import type { CategorySpendItem } from '../components/charts/CategorySpendChart';
 import type { Budget, Template } from '../types';
 
 type SmartCard = {
@@ -26,7 +27,7 @@ export interface HomePageProps {
   handleSaveBudget: (total: number) => Promise<void>;
   budgetSaving: boolean;
   onEditCategoryBudgets: () => void;
-  topExpenses: { category: string; amount: number }[];
+  topExpenseItems: CategorySpendItem[];
   smartCards: SmartCard[];
   smartCardIndex: number;
   setSmartCardIndex: React.Dispatch<React.SetStateAction<number>>;
@@ -51,7 +52,7 @@ export function HomePage({
   handleSaveBudget,
   budgetSaving,
   onEditCategoryBudgets,
-  topExpenses,
+  topExpenseItems,
   smartCards,
   smartCardIndex,
   setSmartCardIndex,
@@ -96,7 +97,7 @@ export function HomePage({
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <TopExpensesChart
-          items={topExpenses.map((item) => ({ category: item.category, spent: item.amount }))}
+          items={topExpenseItems}
           mode="spent"
           onModeChange={() => {}}
           budgetModeAvailable={false}

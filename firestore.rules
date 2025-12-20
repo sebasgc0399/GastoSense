@@ -19,15 +19,21 @@ service cloud.firestore {
 
     // Validate common transaction fields
     function validTransaction() {
-      return request.resource.data.keys().hasAll(['amount','category','type','paymentMethod','date','userId'])
+      return request.resource.data.keys().hasAll(['amount','type','paymentMethod','date','userId'])
         && request.resource.data.amount is number
         && request.resource.data.type in ['expense','income']
-        && request.resource.data.paymentMethod in ['efectivo','debito','credito','digital','otro'];
+        && request.resource.data.paymentMethod in ['efectivo','debito','credito','digital','otro']
+        && (
+          request.resource.data.type == 'income'
+          || ('categoryId' in request.resource.data && request.resource.data.categoryId is string && request.resource.data.categoryId.size() <= 120)
+          || ('category' in request.resource.data && request.resource.data.category is string && request.resource.data.category.size() <= 120)
+        );
     }
 
     function validTemplate() {
       return requestUserMatches()
         && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 120))
+        && (!('categoryId' in request.resource.data) || (request.resource.data.categoryId is string && request.resource.data.categoryId.size() <= 120))
         && (!('category' in request.resource.data) || (request.resource.data.category is string && request.resource.data.category.size() <= 120))
         && (!('amount' in request.resource.data) || request.resource.data.amount is number)
         && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 500))

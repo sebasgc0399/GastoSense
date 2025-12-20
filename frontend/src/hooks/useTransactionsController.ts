@@ -88,7 +88,7 @@ export function useTransactionsController({ userId, txPageSize = 8, sortBy = 'da
     const searchTerm = normalize(filters.search || '');
     const filtered =
       searchTerm.length > 0
-        ? transactions.filter((t) => normalize(`${t.note ?? ''} ${t.category ?? ''}`).includes(searchTerm))
+        ? transactions.filter((t) => normalize(`${t.note ?? ''} ${t.categoryId ?? ''}`).includes(searchTerm))
         : transactions;
 
     if (sortBy !== 'amount_desc') return filtered;

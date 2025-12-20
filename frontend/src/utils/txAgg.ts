@@ -1,4 +1,6 @@
 import type { Transaction, TransactionType } from '../types';
+import type { CategoryResolver } from './categoryResolver';
+import { resolveCanonicalCategoryId } from './categoryResolver';
 
 export type CategorySpendMap = Record<string, number>;
 
@@ -9,10 +11,14 @@ export const sumByType = (transactions: Transaction[], type: TransactionType) =>
 
 export const hasType = (transactions: Transaction[], type: TransactionType) => transactions.some((tx) => tx.type === type);
 
-export const buildCategorySpendMap = (transactions: Transaction[]): CategorySpendMap =>
+export const buildCategorySpendMap = (
+  transactions: Transaction[],
+  resolver?: CategoryResolver,
+): CategorySpendMap =>
   transactions.reduce<CategorySpendMap>((acc, tx) => {
     if (tx.type !== 'expense') return acc;
-    acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+    const categoryId = resolveCanonicalCategoryId(tx.categoryId, resolver);
+    acc[categoryId] = (acc[categoryId] || 0) + tx.amount;
     return acc;
   }, {});
 

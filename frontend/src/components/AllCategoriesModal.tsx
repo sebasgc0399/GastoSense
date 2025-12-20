@@ -101,10 +101,11 @@ export function AllCategoriesModal({
 
         <div className="max-h-[65vh] overflow-y-auto pr-1">
           <CategorySpendChart
-            title={'Categor\u00EDas del mes'}
+            title="Categorías del mes"
             subtitle={monthLabel}
             items={visibleItems}
             mode={mode}
+            showFallbackId={true}
           />
         </div>
 

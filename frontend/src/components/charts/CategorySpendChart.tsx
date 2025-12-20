@@ -1,12 +1,14 @@
-import ReactECharts from 'echarts-for-react';
+﻿import ReactECharts from 'echarts-for-react';
 import type { BarSeriesOption, EChartsOption } from 'echarts';
 
 export type CategorySpendMode = 'spent' | 'budget';
 
 export type CategorySpendItem = {
-  category: string;
+  categoryId: string;
+  label: string;
   spent: number;
   budget?: number; // undefined => "Sin presupuesto"
+  fallbackId?: string;
 };
 
 export type CategorySpendChartProps = {
@@ -16,6 +18,7 @@ export type CategorySpendChartProps = {
   mode: CategorySpendMode;
   limit?: number;
   currency?: 'COP';
+  showFallbackId?: boolean;
 };
 
 const fmtCOP = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}`;
@@ -76,15 +79,22 @@ const getBudgetMeta = (item: CategorySpendItem): BudgetMeta => {
   return { hasBudget, budgetValue, spentWithin, over };
 };
 
-export function CategorySpendChart({ title, subtitle, items, mode, limit }: CategorySpendChartProps) {
+export function CategorySpendChart({
+  title,
+  subtitle,
+  items,
+  mode,
+  limit,
+  showFallbackId = false,
+}: CategorySpendChartProps) {
   const visibleItems = limit ? items.slice(0, limit) : items;
   const showValueLabels = Boolean(limit);
 
   if (!visibleItems.length) {
-    return <p className="text-sm text-[var(--muted)]">{'Aún no hay categorías para mostrar.'}</p>;
+    return <p className="text-sm text-[var(--muted)]">Aún no hay categorías para mostrar.</p>;
   }
 
-  const categories = visibleItems.map((i) => formatCategoryLabel(i.category));
+  const categories = visibleItems.map((i) => formatCategoryLabel(i.label));
   const xMax = Math.max(
     ...visibleItems.map((item) => {
       const meta = getBudgetMeta(item);
@@ -217,7 +227,10 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
     const item = visibleItems[idx];
     if (!item) return '';
 
-    const header = `<div style="font-weight:700;color:#F8FAFC;">${formatCategoryLabel(item.category)}</div>`;
+    const headerLabel = `<div style="font-weight:700;color:#F8FAFC;">${formatCategoryLabel(item.label)}</div>`;
+    const fallbackLine =
+      showFallbackId && item.fallbackId ? `<div style="color:#94A3B8;font-size:11px;">${item.fallbackId}</div>` : '';
+    const header = `${headerLabel}${fallbackLine}`;
 
     if (mode === 'spent') {
       return tooltipShell(`
@@ -307,8 +320,8 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
 
       <ul className="sr-only" aria-label="Resumen por categoría">
         {visibleItems.map((item) => (
-          <li key={item.category}>
-            <span>{formatCategoryLabel(item.category)}</span>
+          <li key={item.categoryId}>
+            <span>{formatCategoryLabel(item.label)}</span>
             <span>{` Gastado: ${fmtCOP(item.spent)}.`}</span>
             <span>{` Presupuesto: ${item.budget && item.budget > 0 ? fmtCOP(item.budget) : '\u2014'}.`}</span>
           </li>
@@ -317,4 +330,6 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
     </div>
   );
 }
+
+
 

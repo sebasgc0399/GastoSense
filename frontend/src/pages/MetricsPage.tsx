@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { AllCategoriesModal } from '../components/AllCategoriesModal';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
@@ -9,6 +9,8 @@ import { CardStat } from '../components/stats/CardStat';
 import { shouldShowIncomeAndBalance } from './metricsRules';
 import { trackEvent } from '../services/analytics';
 import type { Budget, Transaction } from '../types';
+import type { CategoryResolver } from '../utils/categoryResolver';
+import { resolveCanonicalCategoryId, resolveCategoryLabel, truncateCategoryId } from '../utils/categoryResolver';
 import { monthRangeIso, todayIso } from '../utils/dates';
 import { buildCumulativeSeries, buildDailyExpenseSeries, buildIdealBudgetPaceSeries, hasType } from '../utils/txAgg';
 
@@ -22,6 +24,7 @@ interface MetricsPageProps {
   availableBalance: number;
   budget: Budget | null;
   expenseCategories: { category: string; amount: number }[];
+  categoryResolver: CategoryResolver;
   previousMonth: { expense: number; income: number } | null;
   onOpenQuickAdd: () => void;
   onViewMovements: () => void;
@@ -38,6 +41,7 @@ export function MetricsPage({
   availableBalance,
   budget,
   expenseCategories,
+  categoryResolver,
   previousMonth,
   onOpenQuickAdd,
   onViewMovements,
@@ -77,9 +81,23 @@ export function MetricsPage({
   const [categoriesMode, setCategoriesMode] = useState<CategorySpendMode>('spent');
   const effectiveCategoriesMode: CategorySpendMode = budgetModeAvailable ? categoriesMode : 'spent';
 
+  const getItemMeta = useCallback(
+    (categoryId: string) => {
+      const label = resolveCategoryLabel(categoryId, categoryResolver);
+      return {
+        label: label ?? 'Categoría eliminada',
+        fallbackId: label ? undefined : truncateCategoryId(categoryId),
+      };
+    },
+    [categoryResolver],
+  );
+
   const spentCategoryItems = useMemo<CategorySpendItem[]>(
-    () => expenseCategories.filter((c) => c.amount > 0).map((c) => ({ category: c.category, spent: c.amount })),
-    [expenseCategories],
+    () =>
+      expenseCategories
+        .filter((c) => c.amount > 0)
+        .map((c) => ({ categoryId: c.category, spent: c.amount, ...getItemMeta(c.category) })),
+    [expenseCategories, getItemMeta],
   );
 
   const budgetCategoryItems = useMemo<CategorySpendItem[]>(() => {
@@ -87,25 +105,39 @@ export function MetricsPage({
     for (const item of expenseCategories) spendMap[item.category] = item.amount;
 
     const perCategory = budget?.perCategory ?? {};
-    const cats = new Set<string>([...Object.keys(spendMap), ...Object.keys(perCategory)]);
+    const normalizedBudgets: Record<string, number> = {};
+    for (const [rawId, rawBudget] of Object.entries(perCategory)) {
+      const canonicalId = resolveCanonicalCategoryId(rawId, categoryResolver);
+      const budgetValue = typeof rawBudget === 'number' ? rawBudget : Number(rawBudget);
+      if (!Number.isFinite(budgetValue)) continue;
+      const prev = normalizedBudgets[canonicalId];
+      if (prev === undefined) normalizedBudgets[canonicalId] = budgetValue;
+      else normalizedBudgets[canonicalId] = Math.max(prev, budgetValue);
+    }
+
+    const cats = new Set<string>([...Object.keys(spendMap), ...Object.keys(normalizedBudgets)]);
 
     const union: CategorySpendItem[] = [];
-    cats.forEach((category) => {
-      const spent = spendMap[category] ?? 0;
-      const rawBudget = (perCategory as Record<string, unknown>)[category];
-      const budgetValue = typeof rawBudget === 'number' ? rawBudget : Number(rawBudget);
-      const normalizedBudget = Number.isFinite(budgetValue) && budgetValue > 0 ? budgetValue : undefined;
+    cats.forEach((categoryId) => {
+      const spent = spendMap[categoryId] ?? 0;
+      const rawBudget = normalizedBudgets[categoryId];
+      const normalizedBudget = Number.isFinite(rawBudget) && rawBudget > 0 ? rawBudget : undefined;
       if (spent <= 0 && !normalizedBudget) return;
-      union.push({ category, spent, budget: normalizedBudget });
+      union.push({ categoryId, spent, budget: normalizedBudget, ...getItemMeta(categoryId) });
     });
 
     union.sort((a, b) => {
       if (b.spent !== a.spent) return b.spent - a.spent;
-      if (a.spent === 0 && b.spent === 0) return (b.budget ?? 0) - (a.budget ?? 0) || a.category.localeCompare(b.category);
-      return a.category.localeCompare(b.category);
+      if (a.spent === 0 && b.spent === 0) {
+        const budgetDiff = (b.budget ?? 0) - (a.budget ?? 0);
+        if (budgetDiff !== 0) return budgetDiff;
+      }
+      const labelDiff = a.label.localeCompare(b.label, 'es-CO');
+      if (labelDiff !== 0) return labelDiff;
+      return a.categoryId.localeCompare(b.categoryId);
     });
     return union;
-  }, [budget?.perCategory, expenseCategories]);
+  }, [budget?.perCategory, categoryResolver, expenseCategories, getItemMeta]);
 
   const categoryItems = effectiveCategoriesMode === 'spent' ? spentCategoryItems : budgetCategoryItems;
   const shouldShowViewAll = categoryItems.length > 3;
@@ -173,7 +205,7 @@ export function MetricsPage({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-white">{'M\u00E9tricas'}</h2>
+        <h2 className="text-lg font-semibold text-white">Métricas</h2>
         <p className="text-xs text-slate-400">Visualiza tu mes en segundos.</p>
       </div>
 
@@ -186,8 +218,8 @@ export function MetricsPage({
 
       {txCount === 0 ? (
         <div className="card space-y-2">
-          <h3 className="text-base font-semibold text-white">{'A\u00FAn no hay datos'}</h3>
-          <p className="text-sm text-[var(--text-muted)]">{'Registra tu primer gasto para empezar a ver m\u00E9tricas.'}</p>
+          <h3 className="text-base font-semibold text-white">Aún no hay datos</h3>
+          <p className="text-sm text-[var(--text-muted)]">Registra tu primer gasto para empezar a ver métricas.</p>
           <div className="flex flex-wrap gap-2">
             <button
               className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
@@ -277,7 +309,7 @@ export function MetricsPage({
             <div className="card">
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{'Evoluci\u00F3n del mes'}</h3>
+                  <h3 className="text-lg font-semibold text-white">Evolución del mes</h3>
                   {trendInsight && <p className="text-xs text-[var(--muted)]">{trendInsight}</p>}
                 </div>
 

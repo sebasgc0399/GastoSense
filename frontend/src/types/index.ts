@@ -6,7 +6,7 @@ export type PaymentMethod = 'efectivo' | 'debito' | 'credito' | 'digital' | 'otr
 
 export interface TransactionInput {
   amount: number;
-  category: string;
+  categoryId: string;
   note?: string;
   type: TransactionType;
   date: string;
@@ -50,7 +50,7 @@ export interface Category {
 export interface Template {
   id: string;
   name: string;
-  category: string;
+  categoryId?: string;
   amount?: number;
   note?: string;
   paymentMethod?: PaymentMethod;

@@ -16,7 +16,7 @@ describe('txAgg', () => {
   const baseExpense: Transaction = {
     id: 't1',
     amount: 12000,
-    category: 'comida',
+    categoryId: 'comida',
     type: 'expense',
     date: '2025-12-10',
     paymentMethod: 'efectivo',
@@ -26,7 +26,7 @@ describe('txAgg', () => {
     ...baseExpense,
     id: 't2',
     type: 'income',
-    category: 'salario',
+    categoryId: 'salario',
     amount: 100000,
   };
 
@@ -43,8 +43,8 @@ describe('txAgg', () => {
   it('buildCategorySpendMap aggregates expenses only', () => {
     const map = buildCategorySpendMap([
       baseExpense,
-      { ...baseExpense, id: 't3', amount: 5000, category: 'comida' },
-      { ...baseExpense, id: 't4', amount: 7000, category: 'transporte' },
+      { ...baseExpense, id: 't3', amount: 5000, categoryId: 'comida' },
+      { ...baseExpense, id: 't4', amount: 7000, categoryId: 'transporte' },
       baseIncome,
     ]);
 
