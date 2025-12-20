@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
 import { QuickAddSheet } from './components/QuickAddSheet';
+import { BudgetManagerSheet } from './components/BudgetManagerSheet';
 import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { TransactionEditModal } from './components/TransactionEditModal';
 import { UpgradeModal } from './components/UpgradeModal';
@@ -154,15 +155,11 @@ function App() {
     [iaQuota],
   );
 
-  const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
+  const [showCategoryBudgets, setShowCategoryBudgets] = useState(false);
   const [budgetFocusCategory, setBudgetFocusCategory] = useState<string | null>(null);
   const scrollToPlans = useCallback(
     () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     [plansRef],
-  );
-  const scrollToBudgets = useCallback(
-    () => categoryBudgetsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-    [categoryBudgetsRef],
   );
 
   const openSettings = useCallback((source: SettingsOpenSource = 'other') => {
@@ -192,9 +189,13 @@ function App() {
     setBudgetFocusCategory(category ?? null);
     setActiveTab('home');
     trackEvent('smart_card_click', { action: 'budgets', category });
-    // Scroll al bloque de presupuestos; si ya está en pantalla, hará scroll suave
-    setTimeout(() => scrollToBudgets(), 100);
-  }, [scrollToBudgets]);
+    setShowCategoryBudgets(true);
+  }, []);
+
+  const closeCategoryBudgets = useCallback(() => {
+    setShowCategoryBudgets(false);
+    setBudgetFocusCategory(null);
+  }, []);
 
   const openMovements = useCallback(
     (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
@@ -562,9 +563,7 @@ function App() {
             budget={budget}
             handleSaveBudget={handleSaveBudget}
             budgetSaving={budgetSaving}
-            categoryBudgetsRef={categoryBudgetsRef}
-            budgetFocusCategory={budgetFocusCategory}
-            handleSaveCategoryBudgets={handleSaveCategoryBudgets}
+            onEditCategoryBudgets={openBudgets}
             topExpenses={topExpenses}
             smartCards={smartCards}
             smartCardIndex={smartCardIndex}
@@ -711,6 +710,15 @@ function App() {
         userId={user?.uid}
       />
 
+      <BudgetManagerSheet
+        open={showCategoryBudgets}
+        onClose={closeCategoryBudgets}
+        userId={user?.uid}
+        perCategory={budget?.perCategory}
+        onSave={handleSaveCategoryBudgets}
+        focusCategoryId={budgetFocusCategory}
+      />
+
       <TransactionEditModal
         open={!!selectedTx}
         transaction={selectedTx}
@@ -734,3 +742,4 @@ function App() {
 }
 
 export default App;
+

@@ -38,12 +38,13 @@ service cloud.firestore {
     }
 
     function validBudget() {
-      return requestUserMatches()
-        && request.resource.data.keys().hasAny(['total','perCategory','month','userId'])
+      return isSignedIn()
+        && request.resource.data.keys().hasAny(['total','perCategory','month'])
         && request.resource.data.month is string
-        && request.resource.data.total is number
+        && (!('total' in request.resource.data) || request.resource.data.total is number)
         && (!('perCategory' in request.resource.data) || request.resource.data.perCategory is map)
-        && (!('perCategory' in request.resource.data) || request.resource.data.perCategory.size() <= 50);
+        && (!('perCategory' in request.resource.data) || request.resource.data.perCategory.size() <= 50)
+        && (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid);
     }
 
     function validCategory() {
@@ -78,10 +79,10 @@ service cloud.firestore {
     }
 
     match /budgets/{docId} {
-      allow read, list: if budgetDocOwned(docId) && (resource == null || resourceUserMatches());
-      allow create: if budgetDocOwned(docId) && requestUserMatches() && validBudget();
-      allow update: if budgetDocOwned(docId) && requestUserMatches() && resourceUserMatches() && validBudget();
-      allow delete: if budgetDocOwned(docId) && resourceUserMatches();
+      allow read, list: if budgetDocOwned(docId);
+      allow create: if budgetDocOwned(docId) && validBudget();
+      allow update: if budgetDocOwned(docId) && validBudget();
+      allow delete: if budgetDocOwned(docId);
     }
 
     match /users/{uid} {

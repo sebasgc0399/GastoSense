@@ -55,7 +55,7 @@ export function EvolutionChart({
       <div style="display:flex;flex-direction:column;gap:4px;">
         <div style="font-weight:600;color:#F8FAFC;">${point.date}</div>
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
-          <span style="color:#94A3B8;">Gasto del d\u00EDa</span>
+          <span style="color:#94A3B8;">Gasto del día</span>
           <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(amount)}</span>
         </div>
         ${

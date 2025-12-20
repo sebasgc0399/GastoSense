@@ -1,6 +1,5 @@
 import type React from 'react';
 import { BudgetCard } from '../components/BudgetCard';
-import { CategoryBudgets } from '../components/CategoryBudgets';
 import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { TopExpensesChart } from '../components/TopExpensesChart';
@@ -26,9 +25,7 @@ export interface HomePageProps {
   budget: Budget | null;
   handleSaveBudget: (total: number) => Promise<void>;
   budgetSaving: boolean;
-  categoryBudgetsRef: React.RefObject<HTMLDivElement | null>;
-  budgetFocusCategory?: string | null;
-  handleSaveCategoryBudgets: (perCategory: Record<string, number>) => Promise<void>;
+  onEditCategoryBudgets: () => void;
   topExpenses: { category: string; amount: number }[];
   smartCards: SmartCard[];
   smartCardIndex: number;
@@ -53,9 +50,7 @@ export function HomePage({
   budget,
   handleSaveBudget,
   budgetSaving,
-  categoryBudgetsRef,
-  budgetFocusCategory,
-  handleSaveCategoryBudgets,
+  onEditCategoryBudgets,
   topExpenses,
   smartCards,
   smartCardIndex,
@@ -99,14 +94,6 @@ export function HomePage({
         />
       </div>
 
-      <div className="card p-0" ref={categoryBudgetsRef}>
-        <CategoryBudgets
-          perCategory={budget?.perCategory}
-          onSave={handleSaveCategoryBudgets}
-          focusCategory={budgetFocusCategory}
-        />
-      </div>
-
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <TopExpensesChart
           items={topExpenses.map((item) => ({ category: item.category, spent: item.amount }))}
@@ -114,6 +101,7 @@ export function HomePage({
           onModeChange={() => {}}
           budgetModeAvailable={false}
           showModeToggle={false}
+          onEditBudgets={onEditCategoryBudgets}
         />
         <div className="card">
           <div className="mb-3 flex items-center justify-between">

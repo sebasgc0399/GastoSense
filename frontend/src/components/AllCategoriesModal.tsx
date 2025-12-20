@@ -27,7 +27,7 @@ export function AllCategoriesModal({
   mode,
   onModeChange,
   budgetModeAvailable,
-  budgetModeHelperText = 'Define presupuestos por categor\u00EDa para comparar.',
+  budgetModeHelperText = 'Define presupuestos por categoría para comparar.',
   onClose,
   onViewMovements,
 }: AllCategoriesModalProps) {
@@ -54,12 +54,12 @@ export function AllCategoriesModal({
         className="w-full max-w-xl rounded-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] p-4 text-[var(--text)] shadow-2xl backdrop-blur"
         role="dialog"
         aria-modal="true"
-        aria-label="Categor\u00EDas del mes"
+        aria-label="Categorías del mes"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[var(--text)]">{'Categor\u00EDas del mes'}</h3>
+            <h3 className="text-lg font-semibold text-[var(--text)]">{'Categorías del mes'}</h3>
             <p className="text-sm text-[var(--text-muted)]">{monthLabel}</p>
           </div>
 
