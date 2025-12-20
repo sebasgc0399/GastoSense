@@ -153,7 +153,7 @@ export function EvolutionChart({
       borderColor: 'rgba(255,255,255,0.12)',
       textStyle: { color: '#fff', fontSize: 12 },
       confine: true,
-      appendToBody: true,
+      appendToBody: false,
       extraCssText: 'max-width:220px; white-space:normal; border-radius:12px; padding:10px;',
       formatter:
         view === 'daily'
@@ -194,8 +194,15 @@ export function EvolutionChart({
   };
 
   return (
-    <div data-testid="evolution-chart">
-      <ReactECharts option={option} notMerge={true} lazyUpdate={true} style={{ height: 170 }} opts={{ renderer: 'svg' }} />
+    <div data-testid="evolution-chart" className="relative overflow-visible">
+      <ReactECharts
+        option={option}
+        notMerge={true}
+        lazyUpdate={true}
+        style={{ height: 170, overflow: 'visible' }}
+        opts={{ renderer: 'svg' }}
+      />
     </div>
   );
 }
+

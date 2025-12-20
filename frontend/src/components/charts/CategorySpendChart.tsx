@@ -257,7 +257,7 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       confine: true,
-      appendToBody: true,
+      appendToBody: false,
       extraCssText: 'max-width:240px; white-space:normal; border-radius:12px; padding:10px;',
       backgroundColor: 'rgba(0,0,0,0.55)',
       borderColor: 'rgba(255,255,255,0.12)',
@@ -288,7 +288,7 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
   };
 
   return (
-    <div data-testid="category-spend-chart">
+    <div data-testid="category-spend-chart" className="relative overflow-visible">
       {(title || subtitle) && (
         <div className="sr-only">
           {title && <div>{title}</div>}
@@ -301,7 +301,7 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
         option={option}
         notMerge={true}
         lazyUpdate={true}
-        style={{ height }}
+        style={{ height, overflow: 'visible' }}
         opts={{ renderer: 'svg' }}
       />
 
@@ -317,3 +317,4 @@ export function CategorySpendChart({ title, subtitle, items, mode, limit }: Cate
     </div>
   );
 }
+
