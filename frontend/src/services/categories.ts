@@ -19,6 +19,8 @@ import { CATEGORY_ICONS } from '../utils/categoryIcons';
 import type { Category } from '../types';
 
 const COLLECTION = 'categories';
+const FALLBACK_CATEGORY_ID = 'otros';
+const FALLBACK_CATEGORY_LABEL = 'Otros';
 
 type CategoryDraft = Omit<Category, 'id'> & { id?: string };
 
@@ -94,6 +96,14 @@ export async function seedDefaultCategories(userId: string): Promise<void> {
       isSystem: true,
     });
   });
+  const fallbackRef = doc(db, 'users', userId, COLLECTION, FALLBACK_CATEGORY_ID);
+  batch.set(fallbackRef, {
+    label: FALLBACK_CATEGORY_LABEL,
+    icon: CATEGORY_ICONS.default ?? 'Tag',
+    order: frequentCategories.length,
+    isArchived: false,
+    isSystem: true,
+  });
   await batch.commit();
 }
 
@@ -113,12 +123,19 @@ export async function updateCategory(
   const db = getFirestoreDb();
   const ref = doc(db, 'users', userId, COLLECTION, id);
   const data: Record<string, unknown> = {};
-  if (updates.label !== undefined) data.label = updates.label;
+  const isFallback = id === FALLBACK_CATEGORY_ID;
+  if (updates.label !== undefined && (!isFallback || updates.label.trim().toLowerCase() === FALLBACK_CATEGORY_ID)) {
+    data.label = isFallback ? FALLBACK_CATEGORY_LABEL : updates.label;
+  }
   if (updates.icon !== undefined) data.icon = updates.icon;
   if (updates.color !== undefined) data.color = updates.color;
   if (updates.order !== undefined) data.order = updates.order;
-  if (updates.isArchived !== undefined) data.isArchived = updates.isArchived;
-  if (updates.isSystem !== undefined) data.isSystem = updates.isSystem;
+  if (updates.isArchived !== undefined) {
+    if (!isFallback || updates.isArchived === false) data.isArchived = updates.isArchived;
+  }
+  if (updates.isSystem !== undefined) {
+    if (!isFallback || updates.isSystem === true) data.isSystem = updates.isSystem;
+  }
   if (Object.keys(data).length === 0) return;
   await updateDoc(ref, data);
 }
@@ -151,6 +168,10 @@ export async function deleteCategoryConditional(
   id: string,
   isSystem?: boolean,
 ): Promise<void> {
+  if (id === FALLBACK_CATEGORY_ID) {
+    await updateCategory(userId, id, { label: FALLBACK_CATEGORY_LABEL, isArchived: false, isSystem: true });
+    return;
+  }
   const db = getFirestoreDb();
   let systemFlag = isSystem;
   if (systemFlag === undefined) {

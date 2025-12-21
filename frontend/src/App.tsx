@@ -621,6 +621,7 @@ function App() {
             budget={budget}
             categorySpendMap={categorySpendMap}
             categoryResolver={categoryResolver}
+            userId={user?.uid}
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
           />
@@ -746,6 +747,7 @@ function App() {
         onClose={closeCategoryBudgets}
         userId={user?.uid}
         perCategory={budget?.perCategory}
+        categorySpendMap={categorySpendMap}
         onSave={handleSaveCategoryBudgets}
         focusCategoryId={budgetFocusCategory}
       />

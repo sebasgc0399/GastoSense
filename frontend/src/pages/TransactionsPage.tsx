@@ -18,6 +18,7 @@ export interface TransactionsPageProps {
   budget: Budget | null;
   categorySpendMap: Record<string, number>;
   categoryResolver: CategoryResolver;
+  userId?: string | null;
   setSelectedTx: React.Dispatch<React.SetStateAction<Transaction | null>>;
   handleDeleteTransaction: (id: string) => Promise<void>;
 }
@@ -35,6 +36,7 @@ export function TransactionsPage({
   budget,
   categorySpendMap,
   categoryResolver,
+  userId,
   setSelectedTx,
   handleDeleteTransaction,
 }: TransactionsPageProps) {
@@ -69,6 +71,7 @@ export function TransactionsPage({
         endDate={filters.endDate}
         category={filters.category}
         search={filters.search}
+        userId={userId}
         onChange={handleFiltersChange}
       />
 

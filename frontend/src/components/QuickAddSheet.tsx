@@ -58,6 +58,7 @@ interface QuickAddSheetProps {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const MAX_RECORDING_SECONDS = 10;
+const FALLBACK_CATEGORY_ID = 'otros';
 const createInitialState = (): QuickAddFormState => ({
   mode: 'quick',
   amount: '',
@@ -219,27 +220,15 @@ export function QuickAddSheet({
   const isOpen = open;
 
   const formReady = useMemo(() => !!amount && Number(amount) > 0, [amount]);
-  const visibleCategories = useMemo(() => categories.slice(0, 19), [categories]);
-  const defaultCategoryId = categories[0]?.id;
-  const expenseFallbackId = defaultCategoryId ?? 'comida';
+  const visibleCategories = useMemo(
+    () => categories.filter((cat) => cat.id !== FALLBACK_CATEGORY_ID).slice(0, 19),
+    [categories],
+  );
   const showCategorySkeleton = categoriesLoading && visibleCategories.length === 0;
 
   const resetForm = useCallback(() => {
     setFormState(createInitialState());
   }, []);
-
-  useEffect(() => {
-    if (type !== 'expense') return;
-    if (defaultCategoryId) {
-      if (!category || category === 'ingreso') {
-        setCategory(defaultCategoryId);
-      }
-      return;
-    }
-    if (!category || category === 'ingreso') {
-      setCategory('comida');
-    }
-  }, [category, defaultCategoryId, setCategory, type]);
 
   const handleSave = async (closeAfter: boolean) => {
     if (!formReady) {
@@ -250,9 +239,12 @@ export function QuickAddSheet({
     setSaving(true);
     setFeedback(null);
 
+    const shouldFallbackCategory = type === 'expense' && (!category || category === 'ingreso');
+    const resolvedCategoryId =
+      type === 'expense' ? (shouldFallbackCategory ? FALLBACK_CATEGORY_ID : category) : '';
     const payload: TransactionInput = {
       amount: Number(amount),
-      categoryId: category,
+      categoryId: resolvedCategoryId,
       note,
       type,
       paymentMethod,
@@ -261,10 +253,17 @@ export function QuickAddSheet({
 
     try {
       await onSave(payload);
-      setFeedback('Guardado.');
+      setFeedback(shouldFallbackCategory ? 'Guardado en Otros.' : 'Guardado.');
       if (closeAfter) {
-        onClose();
-        resetForm();
+        if (shouldFallbackCategory) {
+          window.setTimeout(() => {
+            onClose();
+            resetForm();
+          }, 700);
+        } else {
+          onClose();
+          resetForm();
+        }
       } else {
         setAmount('');
         setNote('');
@@ -922,8 +921,8 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => {
                         setType('expense');
-                        if (category === 'ingreso' || !category) {
-                          setCategory(expenseFallbackId);
+                        if (category === 'ingreso') {
+                          setCategory('');
                         }
                       }}
                       className={`rounded-full px-3 py-1 ${type === 'expense' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
@@ -934,7 +933,7 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => {
                         setType('income');
-                        setCategory('ingreso');
+                        setCategory('');
                       }}
                       className={`rounded-full px-3 py-1 ${type === 'income' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
                     >

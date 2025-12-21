@@ -10,6 +10,7 @@ interface Props {
   onClose: () => void;
   userId?: string | null;
   perCategory?: Record<string, number>;
+  categorySpendMap?: Record<string, number>;
   onSave: (perCategory: Record<string, number>) => Promise<void>;
   focusCategoryId?: string | null;
 }
@@ -25,6 +26,8 @@ const normalizeAmount = (value?: string) => {
   return Math.max(0, Math.round(numeric));
 };
 
+const FALLBACK_CATEGORY_ID = 'otros';
+
 const sortCategories = (items: Category[]) =>
   [...items].sort((a, b) => {
     const orderDiff = (a.order ?? 0) - (b.order ?? 0);
@@ -37,6 +40,7 @@ export function BudgetManagerSheet({
   onClose,
   userId,
   perCategory,
+  categorySpendMap,
   onSave,
   focusCategoryId,
 }: Props) {
@@ -50,12 +54,18 @@ export function BudgetManagerSheet({
   const initializedRef = useRef(false);
 
   const sortedCategories = useMemo(() => sortCategories(categories), [categories]);
+  const fallbackBudget = useMemo(() => perCategory?.[FALLBACK_CATEGORY_ID] ?? 0, [perCategory]);
+  const fallbackSpent = useMemo(() => categorySpendMap?.[FALLBACK_CATEGORY_ID] ?? 0, [categorySpendMap]);
+  const shouldShowFallback = useMemo(() => fallbackBudget > 0 || fallbackSpent > 0, [fallbackBudget, fallbackSpent]);
   const activeCategories = useMemo(
-    () => sortedCategories.filter((cat) => !cat.isArchived),
-    [sortedCategories],
+    () =>
+      sortedCategories.filter(
+        (cat) => !cat.isArchived && (cat.id !== FALLBACK_CATEGORY_ID || shouldShowFallback),
+      ),
+    [shouldShowFallback, sortedCategories],
   );
   const archivedCategories = useMemo(
-    () => sortedCategories.filter((cat) => cat.isArchived),
+    () => sortedCategories.filter((cat) => cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID),
     [sortedCategories],
   );
   const archivedWithBudget = useMemo(() => {
@@ -168,6 +178,7 @@ export function BudgetManagerSheet({
 
   const renderCategoryRow = (cat: Category) => {
     const value = values[cat.id] ?? '';
+    const isFallback = cat.id === FALLBACK_CATEGORY_ID;
     return (
       <div
         key={cat.id}
@@ -180,12 +191,19 @@ export function BudgetManagerSheet({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="truncate text-sm font-semibold text-[var(--text)]">{cat.label}</p>
-              {cat.isSystem && (
+              {isFallback ? (
+                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
+                  Sistema / fallback
+                </span>
+              ) : cat.isSystem ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
                   Base
                 </span>
-              )}
+              ) : null}
             </div>
+            {isFallback && (
+              <p className="text-[10px] text-[var(--text-muted)]">Sugerencia: Sin tope</p>
+            )}
           </div>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">

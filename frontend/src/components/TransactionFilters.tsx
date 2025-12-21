@@ -1,4 +1,4 @@
-import { frequentCategories } from '../data/frequentCategories';
+import { useCategoriesController } from '../hooks/useCategoriesController';
 import { ResponsiveSelect } from './ResponsiveSelect';
 
 interface TransactionFiltersProps {
@@ -6,10 +6,12 @@ interface TransactionFiltersProps {
   endDate: string;
   category: string;
   search: string;
+  userId?: string | null;
   onChange: (filters: { startDate: string; endDate: string; category: string; search: string }) => void;
 }
 
-export function TransactionFilters({ startDate, endDate, category, search, onChange }: TransactionFiltersProps) {
+export function TransactionFilters({ startDate, endDate, category, search, userId, onChange }: TransactionFiltersProps) {
+  const { categories } = useCategoriesController({ userId });
   return (
     <div className="card">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
@@ -38,7 +40,7 @@ export function TransactionFilters({ startDate, endDate, category, search, onCha
             onChange={(val) => onChange({ startDate, endDate, category: val, search })}
             options={[
               { value: 'all', label: 'Todas' },
-              ...frequentCategories.map((cat) => ({ value: cat.id, label: cat.label })),
+              ...categories.map((cat) => ({ value: cat.id, label: cat.label })),
             ]}
             title="Categoría"
           />
@@ -57,3 +59,5 @@ export function TransactionFilters({ startDate, endDate, category, search, onCha
     </div>
   );
 }
+
+

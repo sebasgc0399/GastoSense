@@ -17,6 +17,14 @@ interface Props {
 type ViewMode = 'list' | 'form' | 'icons';
 
 const DEFAULT_ICON = 'Tag';
+const FALLBACK_CATEGORY_ID = 'otros';
+const FALLBACK_CATEGORY_LABEL = 'Otros';
+const ensureFallbackLast = (list: Category[]) => {
+  const fallback = list.find((cat) => cat.id === FALLBACK_CATEGORY_ID);
+  if (!fallback) return list;
+  const rest = list.filter((cat) => cat.id !== FALLBACK_CATEGORY_ID);
+  return [...rest, fallback];
+};
 
 export function CategoryManagerModal({ open, onClose, userId }: Props) {
   const {
@@ -40,6 +48,11 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const editingCategory = useMemo(
+    () => categories.find((cat) => cat.id === editingId) ?? null,
+    [categories, editingId],
+  );
+  const isEditingFallback = editingCategory?.id === FALLBACK_CATEGORY_ID;
 
   const headerTitle = useMemo(() => {
     if (view === 'icons') return 'Selecciona un ícono';
@@ -53,7 +66,10 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     return editingId ? 'Actualiza el nombre e ícono.' : 'Crea una nueva categoría.';
   }, [editingId, view]);
 
-  const inactiveCategories = useMemo(() => categories.filter((cat) => cat.isArchived), [categories]);
+  const inactiveCategories = useMemo(
+    () => categories.filter((cat) => cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID),
+    [categories],
+  );
 
   const resetForm = useCallback(() => {
     setEditingId(null);
@@ -90,13 +106,14 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
   }, [onClose, open]);
 
   useEffect(() => {
-    const active = categories.filter((cat) => !cat.isArchived);
+    const active = categories.filter((cat) => !cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID);
     setOrderedCategories(active);
   }, [categories]);
 
   const handleEdit = useCallback((cat: Category) => {
     setEditingId(cat.id);
-    setFormState({ label: cat.label, icon: cat.icon });
+    const label = cat.id === FALLBACK_CATEGORY_ID ? FALLBACK_CATEGORY_LABEL : cat.label;
+    setFormState({ label, icon: cat.icon });
     setFormError(null);
     setView('form');
   }, []);
@@ -110,21 +127,31 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
 
   const reorderCategories = useCallback((list: Category[], fromId: string, toId: string) => {
     const fromIndex = list.findIndex((cat) => cat.id === fromId);
-    const toIndex = list.findIndex((cat) => cat.id === toId);
-    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return list;
+    const rawToIndex = list.findIndex((cat) => cat.id === toId);
+    const fallbackIndex = list.findIndex((cat) => cat.id === FALLBACK_CATEGORY_ID);
+    if (fromIndex < 0 || rawToIndex < 0 || fromIndex === rawToIndex) return list;
+    if (fromId === FALLBACK_CATEGORY_ID) return list;
+
+    let toIndex = rawToIndex;
+    if (fallbackIndex >= 0 && toIndex >= fallbackIndex) {
+      if (fallbackIndex <= 0) return list;
+      toIndex = fallbackIndex - 1;
+    }
+
     const next = [...list];
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
-    return next;
+    return ensureFallbackLast(next);
   }, []);
 
   const persistOrder = useCallback(
     async (list: Category[]) => {
       if (!userId) return;
+      const orderedList = ensureFallbackLast(list);
       setSaving(true);
       setFormError(null);
       try {
-        const updates = list
+        const updates = orderedList
           .map((cat, index) => (cat.order === index ? null : updateCategoryDoc(userId, cat.id, { order: index })))
           .filter(Boolean);
         if (updates.length > 0) {
@@ -145,11 +172,20 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     async (fromIndex: number, toIndex: number) => {
       if (saving) return;
       if (toIndex < 0 || toIndex >= orderedCategories.length) return;
+      const fallbackIndex = orderedCategories.findIndex((cat) => cat.id === FALLBACK_CATEGORY_ID);
+      if (fallbackIndex >= 0) {
+        if (fromIndex === fallbackIndex) return;
+        if (toIndex >= fallbackIndex) {
+          if (fallbackIndex <= 0) return;
+          toIndex = fallbackIndex - 1;
+        }
+      }
       const next = [...orderedCategories];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
-      setOrderedCategories(next);
-      await persistOrder(next);
+      const orderedNext = ensureFallbackLast(next);
+      setOrderedCategories(orderedNext);
+      await persistOrder(orderedNext);
     },
     [orderedCategories, persistOrder, saving],
   );
@@ -198,7 +234,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
 
   const handleSave = async () => {
     if (saving) return;
-    const label = formState.label.trim();
+    const label = isEditingFallback ? FALLBACK_CATEGORY_LABEL : formState.label.trim();
     if (!label) {
       setFormError('Ingresa un nombre de categoría.');
       return;
@@ -208,9 +244,15 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     setFormError(null);
     try {
       if (editingId) {
-        await updateCategoryAction(editingId, { label, icon: formState.icon });
+        const updates = isEditingFallback
+          ? { label: FALLBACK_CATEGORY_LABEL, icon: formState.icon }
+          : { label, icon: formState.icon };
+        await updateCategoryAction(editingId, updates);
       } else {
-        const nextOrder = categories.reduce((max, cat) => Math.max(max, cat.order ?? 0), -1) + 1;
+        const nextOrder =
+          categories
+            .filter((cat) => cat.id !== FALLBACK_CATEGORY_ID)
+            .reduce((max, cat) => Math.max(max, cat.order ?? 0), -1) + 1;
         await addCategory({ label, icon: formState.icon, order: nextOrder });
       }
       resetForm();
@@ -224,6 +266,10 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
 
   const handleToggleActive = async (cat: Category) => {
     if (saving) return;
+    if (cat.id === FALLBACK_CATEGORY_ID) {
+      setFormError('La categoria "Otros" no se puede desactivar.');
+      return;
+    }
     const nextArchived = !cat.isArchived;
     if (nextArchived) {
       const confirmed = await confirm({
@@ -254,6 +300,10 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
 
   const handleArchive = async (cat: Category) => {
     if (saving) return;
+    if (cat.id === FALLBACK_CATEGORY_ID) {
+      setFormError('La categoria "Otros" no se puede borrar.');
+      return;
+    }
     if (cat.isSystem) {
       setFormError('Las categorías base no se pueden borrar.');
       return;
@@ -356,6 +406,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                           const isDragOver = dragOverId === cat.id;
                           const isFirst = index === 0;
                           const isLast = index === orderedCategories.length - 1;
+                          const isFallback = cat.id === FALLBACK_CATEGORY_ID;
                           return (
                             <div
                               key={cat.id}
@@ -370,12 +421,12 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                               <div className="flex flex-col items-center gap-1">
                                 <button
                                   type="button"
-                                  draggable={!saving}
+                                  draggable={!saving && !isFallback}
                                   onDragStart={handleDragStart(cat.id)}
                                   onDragEnd={handleDragEnd}
                                   className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50 md:flex"
                                   aria-label="Reordenar categoria"
-                                  disabled={saving}
+                                  disabled={saving || isFallback}
                                 >
                                   <GripVertical className="h-4 w-4" />
                                 </button>
@@ -384,7 +435,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                   onClick={() => moveCategory(index, index - 1)}
                                   className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary disabled:opacity-50 md:hidden"
                                   aria-label="Mover categoria arriba"
-                                  disabled={saving || isFirst}
+                                  disabled={saving || isFirst || isFallback}
                                 >
                                   <ChevronUp className="h-4 w-4" />
                                 </button>
@@ -393,7 +444,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                   onClick={() => moveCategory(index, index + 1)}
                                   className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-primary disabled:opacity-50 md:hidden"
                                   aria-label="Mover categoria abajo"
-                                  disabled={saving || isLast}
+                                  disabled={saving || isLast || isFallback}
                                 >
                                   <ChevronDown className="h-4 w-4" />
                                 </button>
@@ -422,7 +473,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                   }`}
                                   aria-pressed={!cat.isArchived}
                                   aria-label={cat.isArchived ? 'Activar categoría' : 'Desactivar categoría'}
-                                  disabled={saving}
+                                  disabled={saving || isFallback}
                                 >
                                   <span className="sr-only sm:not-sr-only">Activa</span>
                                   <span
@@ -446,7 +497,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </button>
-                                {!cat.isSystem && (
+                                {!cat.isSystem && !isFallback && (
                                   <button
                                     type="button"
                                     onClick={() => handleArchive(cat)}
@@ -490,7 +541,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                                 className="flex items-center gap-1 rounded-full border border-white/10 px-1.5 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition"
                                 aria-pressed={!cat.isArchived}
                                 aria-label="Activar categoría"
-                                disabled={saving}
+                                disabled={saving || cat.id === FALLBACK_CATEGORY_ID}
                               >
                                 <span className="sr-only sm:not-sr-only">Inactiva</span>
                                 <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-white/10">
@@ -526,7 +577,8 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                   value={formState.label}
                   onChange={(e) => setFormState((prev) => ({ ...prev, label: e.target.value }))}
                   placeholder="Ej. Suscripciones"
-                  className="w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none"
+                  disabled={isEditingFallback}
+                  className="w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
@@ -622,6 +674,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     </div>
   , document.body);
 }
+
 
 
 
