@@ -505,14 +505,49 @@ function App() {
       });
       const data = resp.data as { parsed: ParsedTransactionSuggestion };
       await refreshQuota();
-      const raw = data.parsed as ParsedTransactionSuggestion & { category?: string; categoryId?: string };
-      const rawCategory = typeof raw.categoryId === 'string' ? raw.categoryId : typeof raw.category === 'string' ? raw.category : '';
-      const categoryId = resolveCanonicalCategoryId(rawCategory, categoryResolver);
-      return { ...raw, categoryId };
-    } catch (err) {
-      if (isResourceExhausted(err)) {
-        triggerUpgradeOnce('parse_exhausted');
-      }
+        const raw = data.parsed as ParsedTransactionSuggestion & {
+          category?: string;
+          categoryId?: string;
+          categoryFallback?: boolean;
+          categoryFallbackReason?: ParsedTransactionSuggestion['categoryFallbackReason'];
+        };
+        const parsedType = raw.type === 'income' ? 'income' : 'expense';
+        const rawCategory =
+          typeof raw.categoryId === 'string' ? raw.categoryId : typeof raw.category === 'string' ? raw.category : '';
+        const normalizedRawCategory = typeof rawCategory === 'string' ? rawCategory.trim().toLowerCase() : '';
+        const hasCategories = Object.keys(categoryResolver?.categoriesById ?? {}).length > 0;
+        let categoryId = '';
+        let categoryFallbackReason = raw.categoryFallbackReason;
+        if (parsedType === 'expense') {
+          if (normalizedRawCategory === 'otros') {
+            categoryId = 'otros';
+            categoryFallbackReason = categoryFallbackReason ?? 'explicit_other';
+          } else {
+            const resolvedCategoryId = resolveCanonicalCategoryId(rawCategory, categoryResolver);
+            const isValid = !hasCategories || !!categoryResolver?.categoriesById?.[resolvedCategoryId];
+            if (!resolvedCategoryId || resolvedCategoryId === 'ingreso' || !isValid) {
+              categoryId = 'otros';
+              if (!categoryFallbackReason) {
+                categoryFallbackReason = normalizedRawCategory ? 'no_match' : 'empty';
+              }
+            } else {
+              categoryId = resolvedCategoryId;
+            }
+          }
+        }
+        const categoryFallback = parsedType === 'expense' && categoryId === 'otros';
+        if (!categoryFallback) {
+          categoryFallbackReason = undefined;
+        } else if (!categoryFallbackReason) {
+          categoryFallbackReason = normalizedRawCategory ? 'no_match' : 'empty';
+        }
+        const baseConfidence = typeof raw.confidence === 'number' ? raw.confidence : 0.6;
+        const confidence = categoryFallback ? Math.min(baseConfidence, 0.4) : baseConfidence;
+        return { ...raw, type: parsedType, categoryId, categoryFallback, categoryFallbackReason, confidence };
+      } catch (err) {
+        if (isResourceExhausted(err)) {
+          triggerUpgradeOnce('parse_exhausted');
+        }
       throw new Error(mapAiError(err, 'parse'));
     }
   };
@@ -752,13 +787,14 @@ function App() {
         focusCategoryId={budgetFocusCategory}
       />
 
-      <TransactionEditModal
-        open={!!selectedTx}
-        transaction={selectedTx}
-        onClose={() => setSelectedTx(null)}
-        onSave={handleUpdateTransaction}
-        onDelete={handleDeleteTransaction}
-      />
+        <TransactionEditModal
+          open={!!selectedTx}
+          transaction={selectedTx}
+          userId={user?.uid}
+          onClose={() => setSelectedTx(null)}
+          onSave={handleUpdateTransaction}
+          onDelete={handleDeleteTransaction}
+        />
 
       <UpgradeModal
         open={showUpgradeModal}

@@ -1,4 +1,4 @@
-/* eslint-disable max-len, require-jsdoc, operator-linebreak, quotes */
+﻿/* eslint-disable max-len, require-jsdoc, operator-linebreak, quotes */
 import {SecretManagerServiceClient} from "@google-cloud/secret-manager";
 import * as admin from "firebase-admin";
 import crypto from "crypto";
@@ -101,13 +101,42 @@ interface SpendingSummary {
 interface ParsedTransaction {
   amount: number;
   category: string;
+  categoryId?: string;
   note?: string;
   paymentMethod: "efectivo" | "debito" | "credito" | "digital" | "otro";
   type: "expense" | "income";
   date: string;
   confidence?: number;
   rawText?: string;
+  categoryFallback?: boolean;
+  categoryFallbackReason?: CategoryFallbackReason;
 }
+
+type CategoryFallbackReason = "explicit_other" | "no_match" | "ambiguous" | "empty";
+
+interface CategoryCatalogEntry {
+  id: string;
+  label: string;
+}
+
+type CategoryResolution = {
+  categoryId: string;
+  fallbackReason?: CategoryFallbackReason;
+};
+
+interface CategoryCatalogCacheEntry {
+  cachedAt: number;
+  expiresAt: number;
+  categoriesUpdatedAtSeen: number | null;
+  data: CategoryCatalogEntry[];
+}
+
+const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000;
+const FALLBACK_CATEGORY_ID = "otros";
+const categoryCatalogCache = new Map<
+  string,
+  CategoryCatalogCacheEntry
+>();
 
 const defaultUserProfile = (): UserProfile => ({
   role: "free",
@@ -721,6 +750,109 @@ export const transcribeAudio = onCall(
   },
 );
 
+const normalizeCategoryLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const singularizeLabel = (value: string) => {
+  if (value.endsWith("es") && value.length > 3) return value.slice(0, -2);
+  if (value.endsWith("s") && value.length > 2) return value.slice(0, -1);
+  return value;
+};
+
+const getUserCategoriesUpdatedAt = async (uid: string): Promise<number | null> => {
+  const snapshot = await firestore.doc(`users/${uid}`).get();
+  const raw = snapshot.get("categoriesUpdatedAt");
+  if (!raw) return null;
+  if (typeof raw === "number") return raw;
+  if (typeof (raw as FirebaseFirestore.Timestamp).toMillis === "function") {
+    return (raw as FirebaseFirestore.Timestamp).toMillis();
+  }
+  return null;
+};
+
+const loadUserCategoryCatalog = async (
+  uid: string,
+): Promise<CategoryCatalogEntry[]> => {
+  const cached = categoryCatalogCache.get(uid);
+  const now = Date.now();
+  const categoriesUpdatedAt = await getUserCategoriesUpdatedAt(uid);
+  const cacheValid =
+    !!cached &&
+    cached.expiresAt > now &&
+    categoriesUpdatedAt !== null &&
+    cached.categoriesUpdatedAtSeen !== null &&
+    cached.categoriesUpdatedAtSeen === categoriesUpdatedAt;
+  if (cacheValid) return cached.data;
+  const snapshot = await firestore
+    .collection("users")
+    .doc(uid)
+    .collection("categories")
+    .orderBy("order", "asc")
+    .get();
+  const data = snapshot.docs.map((docSnap) => {
+    const rawLabel = docSnap.data()?.label;
+    const label =
+      typeof rawLabel === "string" && rawLabel.trim() ? rawLabel : docSnap.id;
+    return {id: docSnap.id, label};
+  });
+  categoryCatalogCache.set(uid, {
+    cachedAt: now,
+    expiresAt: now + CATEGORY_CACHE_TTL_MS,
+    categoriesUpdatedAtSeen: categoriesUpdatedAt,
+    data,
+  });
+  return data;
+};
+
+const buildCategoryLookup = (categories: CategoryCatalogEntry[]) => {
+  const byId: Record<string, CategoryCatalogEntry> = {};
+  const idByNormalizedLabel: Record<string, string | null> = {};
+  const addKey = (key: string, id: string) => {
+    if (!key) return;
+    if (!(key in idByNormalizedLabel)) {
+      idByNormalizedLabel[key] = id;
+      return;
+    }
+    if (idByNormalizedLabel[key] !== id) idByNormalizedLabel[key] = null;
+  };
+
+  for (const category of categories) {
+    if (!category?.id) continue;
+    byId[category.id] = category;
+    const normalized = normalizeCategoryLabel(category.label || category.id);
+    addKey(normalized, category.id);
+    const singular = singularizeLabel(normalized);
+    if (singular && singular !== normalized) addKey(singular, category.id);
+  }
+
+  return {byId, idByNormalizedLabel};
+};
+
+const resolveCategoryIdFromCatalog = (
+  rawCategory: string,
+  lookup: ReturnType<typeof buildCategoryLookup>,
+): CategoryResolution => {
+  const value = typeof rawCategory === "string" ? rawCategory.trim() : "";
+  if (!value) {
+    return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "empty"};
+  }
+  const normalized = normalizeCategoryLabel(value);
+  if (normalized === FALLBACK_CATEGORY_ID) {
+    return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "explicit_other"};
+  }
+  if (lookup.byId[value]) return {categoryId: value};
+  const match = normalized ? lookup.idByNormalizedLabel[normalized] : undefined;
+  if (typeof match === "string") return {categoryId: match};
+  if (match === null) {
+    return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "ambiguous"};
+  }
+  return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "no_match"};
+};
+
 /**
  * Callable: interpreta frase de movimiento y devuelve objeto estructurado.
  */
@@ -740,6 +872,11 @@ export const parseTransactionPhrase = onCall(
 
     const {client, profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
     await checkRateLimit(request.auth.uid, "parse", profile, effectiveRoleForLimit);
+    const categoryCatalog = await loadUserCategoryCatalog(request.auth.uid);
+    const categoryLookup = buildCategoryLookup(categoryCatalog);
+    const categoryList = categoryCatalog.length
+      ? categoryCatalog.map((cat) => '- ' + cat.id + ': ' + cat.label).join('\\n')
+      : '- ' + FALLBACK_CATEGORY_ID + ': Otros';
 
     const schema = {
       type: "object",
@@ -768,24 +905,44 @@ export const parseTransactionPhrase = onCall(
         "tarjeta de crédito/débito. Ejemplo: 'viaje por avianca a cali hoy me " +
         "costó 300000 pagué con tarjeta de crédito' => amount 300000, " +
         "category transporte, type expense, paymentMethod credito, date hoy. " +
-        "Si ves ingresos, usa type income.";
+        "Si ves ingresos, usa type income. " +
+        "El campo category debe ser el id exacto de una categoria valida. " +
+        "Si no hay una coincidencia clara, usa \"otros\". " +
+        "Categorias validas (id: label):\\n" +
+        categoryList;
 
-      // NOTE: `gpt-5-*` models are best used via the Responses API.
-      const response = await client.responses.create({
-        model: "gpt-5-mini",
-        instructions: system,
-        input: text,
-        text: {
-          format: {
-            type: "json_schema",
-            name: "transaction",
-            schema,
-            strict: true,
+      const primaryModel = "o4-mini";
+      const fallbackModel = "gpt-5-mini";
+      const createParseResponse = (model: string) =>
+        client.responses.create({
+          model,
+          instructions: system,
+          input: text,
+          text: {
+            format: {
+              type: "json_schema",
+              name: "transaction",
+              schema,
+              strict: true,
+            },
           },
-        },
-        reasoning: {effort: "low"},
-        max_output_tokens: 400,
-      });
+          reasoning: {effort: "low"},
+          max_output_tokens: 400,
+        });
+
+      let response: Awaited<ReturnType<typeof createParseResponse>>;
+      let modelUsed = primaryModel;
+      try {
+        response = await createParseResponse(primaryModel);
+      } catch (error) {
+        console.warn(
+          `[parseTransactionPhrase] ${primaryModel} failed, retrying ${fallbackModel}.`,
+          error,
+        );
+        modelUsed = fallbackModel;
+        response = await createParseResponse(fallbackModel);
+      }
+      console.info(`[parseTransactionPhrase] model=${modelUsed}`);
 
       const raw = response.output_text?.trim();
       const parsed = raw ? (JSON.parse(raw) as Partial<ParsedTransaction>) : {};
@@ -796,16 +953,32 @@ export const parseTransactionPhrase = onCall(
         dateCandidate = todayIsoStr;
       }
 
+      const rawCategory = typeof parsed.category === "string" ? parsed.category : "";
+      const parsedType = (parsed.type as ParsedTransaction["type"]) ?? "expense";
+      const isExpense = parsedType === "expense";
+      const categoryResolution = resolveCategoryIdFromCatalog(rawCategory, categoryLookup);
+      const categoryId = isExpense ? categoryResolution.categoryId : "";
+      const categoryFallback = isExpense && categoryId === FALLBACK_CATEGORY_ID;
+      const categoryFallbackReason = categoryFallback
+        ? categoryResolution.fallbackReason ?? "no_match"
+        : undefined;
+      const baseConfidence = parsed.confidence ?? 0.6;
+      const confidence = categoryFallback ? Math.min(baseConfidence, 0.4) : baseConfidence;
+      const categoryValue = categoryFallback ? FALLBACK_CATEGORY_ID : rawCategory || "sin-categoria";
+
       const result: ParsedTransaction = {
         amount: parsed.amount ?? 0,
-        category: parsed.category ?? "sin-categoria",
+        category: categoryValue,
+        categoryId,
         paymentMethod:
           (parsed.paymentMethod as ParsedTransaction["paymentMethod"]) ?? "debito",
-        type: (parsed.type as ParsedTransaction["type"]) ?? "expense",
+        type: parsedType,
         date: dateCandidate,
         note: parsed.note ?? text,
-        confidence: parsed.confidence ?? 0.6,
+        confidence,
         rawText: text,
+        categoryFallback,
+        categoryFallbackReason,
       };
 
       return {parsed: result};

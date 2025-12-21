@@ -18,9 +18,13 @@ export interface Transaction extends TransactionInput {
   userId?: string;
 }
 
+export type CategoryFallbackReason = 'explicit_other' | 'no_match' | 'ambiguous' | 'empty';
+
 export interface ParsedTransactionSuggestion extends TransactionInput {
   confidence?: number;
   rawText?: string;
+  categoryFallback?: boolean;
+  categoryFallbackReason?: CategoryFallbackReason;
 }
 
 export interface SpendingSummaryCard {

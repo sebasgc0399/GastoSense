@@ -4,6 +4,7 @@ import { paymentMethods } from '../data/frequentCategories';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
 import { callTranscribeAudio } from '../services/functions';
+import { buildCategoryResolver, resolveCategoryLabel, truncateCategoryId } from '../utils/categoryResolver';
 import { ResponsiveSelect } from './ResponsiveSelect';
 import { CategoryIcon } from './ui/CategoryIcon';
 import type { ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
@@ -225,6 +226,33 @@ export function QuickAddSheet({
     [categories],
   );
   const showCategorySkeleton = categoriesLoading && visibleCategories.length === 0;
+  const categoryResolver = useMemo(() => buildCategoryResolver(categories), [categories]);
+  const parsedConfidence = parsedSuggestion?.confidence ?? 0.6;
+  const isExpenseSuggestion = parsedSuggestion?.type === 'expense';
+  const lowConfidence = !!parsedSuggestion && isExpenseSuggestion && parsedConfidence < 0.55;
+  const fallbackCategory =
+    !!parsedSuggestion &&
+    isExpenseSuggestion &&
+    (parsedSuggestion.categoryFallback || parsedSuggestion.categoryId === FALLBACK_CATEGORY_ID);
+  const fallbackReason = parsedSuggestion?.categoryFallbackReason;
+  const fallbackMessage =
+    fallbackReason === 'explicit_other'
+      ? "La IA eligió 'Otros', revísalo si aplica."
+      : "Clasificado en 'Otros', puedes cambiarlo.";
+  const suggestedCategoryId = parsedSuggestion?.categoryId ?? '';
+  const suggestedCategoryLabel = suggestedCategoryId ? resolveCategoryLabel(suggestedCategoryId, categoryResolver) : null;
+  const suggestedCategoryDisplay = suggestedCategoryId
+    ? suggestedCategoryLabel ?? 'Categoría eliminada'
+    : '—';
+  const suggestedCategoryTooltip =
+    suggestedCategoryId && !suggestedCategoryLabel ? `ID: ${truncateCategoryId(suggestedCategoryId)}` : undefined;
+  const shouldHighlightCategorySelector =
+    !showDetails &&
+    mode !== 'ai' &&
+    !!parsedSuggestion &&
+    (lowConfidence || fallbackCategory) &&
+    category === parsedSuggestion.categoryId;
+  const showFallbackNotice = fallbackCategory && category === parsedSuggestion?.categoryId;
 
   const resetForm = useCallback(() => {
     setFormState(createInitialState());
@@ -867,10 +895,12 @@ export function QuickAddSheet({
                           {parsedSuggestion.type === 'income' ? 'Ingreso' : 'Gasto'}
                         </dd>
                       </div>
-                      <div>
-                        <dt className="text-[var(--muted)]">Categoria sugerida</dt>
-                        <dd className="font-semibold capitalize">{parsedSuggestion.categoryId}</dd>
-                      </div>
+                        <div>
+                          <dt className="text-[var(--muted)]">Categoria sugerida</dt>
+                          <dd className="font-semibold capitalize" title={suggestedCategoryTooltip}>
+                            {suggestedCategoryDisplay}
+                          </dd>
+                        </div>
                       <div>
                         <dt className="text-[var(--muted)]">Fecha</dt>
                         <dd className="font-semibold">{parsedSuggestion.date}</dd>
@@ -885,6 +915,7 @@ export function QuickAddSheet({
                         Nota: {parsedSuggestion.note}
                       </p>
                     )}
+                    {fallbackCategory && <p className="mt-2 text-xs text-amber-200">{fallbackMessage}</p>}
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         onClick={() => {
@@ -1117,7 +1148,13 @@ export function QuickAddSheet({
                         ))}
                       </div>
                     ) : (
-                      <div className="grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3">
+                      <>
+                        {showFallbackNotice && <p className="mb-2 text-xs text-amber-200">{fallbackMessage}</p>}
+                        <div
+                          className={`grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3 ${
+                            shouldHighlightCategorySelector ? 'rounded-2xl p-1 ring-2 ring-amber-400/60' : ''
+                          }`}
+                        >
                         {visibleCategories.map((cat) => {
                           const active = cat.id === category;
                           return (
@@ -1144,7 +1181,8 @@ export function QuickAddSheet({
                           <Settings size={18} />
                           <span className="mt-1">Configurar</span>
                         </button>
-                      </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
