@@ -86,7 +86,15 @@ export function TransactionsPage({
         {paginatedTransactions.map((tx) => {
           const canonicalCategoryId = resolveCanonicalCategoryId(tx.categoryId, categoryResolver);
           const displayCategory = resolveCategoryLabel(canonicalCategoryId, categoryResolver) ?? tx.categoryId;
-          const budgetLimit = budget?.perCategory?.[canonicalCategoryId];
+          const rawBudgetValue = budget?.perCategory?.[canonicalCategoryId];
+          const budgetValue =
+            typeof rawBudgetValue === 'number'
+              ? rawBudgetValue
+              : typeof rawBudgetValue === 'string'
+                ? Number(rawBudgetValue)
+                : undefined;
+          const hasBudgetValue = typeof budgetValue === 'number' && Number.isFinite(budgetValue);
+          const hasBudgetLimit = hasBudgetValue && budgetValue > 0;
           const spentInCategory = categorySpendMap[canonicalCategoryId] ?? 0;
 
           return (
@@ -101,9 +109,9 @@ export function TransactionsPage({
                 <p className="text-xs text-slate-400">
                   {tx.date} · {tx.paymentMethod}
                 </p>
-                {budgetLimit && (
+                {hasBudgetValue && (
                   <p className="text-[11px] text-slate-300">
-                    Presupuesto cat: ${budgetLimit.toLocaleString()} · Gastado: {spentInCategory.toLocaleString()}
+                    Presupuesto cat: {hasBudgetLimit ? `$${budgetValue.toLocaleString()}` : 'Sin tope'} · Gastado este mes: {spentInCategory.toLocaleString()}
                   </p>
                 )}
               </div>
@@ -119,17 +127,17 @@ export function TransactionsPage({
                   >
                     {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
                   </span>
-                  {budgetLimit && (
+                  {hasBudgetLimit && (
                     <span
                       className={`rounded-full px-2 py-1 ${
-                        spentInCategory >= budgetLimit
+                        spentInCategory >= budgetValue
                           ? 'bg-red-500/10 text-red-200'
-                          : spentInCategory / budgetLimit >= 0.8
+                          : spentInCategory / budgetValue >= 0.8
                             ? 'bg-amber-500/10 text-amber-200'
                             : 'bg-emerald-500/10 text-emerald-200'
                       }`}
                     >
-                      Cat {Math.round(Math.min((spentInCategory / budgetLimit) * 100, 150))}%
+                      Cat {Math.round((spentInCategory / budgetValue) * 100)}%
                     </span>
                   )}
                 </div>
