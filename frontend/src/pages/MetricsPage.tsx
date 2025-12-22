@@ -6,6 +6,7 @@ import { EvolutionChart } from '../components/charts/EvolutionChart';
 import type { CategorySpendItem, CategorySpendMode } from '../components/charts/CategorySpendChart';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
+import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
 import { shouldShowIncomeAndBalance } from './metricsRules';
 import { trackEvent } from '../services/analytics';
 import type { Budget, Transaction } from '../types';
@@ -54,6 +55,17 @@ export function MetricsPage({
   const isCurrentMonth = currentMonth === todayIso().slice(0, 7);
   const expenseTitle = isCurrentMonth ? 'Gasto del mes (hasta hoy)' : 'Gasto del mes';
   const incomeTitle = isCurrentMonth ? 'Ingresos del mes (hasta hoy)' : 'Ingresos del mes';
+  const summaryItems = hasIncome
+    ? [
+        { label: expenseTitle, value: monthlyExpense, tone: 'danger' as const },
+        { label: incomeTitle, value: monthlyIncome, tone: 'success' as const },
+        {
+          label: 'Saldo disponible',
+          value: availableBalance,
+          tone: availableBalance >= 0 ? ('success' as const) : ('danger' as const),
+        },
+      ]
+    : [{ label: expenseTitle, value: monthlyExpense, tone: 'danger' as const }];
 
   const budgetTotal = budget?.total ?? 0;
   const hasBudget = budgetTotal > 0;
@@ -237,12 +249,14 @@ export function MetricsPage({
         </div>
       ) : (
         <>
-          <div className={`grid grid-cols-1 gap-3 ${hasIncome ? 'sm:grid-cols-3' : 'sm:grid-cols-1'}`}>
+          <StatsSummaryCard className="sm:hidden" items={summaryItems} />
+
+          <div className={`hidden grid-cols-1 gap-3 sm:grid ${hasIncome ? 'sm:grid-cols-3' : 'sm:grid-cols-1'}`}>
             <CardStat title={expenseTitle} value={monthlyExpense} tone="danger" subtitle="Total de gastos del periodo." />
             {hasIncome && <CardStat title={incomeTitle} value={monthlyIncome} tone="success" subtitle="Total de ingresos." />}
             {hasIncome && (
               <CardStat
-                title="Balance"
+                title="Saldo disponible"
                 value={availableBalance}
                 tone={availableBalance >= 0 ? 'success' : 'danger'}
                 subtitle="Ingresos - Gastos del periodo."

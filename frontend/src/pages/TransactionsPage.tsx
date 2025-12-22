@@ -1,5 +1,6 @@
 ﻿﻿import type React from 'react';
 import { CardMini } from '../components/stats/CardMini';
+import { StatsSummaryCard, type SummaryItem, type SummaryTone } from '../components/stats/StatsSummaryCard';
 import { TransactionItemCard, type BudgetState } from '../components/transactions/TransactionItemCard';
 import { TransactionsFiltersPanel } from '../components/transactions/TransactionsFiltersPanel';
 import type { Budget, Transaction } from '../types';
@@ -50,12 +51,16 @@ export function TransactionsPage({
     { expense: 0, income: 0 },
   );
   const balanceTotal = totals.income - totals.expense;
-  const balanceTone = balanceTotal >= 0 ? 'success' : 'danger';
-  const balanceColor = balanceTotal >= 0 ? 'text-emerald-300' : 'text-red-300';
+  const balanceTone: SummaryTone = balanceTotal >= 0 ? 'success' : 'danger';
   const categoryLabel =
     filters.category === 'all'
       ? 'Todas'
       : resolveCategoryLabel(filters.category, categoryResolver) ?? filters.category;
+  const summaryItems: SummaryItem[] = [
+    { label: 'Gasto (filtro)', value: totals.expense, tone: 'danger' },
+    { label: 'Ingreso (filtro)', value: totals.income, tone: 'success' },
+    { label: 'Saldo (filtro)', value: balanceTotal, tone: balanceTone },
+  ];
 
   return (
     <section className="space-y-4 pb-5">
@@ -64,23 +69,7 @@ export function TransactionsPage({
         <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
       </div>
 
-      <div className="card sm:hidden">
-        <p className="text-[11px] uppercase text-[var(--muted)]">Resumen</p>
-        <div className="mt-2 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-xs uppercase text-[var(--muted)]">Gasto (filtro)</span>
-            <span className="font-semibold text-red-300">${totals.expense.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-xs uppercase text-[var(--muted)]">Ingreso (filtro)</span>
-            <span className="font-semibold text-emerald-300">${totals.income.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-xs uppercase text-[var(--muted)]">Saldo (filtro)</span>
-            <span className={`font-semibold ${balanceColor}`}>${balanceTotal.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
+      <StatsSummaryCard className="sm:hidden" items={summaryItems} />
 
       <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3">
         <CardMini title="Gasto (filtro)" value={totals.expense} />

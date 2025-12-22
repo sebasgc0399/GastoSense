@@ -4,6 +4,7 @@ import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
+import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
 import type { CategorySpendItem } from '../components/charts/CategorySpendChart';
 import type { Budget, Template } from '../types';
 
@@ -65,9 +66,28 @@ export function HomePage({
   handleEditTemplate,
   handleDeleteTemplate,
 }: HomePageProps) {
+  const summaryItems = [
+    { label: 'Gasto mensual', value: monthlyExpense, tone: 'danger' as const },
+    { label: 'Ingreso mensual', value: monthlyIncome, tone: 'success' as const },
+    {
+      label: 'Saldo disponible',
+      value: availableBalance,
+      tone: availableBalance >= 0 ? ('success' as const) : ('danger' as const),
+    },
+  ];
+
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <ReferenceMonthCard
+        currentMonth={currentMonth}
+        defaultMonth={defaultMonth}
+        onChange={setCurrentMonth}
+        description="Cambia el mes para ver presupuestos y totales."
+      />
+
+      <StatsSummaryCard className="sm:hidden" items={summaryItems} />
+
+      <div className="hidden gap-3 sm:grid sm:grid-cols-3">
         <CardStat title="Gasto mensual" value={monthlyExpense} tone="danger" subtitle="Objetivo: no pasar presupuesto." />
         <CardStat title="Ingreso mensual" value={monthlyIncome} tone="success" subtitle="Suma ingresos fijos." />
         <CardStat
@@ -77,13 +97,6 @@ export function HomePage({
           subtitle="Ingreso - Gasto del mes."
         />
       </div>
-
-      <ReferenceMonthCard
-        currentMonth={currentMonth}
-        defaultMonth={defaultMonth}
-        onChange={setCurrentMonth}
-        description="Cambia el mes para ver presupuestos y totales."
-      />
 
       <div className="card p-0">
         <BudgetCard
