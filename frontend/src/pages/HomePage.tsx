@@ -98,15 +98,13 @@ export function HomePage({
         />
       </div>
 
-      <div className="card p-0">
-        <BudgetCard
-          month={currentMonth}
-          totalExpense={monthlyExpense}
-          budget={budget}
-          onSave={handleSaveBudget}
-          loading={budgetSaving}
-        />
-      </div>
+      <BudgetCard
+        month={currentMonth}
+        totalExpense={monthlyExpense}
+        budget={budget}
+        onSave={handleSaveBudget}
+        loading={budgetSaving}
+      />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <TopExpensesChart
