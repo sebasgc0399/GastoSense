@@ -1,7 +1,7 @@
 ﻿﻿import type React from 'react';
-import { TransactionFilters } from '../components/TransactionFilters';
 import { CardMini } from '../components/stats/CardMini';
 import { TransactionItemCard, type BudgetState } from '../components/transactions/TransactionItemCard';
+import { TransactionsFiltersPanel } from '../components/transactions/TransactionsFiltersPanel';
 import type { Budget, Transaction } from '../types';
 import type { CategoryResolver } from '../utils/categoryResolver';
 import { resolveCanonicalCategoryId, resolveCategoryLabel } from '../utils/categoryResolver';
@@ -41,6 +41,22 @@ export function TransactionsPage({
   setSelectedTx,
   handleDeleteTransaction,
 }: TransactionsPageProps) {
+  const totals = transactions.reduce(
+    (acc, tx) => {
+      if (tx.type === 'income') acc.income += tx.amount;
+      else acc.expense += tx.amount;
+      return acc;
+    },
+    { expense: 0, income: 0 },
+  );
+  const balanceTotal = totals.income - totals.expense;
+  const balanceTone = balanceTotal >= 0 ? 'success' : 'danger';
+  const balanceColor = balanceTotal >= 0 ? 'text-emerald-300' : 'text-red-300';
+  const categoryLabel =
+    filters.category === 'all'
+      ? 'Todas'
+      : resolveCategoryLabel(filters.category, categoryResolver) ?? filters.category;
+
   return (
     <section className="space-y-4 pb-5">
       <div className="space-y-1">
@@ -48,32 +64,35 @@ export function TransactionsPage({
         <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <CardMini
-          title="Gasto (filtro)"
-          value={transactions.filter((t) => t.type === 'expense').reduce((a, t) => a + t.amount, 0)}
-        />
-        <CardMini
-          title="Ingreso (filtro)"
-          value={transactions.filter((t) => t.type === 'income').reduce((a, t) => a + t.amount, 0)}
-          tone="success"
-        />
-        <CardMini
-          title="Saldo (filtro)"
-          value={transactions.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0)}
-          tone={
-            transactions.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0) >= 0 ? 'success' : 'danger'
-          }
-        />
+      <div className="card sm:hidden">
+        <p className="text-[11px] uppercase text-[var(--muted)]">Resumen</p>
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-xs uppercase text-[var(--muted)]">Gasto (filtro)</span>
+            <span className="font-semibold text-red-300">${totals.expense.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-xs uppercase text-[var(--muted)]">Ingreso (filtro)</span>
+            <span className="font-semibold text-emerald-300">${totals.income.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-xs uppercase text-[var(--muted)]">Saldo (filtro)</span>
+            <span className={`font-semibold ${balanceColor}`}>${balanceTotal.toLocaleString()}</span>
+          </div>
+        </div>
       </div>
 
-      <TransactionFilters
-        startDate={filters.startDate}
-        endDate={filters.endDate}
-        category={filters.category}
-        search={filters.search}
-        userId={userId}
+      <div className="hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3">
+        <CardMini title="Gasto (filtro)" value={totals.expense} />
+        <CardMini title="Ingreso (filtro)" value={totals.income} tone="success" />
+        <CardMini title="Saldo (filtro)" value={balanceTotal} tone={balanceTone} />
+      </div>
+
+      <TransactionsFiltersPanel
+        filters={filters}
         onChange={handleFiltersChange}
+        userId={userId}
+        categoryLabel={categoryLabel}
       />
 
       {error && <p className="text-sm text-red-400">{error}</p>}
