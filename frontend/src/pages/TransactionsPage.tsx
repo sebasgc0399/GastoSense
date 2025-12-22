@@ -110,9 +110,15 @@ export function TransactionsPage({
                   {tx.date} · {tx.paymentMethod}
                 </p>
                 {hasBudgetValue && (
-                  <p className="text-[11px] text-slate-300">
-                    Presupuesto cat: {hasBudgetLimit ? `$${budgetValue.toLocaleString()}` : 'Sin tope'} · Gastado este mes: {spentInCategory.toLocaleString()}
-                  </p>
+                  <>
+                    <p className="text-[11px] text-slate-300">
+                      Presupuesto: {hasBudgetLimit ? `$${budgetValue.toLocaleString()}` : 'Sin tope'} · Gastado:{' '}
+                      {`$${spentInCategory.toLocaleString()}`}
+                    </p>
+                    {hasBudgetLimit && spentInCategory > budgetValue && (
+                      <p className="text-[11px] text-slate-300">{`Exceso: $${(spentInCategory - budgetValue).toLocaleString()}`}</p>
+                    )}
+                  </>
                 )}
               </div>
               <div className="text-right">
