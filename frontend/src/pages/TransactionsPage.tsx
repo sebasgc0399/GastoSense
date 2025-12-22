@@ -1,6 +1,7 @@
-﻿import type React from 'react';
+﻿﻿import type React from 'react';
 import { TransactionFilters } from '../components/TransactionFilters';
 import { CardMini } from '../components/stats/CardMini';
+import { TransactionItemCard, type BudgetState } from '../components/transactions/TransactionItemCard';
 import type { Budget, Transaction } from '../types';
 import type { CategoryResolver } from '../utils/categoryResolver';
 import { resolveCanonicalCategoryId, resolveCategoryLabel } from '../utils/categoryResolver';
@@ -94,69 +95,30 @@ export function TransactionsPage({
                 ? Number(rawBudgetValue)
                 : undefined;
           const hasBudgetValue = typeof budgetValue === 'number' && Number.isFinite(budgetValue);
-          const hasBudgetLimit = hasBudgetValue && budgetValue > 0;
+          const budgetState: BudgetState = !hasBudgetValue ? 'none' : budgetValue > 0 ? 'limited' : 'unlimited';
           const spentInCategory = categorySpendMap[canonicalCategoryId] ?? 0;
+          const percentUsed =
+            budgetState === 'limited' && typeof budgetValue === 'number' && budgetValue > 0
+              ? Math.round((spentInCategory / budgetValue) * 100)
+              : undefined;
+          const excessAmount =
+            budgetState === 'limited' && typeof budgetValue === 'number' && spentInCategory > budgetValue
+              ? spentInCategory - budgetValue
+              : undefined;
 
           return (
-            <div
+            <TransactionItemCard
               key={tx.id}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm"
-            >
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {tx.note || displayCategory} · {displayCategory}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {tx.date} · {tx.paymentMethod}
-                </p>
-                {hasBudgetValue && (
-                  <>
-                    <p className="text-[11px] text-slate-300">
-                      Presupuesto: {hasBudgetLimit ? `$${budgetValue.toLocaleString()}` : 'Sin tope'} · Gastado:{' '}
-                      {`$${spentInCategory.toLocaleString()}`}
-                    </p>
-                    {hasBudgetLimit && spentInCategory > budgetValue && (
-                      <p className="text-[11px] text-slate-300">{`Exceso: $${(spentInCategory - budgetValue).toLocaleString()}`}</p>
-                    )}
-                  </>
-                )}
-              </div>
-              <div className="text-right">
-                <p className={`text-base font-bold ${tx.type === 'expense' ? 'text-red-300' : 'text-emerald-300'}`}>
-                  {tx.type === 'expense' ? '-' : '+'}${tx.amount.toLocaleString()}
-                </p>
-                <div className="mt-1 flex items-center justify-end gap-2 text-[11px]">
-                  <span
-                    className={`rounded-full px-2 py-1 ${
-                      tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-200' : 'bg-red-500/10 text-red-200'
-                    }`}
-                  >
-                    {tx.type === 'income' ? 'Ingreso' : 'Gasto'}
-                  </span>
-                  {hasBudgetLimit && (
-                    <span
-                      className={`rounded-full px-2 py-1 ${
-                        spentInCategory >= budgetValue
-                          ? 'bg-red-500/10 text-red-200'
-                          : spentInCategory / budgetValue >= 0.8
-                            ? 'bg-amber-500/10 text-amber-200'
-                            : 'bg-emerald-500/10 text-emerald-200'
-                      }`}
-                    >
-                      Cat {Math.round((spentInCategory / budgetValue) * 100)}%
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 flex justify-end gap-2 text-[11px]">
-                  <button className="text-primary" onClick={() => setSelectedTx(tx)}>
-                    Editar
-                  </button>
-                  <button className="text-red-300" onClick={() => handleDeleteTransaction(tx.id)}>
-                    Borrar
-                  </button>
-                </div>
-              </div>
-            </div>
+              tx={tx}
+              displayCategory={displayCategory}
+              budgetState={budgetState}
+              budgetValue={budgetValue}
+              spentInCategory={spentInCategory}
+              percentUsed={percentUsed}
+              excessAmount={excessAmount}
+              onEdit={(transaction) => setSelectedTx(transaction)}
+              onDelete={handleDeleteTransaction}
+            />
           );
         })}
         {transactions.length > txPageSize && (
@@ -184,5 +146,6 @@ export function TransactionsPage({
     </section>
   );
 }
+
 
 
