@@ -36,6 +36,7 @@ export interface HomePageProps {
   handleNextInsight: () => void;
   handleTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
   handleTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
+  resolveCategoryLabel: (categoryId?: string) => string;
   recurringTemplates: Template[];
   handleUseTemplate: (tpl: Template) => void;
   handleEditTemplate: (tpl: Template) => void;
@@ -61,6 +62,7 @@ export function HomePage({
   handleNextInsight,
   handleTouchStart,
   handleTouchEnd,
+  resolveCategoryLabel,
   recurringTemplates,
   handleUseTemplate,
   handleEditTemplate,
@@ -125,7 +127,7 @@ export function HomePage({
             {smartCards.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                  <span>{smartCards.length > 1 ? 'Desliza para ver más' : 'Sugerencia destacada'}</span>
+                  <span>{smartCards.length > 1 ? 'Desliza para ver mas' : 'Sugerencia destacada'}</span>
                   {smartCards.length > 1 && (
                     <div className="flex gap-2">
                       <button
@@ -206,7 +208,8 @@ export function HomePage({
         templates={recurringTemplates}
         title="Recordatorios recurrentes"
         subtitle="Plantillas marcadas como recurrentes"
-        emptyState="A£n no tienes plantillas recurrentes."
+        emptyState="Aun no tienes plantillas recurrentes."
+        resolveCategoryLabel={resolveCategoryLabel}
         onUseTemplate={handleUseTemplate}
         onEditTemplate={handleEditTemplate}
         onDeleteTemplate={handleDeleteTemplate}
