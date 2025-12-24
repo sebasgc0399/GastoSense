@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { CategorySpendChart } from './charts/CategorySpendChart';
 import type { CategorySpendItem, CategorySpendMode } from './charts/CategorySpendChart';
 
@@ -14,6 +14,8 @@ interface Props {
   showModeToggle?: boolean;
   onEditBudgets?: () => void;
   editBudgetsLabel?: string;
+  onCategoryNavigate?: (categoryId: string) => void;
+  enableCategoryNavigate?: boolean;
 }
 
 export function TopExpensesChart({
@@ -28,6 +30,8 @@ export function TopExpensesChart({
   showModeToggle = true,
   onEditBudgets,
   editBudgetsLabel = 'Editar presupuestos por categoría',
+  onCategoryNavigate,
+  enableCategoryNavigate,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -109,7 +113,13 @@ export function TopExpensesChart({
         </div>
       </div>
 
-      <CategorySpendChart items={items} mode={mode} limit={resolvedLimit} />
+      <CategorySpendChart
+        items={items}
+        mode={mode}
+        limit={resolvedLimit}
+        onCategoryNavigate={onCategoryNavigate}
+        enableCategoryNavigate={enableCategoryNavigate}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ export interface TransactionsPageProps {
   userId?: string | null;
   setSelectedTx: React.Dispatch<React.SetStateAction<Transaction | null>>;
   handleDeleteTransaction: (id: string) => Promise<void>;
+  shouldIgnoreTransactionClick?: () => boolean;
 }
 
 export function TransactionsPage({
@@ -41,6 +42,7 @@ export function TransactionsPage({
   userId,
   setSelectedTx,
   handleDeleteTransaction,
+  shouldIgnoreTransactionClick,
 }: TransactionsPageProps) {
   const totals = transactions.reduce(
     (acc, tx) => {
@@ -124,7 +126,10 @@ export function TransactionsPage({
               spentInCategory={spentInCategory}
               percentUsed={percentUsed}
               excessAmount={excessAmount}
-              onEdit={(transaction) => setSelectedTx(transaction)}
+              onEdit={(transaction) => {
+                if (shouldIgnoreTransactionClick?.()) return;
+                setSelectedTx(transaction);
+              }}
               onDelete={handleDeleteTransaction}
             />
           );

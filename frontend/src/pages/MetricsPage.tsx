@@ -28,7 +28,7 @@ interface MetricsPageProps {
   categoryResolver: CategoryResolver;
   previousMonth: { expense: number; income: number } | null;
   onOpenQuickAdd: () => void;
-  onViewMovements: () => void;
+  onViewMovements: (categoryId?: string, opts?: { suppressTxClick?: boolean }) => void;
   onAdjustBudget: () => void;
 }
 
@@ -241,7 +241,7 @@ export function MetricsPage({
             </button>
             <button
               className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
-              onClick={onViewMovements}
+              onClick={() => onViewMovements()}
             >
               Ver movimientos
             </button>
@@ -315,7 +315,7 @@ export function MetricsPage({
                 </button>
                 <button
                   className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
-                  onClick={onViewMovements}
+                  onClick={() => onViewMovements()}
                 >
                   Ver movimientos
                 </button>
@@ -388,6 +388,7 @@ export function MetricsPage({
               mode={effectiveCategoriesMode}
               onModeChange={handleCategoriesModeChange}
               budgetModeAvailable={budgetModeAvailable}
+              onCategoryNavigate={(categoryId) => onViewMovements(categoryId, { suppressTxClick: true })}
               showViewAll={shouldShowViewAll}
               onViewAll={() => {
                 trackEvent('metrics_top_categories_modal_opened', {

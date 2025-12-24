@@ -47,6 +47,7 @@ function App() {
   type SettingsOpenSource = 'header' | 'upgrade_modal' | 'other';
   const prevTabRef = useRef<TabKey>('home');
   const settingsOpenSourceRef = useRef<SettingsOpenSource>('other');
+  const suppressTxClickUntilRef = useRef(0);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   type TransactionsSortBy = 'date_desc' | 'amount_desc';
@@ -165,9 +166,15 @@ function App() {
   const scrollToMonthlyBudget = useCallback(() => {
     if (typeof document === 'undefined') return;
     const target = document.getElementById('monthly-budget-card');
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const targetCenter = rect.top + scrollTop + rect.height / 2;
+    const desiredTop = targetCenter - window.innerHeight / 2;
+    const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const clampedTop = Math.min(Math.max(0, desiredTop), maxTop);
+
+    window.scrollTo({ top: clampedTop, behavior: 'smooth' });
   }, []);
 
   const openSettings = useCallback((source: SettingsOpenSource = 'other') => {
@@ -215,14 +222,21 @@ function App() {
   }, [closeCategoryBudgets, scrollToMonthlyBudget]);
 
   const openMovements = useCallback(
-    (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
+    (category?: string, opts?: { sortBy?: TransactionsSortBy; suppressTxClick?: boolean }) => {
       const { startDate, endDate } = monthRangeIso(selectedMonth);
+      if (opts?.suppressTxClick) {
+        suppressTxClickUntilRef.current = Date.now() + 500;
+      }
       setTxSortBy(opts?.sortBy ?? 'date_desc');
       txHandleFiltersChange({ startDate, endDate, category: category || 'all', search: '' });
       setActiveTab('transactions');
       trackEvent('smart_card_click', { action: 'movements', category });
     },
     [selectedMonth, txHandleFiltersChange],
+  );
+  const shouldIgnoreTransactionClick = useCallback(
+    () => Date.now() < suppressTxClickUntilRef.current,
+    [],
   );
   const handleViewCategory = useCallback(
     (categoryId: string) => {
@@ -691,6 +705,7 @@ function App() {
             userId={user?.uid}
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
+            shouldIgnoreTransactionClick={shouldIgnoreTransactionClick}
           />
         )}
         {activeTab === 'metrics' && (
@@ -707,7 +722,7 @@ function App() {
             categoryResolver={categoryResolver}
             previousMonth={previousMonth}
             onOpenQuickAdd={() => openQuickAdd('expense')}
-            onViewMovements={() => openMovements()}
+            onViewMovements={(categoryId, opts) => openMovements(categoryId, opts)}
             onAdjustBudget={openMonthlyBudget}
           />
         )}

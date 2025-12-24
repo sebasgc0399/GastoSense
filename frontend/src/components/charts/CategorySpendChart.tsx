@@ -1,4 +1,5 @@
-﻿import ReactECharts from 'echarts-for-react';
+﻿import { useRef } from 'react';
+import ReactECharts from 'echarts-for-react';
 import type { BarSeriesOption, EChartsOption } from 'echarts';
 
 export type CategorySpendMode = 'spent' | 'budget';
@@ -19,6 +20,8 @@ export type CategorySpendChartProps = {
   limit?: number;
   currency?: 'COP';
   showFallbackId?: boolean;
+  onCategoryNavigate?: (categoryId: string) => void;
+  enableCategoryNavigate?: boolean;
 };
 
 const fmtCOP = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}`;
@@ -37,7 +40,15 @@ const RANK_PALETTE = [
   '#94A3B8',
 ] as const;
 
-const rankColor = (index: number) => RANK_PALETTE[index % RANK_PALETTE.length];
+const hashCategoryId = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
+const stableCategoryColor = (categoryId: string) =>
+  RANK_PALETTE[hashCategoryId(categoryId) % RANK_PALETTE.length];
 
 const formatCategoryLabel = (value: string) => {
   const trimmed = value.trim();
@@ -86,7 +97,11 @@ export function CategorySpendChart({
   mode,
   limit,
   showFallbackId = false,
+  onCategoryNavigate,
+  enableCategoryNavigate = true,
 }: CategorySpendChartProps) {
+  const lastTapRef = useRef<{ id: string; at: number } | null>(null);
+  const canNavigate = Boolean(enableCategoryNavigate && onCategoryNavigate);
   const visibleItems = limit ? items.slice(0, limit) : items;
   const showValueLabels = Boolean(limit);
 
@@ -107,9 +122,9 @@ export function CategorySpendChart({
   const spentOnlySeries: BarSeriesOption = {
     name: 'Gastado',
     type: 'bar',
-    data: visibleItems.map((item, index) => ({
+    data: visibleItems.map((item) => ({
       value: item.spent,
-      itemStyle: { color: rankColor(index), borderRadius: BAR_RADIUS },
+      itemStyle: { color: stableCategoryColor(item.categoryId), borderRadius: BAR_RADIUS },
     })) as unknown as BarSeriesOption['data'],
     barWidth: BAR_HEIGHT,
     showBackground: true,
@@ -262,6 +277,23 @@ export function CategorySpendChart({
 
   const height = Math.max(limit ? 170 : 240, visibleItems.length * 34 + 56);
 
+  const handleChartClick = (params: { dataIndex?: number }) => {
+    if (!canNavigate) return;
+    const idx = typeof params?.dataIndex === 'number' ? params.dataIndex : null;
+    if (idx === null) return;
+    const item = visibleItems[idx];
+    if (!item) return;
+    const now = Date.now();
+    const lastTap = lastTapRef.current;
+    if (lastTap && lastTap.id === item.categoryId && now - lastTap.at < 1200) {
+      lastTapRef.current = null;
+      onCategoryNavigate?.(item.categoryId);
+      return;
+    }
+    lastTapRef.current = { id: item.categoryId, at: now };
+  };
+
+
   const option: EChartsOption = {
     backgroundColor: 'transparent',
     animation: false,
@@ -316,7 +348,13 @@ export function CategorySpendChart({
         lazyUpdate={true}
         style={{ height, overflow: 'visible' }}
         opts={{ renderer: 'svg' }}
+        onEvents={canNavigate ? { click: handleChartClick } : undefined}
       />
+
+
+      {canNavigate && (
+        <p className="mt-2 text-[11px] text-[var(--text-muted)]">Toca de nuevo para ver movimientos</p>
+      )}
 
       <ul className="sr-only" aria-label="Resumen por categoría">
         {visibleItems.map((item) => (
@@ -330,6 +368,9 @@ export function CategorySpendChart({
     </div>
   );
 }
+
+
+
 
 
 
