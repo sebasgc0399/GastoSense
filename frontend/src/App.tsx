@@ -162,6 +162,13 @@ function App() {
     () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     [plansRef],
   );
+  const scrollToMonthlyBudget = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const target = document.getElementById('monthly-budget-card');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
 
   const openSettings = useCallback((source: SettingsOpenSource = 'other') => {
     settingsOpenSourceRef.current = source;
@@ -200,6 +207,12 @@ function App() {
     setShowCategoryBudgets(false);
     setBudgetFocusCategory(null);
   }, []);
+
+  const openMonthlyBudget = useCallback(() => {
+    closeCategoryBudgets();
+    setActiveTab('home');
+    setTimeout(() => scrollToMonthlyBudget(), 120);
+  }, [closeCategoryBudgets, scrollToMonthlyBudget]);
 
   const openMovements = useCallback(
     (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
@@ -695,7 +708,7 @@ function App() {
             previousMonth={previousMonth}
             onOpenQuickAdd={() => openQuickAdd('expense')}
             onViewMovements={() => openMovements()}
-            onAdjustBudget={() => openBudgets()}
+            onAdjustBudget={openMonthlyBudget}
           />
         )}
         {activeTab === 'advisor' && (

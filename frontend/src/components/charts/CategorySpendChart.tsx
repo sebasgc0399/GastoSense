@@ -260,7 +260,7 @@ export function CategorySpendChart({
     `);
   };
 
-  const height = limit ? 170 : Math.max(240, visibleItems.length * 34 + 56);
+  const height = Math.max(limit ? 170 : 240, visibleItems.length * 34 + 56);
 
   const option: EChartsOption = {
     backgroundColor: 'transparent',

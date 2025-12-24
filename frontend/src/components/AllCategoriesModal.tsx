@@ -105,7 +105,7 @@ export function AllCategoriesModal({
             subtitle={monthLabel}
             items={visibleItems}
             mode={mode}
-            showFallbackId={true}
+            showFallbackId={false}
           />
         </div>
 
