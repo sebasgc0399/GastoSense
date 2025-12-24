@@ -14,6 +14,39 @@ const FALLBACK_CATEGORY_ID = 'otros';
 const FALLBACK_CATEGORY_LABEL = 'Otros';
 const FALLBACK_ICON = 'Tag';
 
+export type CategoryDuplicateCode = 'duplicate_active' | 'duplicate_archived';
+
+export class CategoryDuplicateError extends Error {
+  code: CategoryDuplicateCode;
+  categoryId: string;
+  label: string;
+
+  constructor(code: CategoryDuplicateCode, categoryId: string, label: string) {
+    super(code === 'duplicate_archived' ? 'Category exists but archived' : 'Category already exists');
+    this.name = 'CategoryDuplicateError';
+    this.code = code;
+    this.categoryId = categoryId;
+    this.label = label;
+  }
+}
+
+export const isCategoryDuplicateError = (err: unknown): err is CategoryDuplicateError => {
+  if (!err || typeof err !== 'object') return false;
+  const candidate = err as { code?: string; categoryId?: string; label?: string };
+  return (
+    (candidate.code === 'duplicate_active' || candidate.code === 'duplicate_archived') &&
+    typeof candidate.categoryId === 'string'
+  );
+};
+
+const normalizeCategoryLabelKey = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+
 export interface UseCategoriesControllerParams {
   userId: string | null | undefined;
   includeArchived?: boolean;
@@ -171,6 +204,18 @@ export function useCategoriesController({
   const addCategory = useCallback(
     async (payload: CategoryDraft) => {
       if (!userId) return;
+      const labelKey = normalizeCategoryLabelKey(payload.label);
+      if (labelKey) {
+        const allCategories = await getUserCategories(userId);
+        const duplicate = allCategories.find((cat) => normalizeCategoryLabelKey(cat.label) === labelKey);
+        if (duplicate) {
+          throw new CategoryDuplicateError(
+            duplicate.isArchived ? 'duplicate_archived' : 'duplicate_active',
+            duplicate.id,
+            duplicate.label,
+          );
+        }
+      }
       const maxOrder = categories
         .filter((cat) => cat.id !== FALLBACK_CATEGORY_ID)
         .reduce((max, cat) => Math.max(max, cat.order ?? 0), -1);
