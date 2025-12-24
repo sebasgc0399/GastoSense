@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -32,7 +33,7 @@ export function listenTransactions({ userId, startDate, endDate, category, onCha
 
   if (startDate) constraints.push(where('date', '>=', startDate));
   if (endDate) constraints.push(where('date', '<=', endDate));
-  if (category && category !== 'all') constraints.push(where('category', '==', category));
+  if (category && category !== 'all') constraints.push(where('categoryId', '==', category));
 
   const q = query(collection(db, COLLECTION), ...constraints);
 
@@ -48,12 +49,17 @@ export function listenTransactions({ userId, startDate, endDate, category, onCha
             : rawDate?.toDate
               ? rawDate.toDate().toISOString().slice(0, 10)
               : '';
+        const type = data.type === 'income' ? 'income' : 'expense';
+        const categoryId =
+          type === 'income'
+            ? (data.category ?? data.categoryId ?? 'ingreso')
+            : (data.categoryId ?? data.category ?? 'sin-categoria');
         return {
           id: docSnap.id,
           amount: Number(data.amount) || 0,
-          category: data.category ?? 'sin-categoria',
+          categoryId,
           note: data.note ?? '',
-          type: data.type === 'income' ? 'income' : 'expense',
+          type,
           date,
           paymentMethod: data.paymentMethod ?? 'otro',
           userId: data.userId,
@@ -78,7 +84,7 @@ export async function fetchTransactionsRange(params: {
   const constraints: QueryConstraint[] = [where('userId', '==', params.userId), orderBy('date', 'desc')];
   if (params.startDate) constraints.push(where('date', '>=', params.startDate));
   if (params.endDate) constraints.push(where('date', '<=', params.endDate));
-  if (params.category && params.category !== 'all') constraints.push(where('category', '==', params.category));
+  if (params.category && params.category !== 'all') constraints.push(where('categoryId', '==', params.category));
 
   const q = query(collection(db, COLLECTION), ...constraints);
   const snapshot = await getDocs(q);
@@ -92,12 +98,17 @@ export async function fetchTransactionsRange(params: {
         : rawDate?.toDate
           ? rawDate.toDate().toISOString().slice(0, 10)
           : '';
+    const type = data.type === 'income' ? 'income' : 'expense';
+    const categoryId =
+      type === 'income'
+        ? (data.category ?? data.categoryId ?? 'ingreso')
+        : (data.categoryId ?? data.category ?? 'sin-categoria');
     return {
       id: docSnap.id,
       amount: Number(data.amount) || 0,
-      category: data.category ?? 'sin-categoria',
+      categoryId,
       note: data.note ?? '',
-      type: data.type === 'income' ? 'income' : 'expense',
+      type,
       date,
       paymentMethod: data.paymentMethod ?? 'otro',
       userId: data.userId,
@@ -107,17 +118,43 @@ export async function fetchTransactionsRange(params: {
 
 export async function createTransaction(payload: TransactionInput, userId: string) {
   const db = getFirestoreDb();
-  await addDoc(collection(db, COLLECTION), {
-    ...payload,
+  const data: Record<string, unknown> = {
+    amount: payload.amount,
+    type: payload.type,
+    date: payload.date,
+    paymentMethod: payload.paymentMethod,
     userId,
     createdAt: serverTimestamp(),
-  });
+  };
+  if (payload.note !== undefined) data.note = payload.note;
+  if (payload.type === 'expense') {
+    data.categoryId = payload.categoryId;
+    data.category = payload.categoryId;
+  } else {
+    data.category = payload.categoryId || 'ingreso';
+  }
+  await addDoc(collection(db, COLLECTION), data);
 }
 
 export async function updateTransaction(id: string, payload: TransactionInput, userId: string) {
   const db = getFirestoreDb();
   const ref = doc(db, COLLECTION, id);
-  await updateDoc(ref, { ...payload, userId });
+  const data: Record<string, unknown> = {
+    amount: payload.amount,
+    type: payload.type,
+    date: payload.date,
+    paymentMethod: payload.paymentMethod,
+    userId,
+  };
+  if (payload.note !== undefined) data.note = payload.note;
+  if (payload.type === 'expense') {
+    data.categoryId = payload.categoryId;
+    data.category = payload.categoryId;
+  } else {
+    data.category = payload.categoryId || 'ingreso';
+    data.categoryId = deleteField();
+  }
+  await updateDoc(ref, data);
 }
 
 export async function deleteTransaction(id: string) {

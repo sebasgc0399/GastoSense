@@ -7,19 +7,24 @@ export interface TransactionsFilters {
   startDate: string;
   endDate: string;
   category: string;
+  search: string;
 }
+
+export type TransactionsSortBy = 'date_desc' | 'amount_desc';
 
 export interface UseTransactionsControllerParams {
   userId: string | null | undefined;
   txPageSize?: number;
+  sortBy?: TransactionsSortBy;
 }
 
-export function useTransactionsController({ userId, txPageSize = 8 }: UseTransactionsControllerParams) {
+export function useTransactionsController({ userId, txPageSize = 8, sortBy = 'date_desc' }: UseTransactionsControllerParams) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filters, setFilters] = useState<TransactionsFilters>({
     startDate: monthStartIso(),
     endDate: todayIso(),
     category: 'all',
+    search: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [txPage, setTxPage] = useState(1);
@@ -27,11 +32,11 @@ export function useTransactionsController({ userId, txPageSize = 8 }: UseTransac
   const loadedUserRef = useRef<string | null>(null);
 
   const handleFiltersChange = useCallback((next: TransactionsFilters) => {
-    const { startDate, endDate, category } = next;
+    const { startDate, endDate, category, search } = next;
     setTxPage(1);
     // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
     if (startDate && endDate && startDate > endDate) {
-      setFilters({ startDate: endDate, endDate: startDate, category });
+      setFilters({ startDate: endDate, endDate: startDate, category, search });
     } else {
       setFilters(next);
     }
@@ -67,13 +72,32 @@ export function useTransactionsController({ userId, txPageSize = 8 }: UseTransac
       },
     });
     return () => unsubscribe();
-  }, [filters, userId]);
+  }, [filters.category, filters.endDate, filters.startDate, userId]);
 
   const transactionsReady = !!userId && loadedUserId === userId;
-  const visibleTransactions = useMemo(
-    () => (transactionsReady ? transactions : []),
-    [transactions, transactionsReady],
-  );
+  const visibleTransactions = useMemo(() => {
+    if (!transactionsReady) return [];
+
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    const searchTerm = normalize(filters.search || '');
+    const filtered =
+      searchTerm.length > 0
+        ? transactions.filter((t) => normalize(`${t.note ?? ''} ${t.categoryId ?? ''}`).includes(searchTerm))
+        : transactions;
+
+    if (sortBy !== 'amount_desc') return filtered;
+    return [...filtered].sort((a, b) => {
+      const diff = b.amount - a.amount;
+      if (diff !== 0) return diff;
+      return b.date.localeCompare(a.date);
+    });
+  }, [filters.search, sortBy, transactions, transactionsReady]);
 
   const paginatedTransactions = useMemo(() => {
     const start = (txPage - 1) * txPageSize;

@@ -1,4 +1,4 @@
-type TabKey = 'home' | 'transactions' | 'advisor' | 'settings';
+type TabKey = 'home' | 'transactions' | 'metrics' | 'advisor' | 'settings';
 
 interface BottomNavProps {
   value: TabKey;
@@ -8,8 +8,8 @@ interface BottomNavProps {
 const tabs: { key: TabKey; label: string; iconSrc: string }[] = [
   { key: 'home', label: 'Inicio', iconSrc: '/icons/Home_64v2.svg' },
   { key: 'transactions', label: 'Movimientos', iconSrc: '/icons/Movements_64.svg' },
+  { key: 'metrics', label: 'M\u00E9tricas', iconSrc: '/icons/Chart_64.svg' },
   { key: 'advisor', label: 'Asesor IA', iconSrc: '/icons/RobotIA_64.svg' },
-  { key: 'settings', label: 'Config', iconSrc: '/icons/Gear_64.svg' },
 ];
 
 export function BottomNav({ value, onChange }: BottomNavProps) {
