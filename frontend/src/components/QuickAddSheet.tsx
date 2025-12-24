@@ -757,7 +757,7 @@ export function QuickAddSheet({
   return (
     <div className="fixed inset-0 z-40">
       <div className="modal-overlay absolute inset-0 bg-[var(--modal-overlay)] backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute inset-x-0 bottom-0 z-50 h-[90dvh] overflow-x-hidden overscroll-none touch-pan-y rounded-t-3xl bg-[var(--modal-surface)] shadow-2xl transition">
+      <div className="absolute inset-x-0 bottom-0 z-50 h-[90vh] h-[90dvh] max-h-[90svh] overflow-x-hidden overscroll-none touch-pan-y rounded-t-3xl bg-[var(--modal-surface)] shadow-2xl transition">
         <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-[var(--modal-surface)]">
           <div className="flex shrink-0 items-center justify-center py-1">
             <span className="h-1 w-12 rounded-full bg-[var(--card-border)]" />
@@ -944,7 +944,7 @@ export function QuickAddSheet({
               </div>
             </div>
           ) : (
-            <div className="mt-1 flex flex-1 flex-col overflow-hidden">
+            <div className="mt-1 flex flex-1 flex-col overflow-hidden min-h-0">
               <div className="shrink-0 px-4 py-1">
                 <div className="flex items-center justify-between">
                   <div className="inline-flex rounded-full bg-white/10 p-1 text-xs font-semibold text-[var(--text)]">
@@ -990,7 +990,7 @@ export function QuickAddSheet({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto [-webkit-overflow-scrolling:touch]">
                 {showDetails ? (
                   <div className="space-y-4 p-4">
                     <h3 className="text-sm font-semibold text-[var(--text)]">Detalles</h3>
@@ -1137,9 +1137,9 @@ export function QuickAddSheet({
                     )}
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col p-3">
+                  <div className="flex flex-col p-3">
                     {showCategorySkeleton ? (
-                      <div className="grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3">
+                      <div className="grid grid-cols-4 gap-2 pb-6 sm:gap-3">
                         {Array.from({ length: 8 }).map((_, idx) => (
                           <div
                             key={`category-skeleton-${idx}`}
@@ -1151,7 +1151,7 @@ export function QuickAddSheet({
                       <>
                         {showFallbackNotice && <p className="mb-2 text-xs text-amber-200">{fallbackMessage}</p>}
                         <div
-                          className={`grid flex-1 grid-cols-4 gap-2 pb-6 sm:gap-3 ${
+                          className={`grid grid-cols-4 gap-2 pb-6 sm:gap-3 ${
                             shouldHighlightCategorySelector ? 'rounded-2xl p-1 ring-2 ring-amber-400/60' : ''
                           }`}
                         >
