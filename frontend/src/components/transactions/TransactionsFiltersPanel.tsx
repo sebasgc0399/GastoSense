@@ -22,7 +22,7 @@ export function TransactionsFiltersPanel({
   categoryLabel,
 }: TransactionsFiltersPanelProps) {
   const [open, setOpen] = useState(false);
-  const searchValue = filters.search.trim();
+  const searchValue = (filters.search ?? '').trim();
   const showSearch = searchValue.length > 0;
   const hasCategoryFilter = filters.category !== 'all';
   const canClear = showSearch || hasCategoryFilter;
