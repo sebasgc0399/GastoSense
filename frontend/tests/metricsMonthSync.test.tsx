@@ -78,7 +78,11 @@ describe('selectedMonth sync (Metrics -> Movimientos)', () => {
     await user.click(screen.getByRole('button', { name: 'Ver movimientos' }));
 
     expect(screen.getByText('Movimientos')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('2025-11-01')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('2025-11-30')).toBeInTheDocument();
+    screen.getAllByLabelText('Desde').forEach((input) => {
+      expect(input).toHaveValue('2025-11-01');
+    });
+    screen.getAllByLabelText('Hasta').forEach((input) => {
+      expect(input).toHaveValue('2025-11-30');
+    });
   });
 });
