@@ -89,7 +89,7 @@ describe('MetricsPage', () => {
       />,
     );
 
-    expect(screen.getByText('Gasto del mes')).toBeInTheDocument();
+    expect(screen.getAllByText(/Gasto del mes/i)).toHaveLength(2);
     expect(screen.getByText('Presupuesto total')).toBeInTheDocument();
     expect(screen.getByText('Evoluci\u00F3n del mes')).toBeInTheDocument();
     expect(screen.getByTestId('evolution-chart')).toBeInTheDocument();
@@ -97,8 +97,8 @@ describe('MetricsPage', () => {
     expect(screen.getByTestId('category-spend-chart')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Barras' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Presupuesto' })).toBeInTheDocument();
-    expect(screen.queryByText('Ingresos del mes')).not.toBeInTheDocument();
-    expect(screen.queryByText('Balance')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ingresos del mes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Saldo disponible/i)).not.toBeInTheDocument();
   });
 
   it('renders Evoluci\u00F3n del mes and toggles to Acumulado when budget exists', async () => {
@@ -183,8 +183,8 @@ describe('MetricsPage', () => {
       />,
     );
 
-    expect(screen.getByText('Ingresos del mes')).toBeInTheDocument();
-    expect(screen.getByText('Balance')).toBeInTheDocument();
+    expect(screen.getAllByText(/Ingresos del mes/i)).toHaveLength(2);
+    expect(screen.getAllByText(/Saldo disponible/i)).toHaveLength(2);
   });
 
   it('does not render Top categorÃ­as when there are only incomes', () => {
@@ -291,7 +291,7 @@ describe('MetricsPage', () => {
 
     const categoryBudgetBtn = screen.getByRole('button', { name: 'Presupuesto' });
     expect(categoryBudgetBtn).toBeDisabled();
-    expect(screen.getByText('Define presupuestos por categor\u00EDa para comparar.')).toBeInTheDocument();
+    expect(screen.getByText('Para ver Presupuesto, define topes por categoría.')).toBeInTheDocument();
   });
 
   it('toggles to Presupuesto mode and unions budget categories (including budget-only)', async () => {
