@@ -12,10 +12,13 @@ export interface UseTemplatesControllerParams {
   onOpenQuickAdd: () => void;
 }
 
+type SelectedTemplateIntent = 'use' | 'edit';
+
 export interface TemplatesControllerResult {
   templates: Template[];
   recurringTemplates: Template[];
   selectedTemplate: Template | null;
+  selectedTemplateIntent: SelectedTemplateIntent | null;
   clearSelectedTemplate: () => void;
   fetchTemplates: () => Promise<void>;
   saveTemplate: (
@@ -28,11 +31,13 @@ export interface TemplatesControllerResult {
   ) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
   handleUseTemplate: (tpl: Template) => void;
+  handleEditTemplate: (tpl: Template) => void;
 }
 
 export function useTemplatesController({ userId, onOpenQuickAdd }: UseTemplatesControllerParams): TemplatesControllerResult {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [selectedTemplateIntent, setSelectedTemplateIntent] = useState<SelectedTemplateIntent | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     if (!userId) return;
@@ -83,11 +88,24 @@ export function useTemplatesController({ userId, onOpenQuickAdd }: UseTemplatesC
 
   const recurringTemplates = useMemo(() => templates.filter((t) => t.recurring), [templates]);
 
-  const clearSelectedTemplate = useCallback(() => setSelectedTemplate(null), []);
+  const clearSelectedTemplate = useCallback(() => {
+    setSelectedTemplate(null);
+    setSelectedTemplateIntent(null);
+  }, []);
 
   const handleUseTemplate = useCallback(
     (tpl: Template) => {
       setSelectedTemplate(tpl);
+      setSelectedTemplateIntent('use');
+      onOpenQuickAdd();
+    },
+    [onOpenQuickAdd],
+  );
+
+  const handleEditTemplate = useCallback(
+    (tpl: Template) => {
+      setSelectedTemplate(tpl);
+      setSelectedTemplateIntent('edit');
       onOpenQuickAdd();
     },
     [onOpenQuickAdd],
@@ -97,11 +115,13 @@ export function useTemplatesController({ userId, onOpenQuickAdd }: UseTemplatesC
     templates,
     recurringTemplates,
     selectedTemplate,
+    selectedTemplateIntent,
     clearSelectedTemplate,
     fetchTemplates,
     saveTemplate,
     updateTemplate,
     deleteTemplate,
     handleUseTemplate,
+    handleEditTemplate,
   };
 }

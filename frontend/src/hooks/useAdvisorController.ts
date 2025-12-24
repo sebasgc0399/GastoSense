@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { callAnalyzeMonthlyDeep, callAnalyzeSummary } from '../services/functions';
-import { fetchTransactionsRange } from '../services/transactions';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { callAnalyzeSummary } from '../services/functions';
 import { setUserAdvisorMode } from '../services/users';
 import type { AdvisorMode, IaQuota, UserRole } from '../types';
-import { todayIso } from '../utils/dates';
 
 type ChatItem = {
   id: string;
@@ -13,6 +11,11 @@ type ChatItem = {
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
   chartTop?: { category: string; amount: number }[];
+  actionData?: {
+    type: 'NAVIGATE_FILTER' | 'OPEN_BUDGET' | 'OPEN_MODAL';
+    label: string;
+    payload: Record<string, unknown>;
+  };
 };
 
 type AdvisorQuickAction = {
@@ -29,9 +32,45 @@ type FeatureLock = { id: string; title: string; description: string; badge: stri
 export type LastTransactionSummary = {
   amount: number;
   category: string;
+  note?: string;
   type: 'expense' | 'income';
   date: string;
 };
+
+function compactNote(note?: string): string | undefined {
+  if (typeof note !== 'string') return undefined;
+  const cleaned = note.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return undefined;
+  return cleaned.slice(0, 60);
+}
+
+function safeParseDateYYYYMMDD(input?: string): Date | null {
+  if (!input || typeof input !== 'string') return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) return null;
+  const d = new Date(`${input}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function subtractDaysIso(isoDate: string, days: number): string | null {
+  const d = safeParseDateYYYYMMDD(isoDate);
+  if (!d) return null;
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+function selectLastDays(txs: LastTransactionSummary[], days: number): LastTransactionSummary[] {
+  if (!Array.isArray(txs) || !txs.length) return [];
+  let endDate: string | null = null;
+  for (const t of txs) {
+    if (!t?.date || typeof t.date !== 'string') continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date)) continue;
+    if (!endDate || t.date > endDate) endDate = t.date;
+  }
+  if (!endDate) return txs;
+  const startDate = subtractDaysIso(endDate, Math.max(0, days - 1));
+  if (!startDate) return txs;
+  return txs.filter((t) => typeof t.date === 'string' && t.date >= startDate && t.date <= endDate);
+}
 
 export interface UseAdvisorControllerParams {
   userId: string | null | undefined;
@@ -76,7 +115,6 @@ export function useAdvisorController({
   monthlyIncome,
   topCategories,
   budgetTotal,
-  budgetPerCategory,
   previousMonth,
   lastTransactions,
   openUpgrade,
@@ -96,6 +134,12 @@ export function useAdvisorController({
   });
   const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
   const [advisorLoading, setAdvisorLoading] = useState(false);
+  const activeModeRef = useRef<AdvisorMode>(advisorMode);
+  const requestSeqRef = useRef(0);
+
+  useEffect(() => {
+    activeModeRef.current = advisorMode;
+  }, [advisorMode]);
 
   useEffect(() => {
     if (profileAdvisorMode !== 'amable' && profileAdvisorMode !== 'reganon') return;
@@ -126,6 +170,9 @@ export function useAdvisorController({
   const handleToneChange = useCallback(
     async (mode: AdvisorMode) => {
       if (mode === advisorMode) return;
+      // Invalida cualquier respuesta en vuelo para evitar que aparezca en un modo distinto.
+      requestSeqRef.current += 1;
+      setAdvisorLoading(false);
       setAdvisorMode(mode);
       setChatFeed([]);
       try {
@@ -146,7 +193,6 @@ export function useAdvisorController({
 
   const iaRole: UserRole = (userRole as UserRole) || (iaQuota?.role as UserRole) || 'free';
   const isFreeRole = iaRole === 'free';
-  const isManagedRole = ['paid_managed', 'gifted_managed', 'admin'].includes(iaRole);
 
   const parseExhausted =
     iaQuota?.parseLimit !== undefined && iaQuota?.parseLimit !== null ? iaQuota.parseUsed >= iaQuota.parseLimit : false;
@@ -189,22 +235,16 @@ export function useAdvisorController({
         requiresAnalyze: true,
         badge: 'PRO/BYOK',
       },
-      {
-        label: 'Análisis mensual profundo',
-        description: 'Compara tus últimos 3 meses y da un plan por categoría.',
-        action: 'Análisis mensual profundo',
-        locked: !isManagedRole,
-        requiresAnalyze: true,
-        badge: 'PRO',
-      },
     ],
-    [isFreeRole, isManagedRole],
+    [isFreeRole],
   );
 
   const featureLocks: FeatureLock[] = useMemo(() => [], []);
 
   const handleAdvisorAction = useCallback(
     async (action: string) => {
+      const requestMode = advisorMode;
+      const requestSeq = (requestSeqRef.current += 1);
       if (analyzeExhausted) {
         openUpgrade('analyze_exhausted');
         return;
@@ -226,124 +266,144 @@ export function useAdvisorController({
           kind: 'action',
         });
 
-        if (action === 'Análisis mensual profundo') {
-          const now = new Date();
-          const months: string[] = [];
-          for (let i = 2; i >= 0; i -= 1) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push(d.toISOString().slice(0, 7));
-          }
-          const rangeStart = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10);
-          const rangeEnd = todayIso();
-          const txs = await fetchTransactionsRange({ userId, startDate: rangeStart, endDate: rangeEnd });
-
-          const catMap: Record<string, { name: string; sums: number[]; isIncome?: boolean }> = {};
-          txs.forEach((tx) => {
-            if (!tx.date || !tx.category) return;
-            const m = tx.date.slice(0, 7);
-            const pos = months.indexOf(m);
-            if (pos === -1) return;
-            if (!catMap[tx.category]) {
-              catMap[tx.category] = { name: tx.category, sums: Array(months.length).fill(0), isIncome: tx.type === 'income' };
-            }
-            catMap[tx.category].sums[pos] += tx.amount;
-            if (tx.type === 'income') catMap[tx.category].isIncome = true;
-          });
-
-          const categories = Object.values(catMap).map((c) => ({
-            id: c.name,
-            name: c.name,
-            last3Months: c.sums,
-            last3Budgets: months.map((m) => (m === currentMonth && budgetPerCategory ? budgetPerCategory[c.name] ?? null : null)),
-            isIncome: c.isIncome,
-          }));
-
-          const payload = {
-            tone: advisorMode,
-            currency: 'COP',
-            userLocale: 'es-CO',
-            months,
-            categories,
-          };
-
-          const resp = await callAnalyzeMonthlyDeep({ input: payload });
-          const data = resp.data as {
-            summary?: string;
-            globalTrend?: string;
-            categoryPlans?: { categoryName: string; advice?: string; changePctVsAvg?: number; overBudgetPct?: number | null }[];
-            top3Actions?: string[];
-          };
-          const parts: string[] = [];
-          if (data.summary) parts.push(data.summary);
-          if (data.globalTrend) {
-            const trendText =
-              data.globalTrend === 'sube'
-                ? 'Gasto subiendo vs. promedio previo.'
-                : data.globalTrend === 'baja'
-                  ? 'Gasto bajando vs. promedio previo.'
-                  : 'Gasto estable vs. meses previos.';
-            parts.push(`Tendencia: ${trendText}`);
-          }
-          const plans = data.categoryPlans?.slice(0, 3) ?? [];
-          if (plans.length) {
-            parts.push('Categorías clave:');
-            plans.forEach((p) => {
-              const change =
-                typeof p.changePctVsAvg === 'number' ? `${p.changePctVsAvg > 0 ? '+' : ''}${Math.round(p.changePctVsAvg)}%` : '';
-              const over =
-                typeof p.overBudgetPct === 'number' && p.overBudgetPct > 0 ? `, sobre tope ${Math.round(p.overBudgetPct)}%` : '';
-              parts.push(`• ${p.categoryName}: ${p.advice ?? ''} (cambio ${change}${over})`);
-            });
-          }
-          const actionsSet = new Set<string>();
-          (data.top3Actions || []).forEach((a) => actionsSet.add(a));
-          const actions = Array.from(actionsSet).slice(0, 3);
-          if (actions.length) {
-            parts.push('');
-            parts.push('Acciones clave:');
-            actions.forEach((a) => parts.push(`• ${a}`));
-          }
-          pushFeedItem({
-            from: 'ia',
-            text: parts.join('\n'),
-            tone: advisorMode,
-            kind: 'ia',
-          });
-        } else {
-          const resp = await callAnalyzeSummary({
-            mode: advisorMode,
-            action,
-            summary: {
-              month: currentMonth,
-              totalExpense: monthlyExpense,
-              totalIncome: monthlyIncome,
-              topCategories: topCategories.slice(0, 3),
-              budget: budgetTotal ?? undefined,
-              lastTransactions: lastTransactions.slice(0, 3).map((tx) => ({
+        const txsForAdvisor = action === 'Resumen semanal' ? selectLastDays(lastTransactions, 14) : lastTransactions;
+        const resp = await callAnalyzeSummary({
+          mode: advisorMode,
+          action,
+          summary: {
+            month: currentMonth,
+            totalExpense: monthlyExpense,
+            totalIncome: monthlyIncome,
+            topCategories: topCategories.slice(0, 3),
+            budget: budgetTotal ?? undefined,
+            lastTransactions: txsForAdvisor.map((tx) => {
+              const note = compactNote(tx.note);
+              return {
                 amount: tx.amount,
                 category: tx.category,
                 type: tx.type,
                 date: tx.date,
-              })),
-              previousMonthExpense: previousMonth?.expense,
-              previousMonthIncome: previousMonth?.income,
-            },
-          });
-          const data = resp.data as { message?: string };
-          pushFeedItem({
-            from: 'ia',
-            text: data?.message ?? 'Sin respuesta de IA.',
-            tone: advisorMode,
-            kind: 'ia',
-            chartTop: action.toLowerCase().includes('plata')
-              ? topCategories.slice(0, 3).map((t) => ({ category: t.category, amount: t.amount }))
-              : undefined,
-          });
+                ...(note ? { note } : {}),
+              };
+            }),
+            previousMonthExpense: previousMonth?.expense,
+            previousMonthIncome: previousMonth?.income,
+          },
+        });
+        const data = resp.data as { message?: string };
+
+        const rawText = data?.message ?? 'Sin respuesta de IA.';
+        let workingText = rawText;
+
+        const actionRegex = /\[ACTION_DATA\]\s*(\{[\s\S]*\})\s*$/;
+        const actionMatch = workingText.match(actionRegex);
+
+        let dynamicActionData: ChatItem['actionData'];
+        let dynamicChartData: { category: string; amount: number }[] | undefined;
+
+        if (actionMatch && actionMatch[1]) {
+          workingText = workingText.replace(actionMatch[0], '').trim();
+          try {
+            const rawJson = actionMatch[1];
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(rawJson);
+            } catch {
+              parsed = JSON.parse(rawJson.replace(/'/g, '"'));
+            }
+
+            const obj = parsed as { type?: unknown; label?: unknown; payload?: unknown } | null;
+            const type = typeof obj?.type === 'string' ? obj.type : null;
+            const label = typeof obj?.label === 'string' ? obj.label.trim() : null;
+            const payload = obj?.payload;
+
+            const allowedTypes = ['NAVIGATE_FILTER', 'OPEN_BUDGET', 'OPEN_MODAL'] as const;
+            const isAllowedType = (t: string): t is (typeof allowedTypes)[number] =>
+              (allowedTypes as readonly string[]).includes(t);
+
+            if (
+              type &&
+              isAllowedType(type) &&
+              label &&
+              payload &&
+              typeof payload === 'object' &&
+              !Array.isArray(payload)
+            ) {
+              dynamicActionData = {
+                type,
+                label,
+                payload: payload as Record<string, unknown>,
+              };
+            }
+          } catch (e) {
+            console.error('Error parsing action data', e);
+          }
         }
+
+        const chartRegex = /\[CHART_DATA\]\s*(\[[\s\S]*?\])\s*$/;
+        const chartMatch = workingText.match(chartRegex);
+
+        if (chartMatch && chartMatch[1]) {
+          workingText = workingText.replace(chartMatch[0], '').trim();
+          try {
+            const rawJson = chartMatch[1];
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(rawJson);
+            } catch {
+              parsed = JSON.parse(rawJson.replace(/'/g, '"'));
+            }
+
+            if (Array.isArray(parsed)) {
+              const mapped = parsed
+                .map((d) => {
+                  const item = (d ?? {}) as { label?: unknown; value?: unknown };
+                  const label = typeof item.label === 'string' ? item.label.trim() : '';
+                  const valueRaw = item.value;
+                  const value =
+                    typeof valueRaw === 'number'
+                      ? valueRaw
+                      : typeof valueRaw === 'string'
+                        ? Number(valueRaw)
+                        : NaN;
+                  if (!label || !Number.isFinite(value)) return null;
+                  return { category: label, amount: value };
+                })
+                .filter((x): x is { category: string; amount: number } => Boolean(x));
+
+              if (mapped.length) {
+                dynamicChartData = mapped;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing chart data', e);
+          }
+        }
+
+        const cleanText = workingText.trim() || 'Sin respuesta de IA.';
+
+        if (activeModeRef.current !== requestMode || requestSeqRef.current !== requestSeq) {
+          console.log('Respuesta descartada por cambio de modo');
+          await refreshQuota();
+          return;
+        }
+
+        pushFeedItem({
+          from: 'ia',
+          text: cleanText,
+          tone: advisorMode,
+          kind: 'ia',
+          chartTop: dynamicChartData,
+          actionData: dynamicActionData,
+        });
 
         await refreshQuota();
       } catch (err) {
         console.error(err);
+        if (activeModeRef.current !== requestMode || requestSeqRef.current !== requestSeq) {
+          console.log('Error descartado por cambio de modo');
+          return;
+        }
         pushFeedItem({
           from: 'ia',
           text: mapAiError(err, 'analyze'),
@@ -354,14 +414,15 @@ export function useAdvisorController({
           triggerUpgradeOnce('analyze_exhausted');
         }
       } finally {
-        setAdvisorLoading(false);
+        if (requestSeqRef.current === requestSeq) {
+          setAdvisorLoading(false);
+        }
       }
     },
     [
       advisorMode,
       analyzeExhausted,
       budgetTotal,
-      budgetPerCategory,
       currentMonth,
       isResourceExhausted,
       lastTransactions,
