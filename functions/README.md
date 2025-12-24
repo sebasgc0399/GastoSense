@@ -1,6 +1,6 @@
-# Functions - GastoSense
+# Functions — GastoSense
 
-Firebase Functions (Node 20, TypeScript) para IA, cuotas semanales, manejo de claves, planes/pagos y perfiles/roles. Toda la logica vive aqui; no hay backend Express separado.
+Firebase Functions (Node 20, TypeScript) para IA, cuotas semanales, manejo de claves, planes/pagos y perfiles/roles. Toda la lógica de negocio vive aquí; no hay backend Express separado.
 
 ## Requisitos
 - Node 20.x (coincide con `engines`)
@@ -8,7 +8,7 @@ Firebase Functions (Node 20, TypeScript) para IA, cuotas semanales, manejo de cl
 - Proyecto Firebase configurado (Auth, Firestore, Hosting, Functions, Secret Manager)
 - Wompi para pagos
 
-## Instalacion y scripts
+## Instalación y scripts
 ```bash
 cd functions
 npm install
@@ -26,57 +26,38 @@ Configura en Firebase (secrets o env) al menos:
 - `WOMPI_REDIRECT_URL`
 - `WOMPI_PLAN_*` (IDs y precios)
 - `WOMPI_PLAN_CURRENCY`
-- `MAX_USERS` (limite de perfiles, opcional)
+- `MAX_USERS` (límite de perfiles, opcional)
 
 ## Endpoints principales (callable / HTTP / schedulers)
+- **IA**:
+  - `parseTransactionPhrase`: interpreta texto libre; descuenta cuota `parse`.
+  - `transcribeAudio`: Whisper (<=10s); descuenta cuota `parse`.
+  - `analyzeSummary`: Espejo diario / Gastos hormiga / Resumen semanal; descuenta `analyze`.
+- **Perfiles/cuotas**:
+  - `getUserProfile`, `registerUserEntry`.
+  - `getUsageQuota`: consumo y límite semanal por rol (free 5/2, BYOK 70/20, managed 90/20, admin 400/400; BYOK con clave gestionada o membresía expirada se degrada a free).
+  - `setUserAdvisorMode`: guarda tono (amable/regañón) en perfil.
+- **Claves**:
+  - `setUserOpenAIKey`, `clearUserOpenAIKey` (BYOK en Secret Manager).
+  - `setUserKeyPreference` (byok/managed, según rol/plan).
+- **Roles/usuarios**:
+  - `setUserRole` (solo admin), `listUsers` (hasta 200).
+- **Planes/pagos**:
+  - `getPlans`: precios totales por periodo.
+  - `createWompiCheckout`: genera URL de pago con firma (referencia `plan:period:uid:timestamp`).
+  - `wompiWebhook` (HTTP, idempotente): valida firma/monto/moneda; usa colección `payments/{transactionId}` para no procesar dos veces; calcula `expiresAt` extendiendo si renueva el mismo plan activo o reiniciando si cambia de plan/estaba vencido; actualiza rol (`paid_byok`/`paid_managed`), preferencia de clave (PRO ⇒ managed si no hay BYOK; BYOK ⇒ byok si no había) y suscripción activa.
+- **Scheduler**:
+  - `expireSubscriptions` (cron diario 00:00 UTC) marca suscripciones vencidas como `expired`.
 
-### IA
-- `parseTransactionPhrase`: interpreta texto libre; descuenta cuota `parse`.
-- `transcribeAudio`: Whisper (<=10s); descuenta cuota `parse`.
-- `analyzeSummary`: asesor IA con 4 acciones:
-  - Espejo diario
-  - Gastos hormiga
-  - Resumen semanal
-  - En que se va la plata
-  Respuesta puede incluir bloques `[CHART_DATA]` y `[ACTION_DATA]` (JSON estricto). Referencia: `docs/SYSTEM_PROMPT_MAESTRO.md`.
+## Firestore (referencia rápida)
+- Colecciones: `transactions`, `templates`, `budgets`, `users`, `usage`, `payments` (idempotencia de Wompi).
+- Reglas: cada doc pertenece a `userId`; `users` editable solo por admin; validaciones de tipos/enums y tamaños.
 
-### Perfiles / cuotas
-- `getUserProfile`, `registerUserEntry`
-- `getUsageQuota`: consumo y limite semanal por rol (free 5/2, paid_byok 70/20, paid_managed 90/20, gifted_managed 90/20, admin 400/400).
-- `setAdvisorMode`: guarda tono (amable/reganon) en perfil.
-
-### Claves
-- `setUserOpenAIKey`, `clearUserOpenAIKey` (BYOK en Secret Manager)
-- `setUserKeyPreference` (byok/managed, segun rol/plan)
-
-### Roles / usuarios
-- `listUsers` (hasta 200)
-- `setUserRole` (solo admin)
-
-### Planes / pagos
-- `getPlans`: precios totales por periodo
-- `createWompiCheckout`: genera URL de pago con firma (referencia `plan:period:uid:timestamp`)
-- `wompiWebhook` (HTTP, idempotente):
-  - valida firma/monto/moneda
-  - usa `payments/{transactionId}` para no procesar dos veces
-  - calcula `expiresAt` extendiendo si renueva el mismo plan activo o reiniciando si cambia de plan/estaba vencido
-  - actualiza rol (`paid_byok`/`paid_managed`) y preferencia de clave
-
-### Scheduler
-- `expireSubscriptions`: cron diario 00:00 UTC, marca suscripciones vencidas como `expired`.
-
-## Firestore (referencia rapida)
-- Colecciones: `transactions`, `templates`, `budgets`, `users`, `usage`, `payments`.
-- Reglas: cada doc pertenece a `userId`; `users` editable solo por admin; validaciones de tipos/enums y tamanos.
-
-## Notas tecnicas
-- Region: `us-central1`, `maxInstances: 10`.
+## Notas técnicas
+- Región: `us-central1`, `maxInstances: 10`.
 - BYOK se guarda en Secret Manager; clave gestionada via `OPENAI_API_KEY`.
-- Rate limiting semanal por rol en `usage/{uid}`.
-  - Membresia expirada degrada limites a free sin cambiar el rol almacenado.
-  - Paid BYOK usando clave gestionada se trata como free para limites.
-- `analyzeSummary` usa Responses API y produce texto + bloques opcionales para charts/acciones.
+- Rate limiting semanal por rol (`usage/{uid}` con clave de semana); membresía expirada degrada límites a free sin cambiar el rol almacenado; BYOK con clave gestionada se trata como free.
+- Wompi: firma HMAC/SHA256, referencia `plan:period:uid:timestamp`; helper `computeNewExpiresAt` extiende si es el mismo plan activo, o reinicia si cambia de plan o estaba vencido; `wompiWebhook` usa transacción e idempotencia con la colección `payments`.
 
 ## Desarrollo local
-- `npm run build` para validar tipado.
-- Si tienes emuladores configurados: `firebase emulators:start`.
+- Usa `npm run build` para asegurarte de tipado; no se incluye emulador en este README, pero puedes usar `firebase emulators:start` si lo tienes configurado.

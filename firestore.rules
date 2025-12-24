@@ -19,21 +19,15 @@ service cloud.firestore {
 
     // Validate common transaction fields
     function validTransaction() {
-      return request.resource.data.keys().hasAll(['amount','type','paymentMethod','date','userId'])
+      return request.resource.data.keys().hasAll(['amount','category','type','paymentMethod','date','userId'])
         && request.resource.data.amount is number
         && request.resource.data.type in ['expense','income']
-        && request.resource.data.paymentMethod in ['efectivo','debito','credito','digital','otro']
-        && (
-          request.resource.data.type == 'income'
-          || ('categoryId' in request.resource.data && request.resource.data.categoryId is string && request.resource.data.categoryId.size() <= 120)
-          || ('category' in request.resource.data && request.resource.data.category is string && request.resource.data.category.size() <= 120)
-        );
+        && request.resource.data.paymentMethod in ['efectivo','debito','credito','digital','otro'];
     }
 
     function validTemplate() {
       return requestUserMatches()
         && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 120))
-        && (!('categoryId' in request.resource.data) || (request.resource.data.categoryId is string && request.resource.data.categoryId.size() <= 120))
         && (!('category' in request.resource.data) || (request.resource.data.category is string && request.resource.data.category.size() <= 120))
         && (!('amount' in request.resource.data) || request.resource.data.amount is number)
         && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 500))
@@ -44,25 +38,12 @@ service cloud.firestore {
     }
 
     function validBudget() {
-      return isSignedIn()
-        && request.resource.data.keys().hasAny(['total','perCategory','month'])
+      return requestUserMatches()
+        && request.resource.data.keys().hasAny(['total','perCategory','month','userId'])
         && request.resource.data.month is string
-        && (!('total' in request.resource.data) || request.resource.data.total is number)
+        && request.resource.data.total is number
         && (!('perCategory' in request.resource.data) || request.resource.data.perCategory is map)
-        && (!('perCategory' in request.resource.data) || request.resource.data.perCategory.size() <= 50)
-        && (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid);
-    }
-
-    function validCategory() {
-      return request.resource.data.keys().hasAll(['label','icon','order'])
-        && request.resource.data.label is string
-        && request.resource.data.label.size() <= 120
-        && request.resource.data.icon is string
-        && request.resource.data.icon.size() <= 60
-        && request.resource.data.order is number
-        && (!('color' in request.resource.data) || (request.resource.data.color is string && request.resource.data.color.size() <= 12))
-        && (!('isArchived' in request.resource.data) || request.resource.data.isArchived is bool)
-        && (!('isSystem' in request.resource.data) || request.resource.data.isSystem is bool);
+        && (!('perCategory' in request.resource.data) || request.resource.data.perCategory.size() <= 50);
     }
 
     // Budgets are stored as {uid}_{month}; enforce that the caller matches the prefix
@@ -85,22 +66,15 @@ service cloud.firestore {
     }
 
     match /budgets/{docId} {
-      allow read, list: if budgetDocOwned(docId);
-      allow create: if budgetDocOwned(docId) && validBudget();
-      allow update: if budgetDocOwned(docId) && validBudget();
-      allow delete: if budgetDocOwned(docId);
+      allow read, list: if budgetDocOwned(docId) && (resource == null || resourceUserMatches());
+      allow create: if budgetDocOwned(docId) && requestUserMatches() && validBudget();
+      allow update: if budgetDocOwned(docId) && requestUserMatches() && resourceUserMatches() && validBudget();
+      allow delete: if budgetDocOwned(docId) && resourceUserMatches();
     }
 
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow write: if isAdmin();
-
-      match /categories/{categoryId} {
-        allow read, list: if isSignedIn() && request.auth.uid == uid;
-        allow create: if isSignedIn() && request.auth.uid == uid && validCategory();
-        allow update: if isSignedIn() && request.auth.uid == uid && validCategory();
-        allow delete: if isSignedIn() && request.auth.uid == uid;
-      }
     }
 
     // Deny everything else

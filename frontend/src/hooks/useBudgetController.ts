@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getBudget, saveBudgetPerCategory, saveBudgetTotal } from '../services/budgets';
+import { getBudget, saveBudget } from '../services/budgets';
 import type { Budget } from '../types';
 
 export interface UseBudgetControllerParams {
@@ -36,7 +36,7 @@ export function useBudgetController({ userId, currentMonth }: UseBudgetControlle
       setBudgetSaving(true);
       try {
         if (!userId) return;
-        await saveBudgetTotal({ uid: userId, month: currentMonth, total });
+        await saveBudget(userId, currentMonth, { total });
         const updated = await getBudget(userId, currentMonth);
         setBudget(updated);
       } catch (err) {
@@ -53,17 +53,16 @@ export function useBudgetController({ userId, currentMonth }: UseBudgetControlle
       setBudgetSaving(true);
       try {
         if (!userId) return;
-        await saveBudgetPerCategory({ uid: userId, month: currentMonth, perCategory });
+        await saveBudget(userId, currentMonth, { total: budget?.total || 0, perCategory });
         const updated = await getBudget(userId, currentMonth);
         setBudget(updated);
       } catch (err) {
         console.error(err);
-        throw err;
       } finally {
         setBudgetSaving(false);
       }
     },
-    [currentMonth, userId],
+    [budget?.total, currentMonth, userId],
   );
 
   return {
@@ -73,3 +72,4 @@ export function useBudgetController({ userId, currentMonth }: UseBudgetControlle
     handleSaveCategoryBudgets,
   };
 }
+
