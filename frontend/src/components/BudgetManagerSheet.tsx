@@ -1,8 +1,9 @@
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import type { Category } from '../types';
+import { formatPesos } from '../utils/format';
 import { CategoryIcon } from './ui/CategoryIcon';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
   categorySpendMap?: Record<string, number>;
   onSave: (perCategory: Record<string, number>) => Promise<void>;
   focusCategoryId?: string | null;
+  onViewCategory?: (categoryId: string) => void;
 }
 
 const toInputValue = (value?: number) => {
@@ -26,7 +28,21 @@ const normalizeAmount = (value?: string) => {
   return Math.max(0, Math.round(numeric));
 };
 
+const prunePerCategory = (valuesById: Record<string, number>, allowedIds?: Set<string>) => {
+  const pruned: Record<string, number> = {};
+  const hasAllowedIds = allowedIds && allowedIds.size > 0;
+
+  Object.entries(valuesById).forEach(([id, value]) => {
+    if (value <= 0) return;
+    if (hasAllowedIds && !allowedIds.has(id)) return;
+    pruned[id] = value;
+  });
+
+  return pruned;
+};
+
 const FALLBACK_CATEGORY_ID = 'otros';
+const allowBudgetForFallback = false;
 
 const sortCategories = (items: Category[]) =>
   [...items].sort((a, b) => {
@@ -43,6 +59,7 @@ export function BudgetManagerSheet({
   categorySpendMap,
   onSave,
   focusCategoryId,
+  onViewCategory,
 }: Props) {
   const { categories, loading, error } = useCategoriesController({ userId, includeArchived: true });
   const [values, setValues] = useState<Record<string, string>>({});
@@ -54,9 +71,8 @@ export function BudgetManagerSheet({
   const initializedRef = useRef(false);
 
   const sortedCategories = useMemo(() => sortCategories(categories), [categories]);
-  const fallbackBudget = useMemo(() => perCategory?.[FALLBACK_CATEGORY_ID] ?? 0, [perCategory]);
   const fallbackSpent = useMemo(() => categorySpendMap?.[FALLBACK_CATEGORY_ID] ?? 0, [categorySpendMap]);
-  const shouldShowFallback = useMemo(() => fallbackBudget > 0 || fallbackSpent > 0, [fallbackBudget, fallbackSpent]);
+  const shouldShowFallback = useMemo(() => fallbackSpent > 0, [fallbackSpent]);
   const activeCategories = useMemo(
     () =>
       sortedCategories.filter(
@@ -68,13 +84,14 @@ export function BudgetManagerSheet({
     () => sortedCategories.filter((cat) => cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID),
     [sortedCategories],
   );
-  const archivedWithBudget = useMemo(() => {
-    if (!perCategory) return [];
-    return archivedCategories.filter((cat) => (perCategory[cat.id] ?? 0) > 0);
-  }, [archivedCategories, perCategory]);
+  const archivedRelevant = useMemo(() => {
+    const budgetMap = perCategory ?? {};
+    const spendMap = categorySpendMap ?? {};
+    return archivedCategories.filter((cat) => (budgetMap[cat.id] ?? 0) > 0 || (spendMap[cat.id] ?? 0) > 0);
+  }, [archivedCategories, categorySpendMap, perCategory]);
   const visibleCategories = useMemo(
-    () => [...activeCategories, ...archivedWithBudget],
-    [activeCategories, archivedWithBudget],
+    () => [...activeCategories, ...archivedRelevant],
+    [activeCategories, archivedRelevant],
   );
 
   useEffect(() => {
@@ -108,8 +125,8 @@ export function BudgetManagerSheet({
   }, [open, perCategory, visibleCategories]);
 
   const focusIsArchived = useMemo(
-    () => !!focusCategoryId && archivedWithBudget.some((cat) => cat.id === focusCategoryId),
-    [archivedWithBudget, focusCategoryId],
+    () => !!focusCategoryId && archivedRelevant.some((cat) => cat.id === focusCategoryId),
+    [archivedRelevant, focusCategoryId],
   );
 
   useEffect(() => {
@@ -164,7 +181,9 @@ export function BudgetManagerSheet({
       visibleCategories.forEach((cat) => {
         computed[cat.id] = normalizeAmount(values[cat.id]);
       });
-      const nextPerCategory = { ...(perCategory ?? {}), ...computed };
+      delete computed[FALLBACK_CATEGORY_ID];
+      const allowedIds = categories.length > 0 ? new Set(categories.map((cat) => cat.id)) : undefined;
+      const nextPerCategory = prunePerCategory(computed, allowedIds);
       await onSave(nextPerCategory);
       setToastMessage('Presupuestos actualizados');
       onClose();
@@ -179,6 +198,9 @@ export function BudgetManagerSheet({
   const renderCategoryRow = (cat: Category) => {
     const value = values[cat.id] ?? '';
     const isFallback = cat.id === FALLBACK_CATEGORY_ID;
+    const disabled = isFallback && !allowBudgetForFallback;
+    const displayValue = disabled ? '' : value;
+    const spent = categorySpendMap?.[cat.id] ?? 0;
     return (
       <div
         key={cat.id}
@@ -193,20 +215,14 @@ export function BudgetManagerSheet({
               <p className="truncate text-sm font-semibold text-[var(--text)]">{cat.label}</p>
               {isFallback ? (
                 <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
-                  Sistema / fallback
-                </span>
-              ) : cat.isSystem ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
-                  Base
+                  Automatica
                 </span>
               ) : null}
             </div>
-            {isFallback && (
-              <p className="text-[10px] text-[var(--text-muted)]">Sugerencia: Sin tope</p>
-            )}
+            <p className="text-[10px] text-[var(--text-muted)]">Gastado este mes: {formatPesos(spent)}</p>
           </div>
         </div>
-        <div className="flex w-full items-center gap-2 sm:w-auto">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <input
             ref={(el) => {
               inputRefs.current[cat.id] = el;
@@ -215,18 +231,32 @@ export function BudgetManagerSheet({
             inputMode="numeric"
             min={0}
             step={1}
-            value={value}
-            placeholder="Sin tope"
+            value={displayValue}
+            placeholder={disabled ? 'No aplica' : 'Sin tope'}
             onChange={(e) => handleValueChange(cat.id, e.target.value)}
-            className="input w-full text-right sm:w-32"
+            disabled={disabled}
+            className="input w-full text-right sm:w-32 disabled:opacity-60"
           />
-          <button
-            type="button"
-            onClick={() => handleValueChange(cat.id, '0')}
-            className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
-          >
-            Sin tope
-          </button>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => handleValueChange(cat.id, '')}
+              className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
+            >
+              Sin tope
+            </button>
+          )}
+          {onViewCategory && (
+            <button
+              type="button"
+              onClick={() => onViewCategory(cat.id)}
+              className="flex items-center gap-1 rounded-lg border border-transparent px-2 py-2 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              aria-label={`Ver movimientos de ${cat.label}`}
+            >
+              Ver
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -288,18 +318,18 @@ export function BudgetManagerSheet({
                     <div className="space-y-3">{activeCategories.map(renderCategoryRow)}</div>
                   )}
 
-                  {archivedWithBudget.length > 0 && (
+                  {archivedRelevant.length > 0 && (
                     <div className="pt-2">
                       <button
                         type="button"
                         onClick={() => setArchivedOpen((prev) => !prev)}
                         className="flex w-full items-center justify-between rounded-xl border border-[var(--card-border)] bg-[var(--card)]/30 px-3 py-2 text-sm font-semibold text-[var(--text)]"
                       >
-                        <span>Inactivas con presupuesto</span>
+                        <span>Inactivas con presupuesto o gasto</span>
                         {archivedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </button>
                       {archivedOpen && (
-                        <div className="mt-3 space-y-3">{archivedWithBudget.map(renderCategoryRow)}</div>
+                        <div className="mt-3 space-y-3">{archivedRelevant.map(renderCategoryRow)}</div>
                       )}
                     </div>
                   )}

@@ -211,6 +211,13 @@ function App() {
     },
     [selectedMonth, txHandleFiltersChange],
   );
+  const handleViewCategory = useCallback(
+    (categoryId: string) => {
+      openMovements(categoryId);
+      closeCategoryBudgets();
+    },
+    [closeCategoryBudgets, openMovements],
+  );
 
   const handleAiActionClick = useCallback(
     (actionData: AiActionData) => {
@@ -797,6 +804,7 @@ function App() {
         categorySpendMap={categorySpendMap}
         onSave={handleSaveCategoryBudgets}
         focusCategoryId={budgetFocusCategory}
+        onViewCategory={handleViewCategory}
       />
 
         <TransactionEditModal

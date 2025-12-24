@@ -50,15 +50,19 @@ export function useBudgetController({ userId, currentMonth }: UseBudgetControlle
 
   const handleSaveCategoryBudgets = useCallback(
     async (perCategory: Record<string, number>) => {
+      if (!userId) return;
       setBudgetSaving(true);
       try {
-        if (!userId) return;
         await saveBudgetPerCategory({ uid: userId, month: currentMonth, perCategory });
+      } catch (err) {
+        console.error(err);
+        throw err;
+      }
+      try {
         const updated = await getBudget(userId, currentMonth);
         setBudget(updated);
       } catch (err) {
         console.error(err);
-        throw err;
       } finally {
         setBudgetSaving(false);
       }
