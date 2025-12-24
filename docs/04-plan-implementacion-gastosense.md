@@ -198,18 +198,12 @@
 
 ## 8) Fase 5 — Pagos, planes, y confianza (P0)
 
-### GS-P0-050 — Periodicidades + descuentos (implementado) y UX de selección
-- **Prioridad:** P0 · **Estado:** Hecho (lógica) / Pendiente (pulir UX/copy)
-- **Objetivo:** Maximizar conversión con selector claro, manteniendo coherencia de precios.
-- **Hecho (según producto actual):**
-  - Selector de periodicidad: **Mensual / Trimestral / Semestral / Anual**.
-  - Descuentos acumulados: **Trimestral -5%**, **Semestral -10%**, **Anual -15%** (vs mensual).
-- **Pendiente (UX recomendado):**
-  - Mostrar “equivalente mensual” (ej: “≈ $X/mes pagando anual”).
-  - Badges: **Anual = Mejor precio**; Semestral = Popular (cuando datos lo justifiquen).
+### GS-P0-050 — Periodicidades + descuentos (ya implementado) y UX de selección
+- **Prioridad:** P0 · **Estado:** Hecho/Parcial
+- **Objetivo:** Maximizar conversión con selector claro.
 - **Criterio de aceptación (UX):**
-  - El usuario entiende en <5s cuánto paga hoy y cuánto ahorra.
-  - No hay inconsistencias entre precio mostrado y cobrado.
+  - Muestra “equivalente mensual” y “ahorras X%”.
+  - Badges “Mejor precio” (anual).
 
 ### GS-P0-051 — Idempotencia y robustez en webhook Wompi
 - **Prioridad:** P0 · **Estado:** Pendiente/Parcial

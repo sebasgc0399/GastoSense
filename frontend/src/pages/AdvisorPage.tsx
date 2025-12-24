@@ -10,11 +10,6 @@ type ChatItem = {
   tone?: AdvisorMode;
   kind?: 'action' | 'tx' | 'ia';
   chartTop?: { category: string; amount: number }[];
-  actionData?: {
-    type: 'NAVIGATE_FILTER' | 'OPEN_BUDGET' | 'OPEN_MODAL';
-    label: string;
-    payload: Record<string, unknown>;
-  };
 };
 
 type AdvisorQuickAction = {
@@ -35,7 +30,6 @@ export interface AdvisorPageProps {
   analyzeExhausted: boolean;
   openUpgrade: (ctx: 'parse_exhausted' | 'analyze_exhausted' | 'feature_locked') => void;
   handleAdvisorAction: (action: string) => Promise<void>;
-  onActionClick: (actionData: NonNullable<ChatItem['actionData']>) => void;
   featureLocks: FeatureLock[];
   chatFeed: ChatItem[];
   advisorLoading: boolean;
@@ -49,7 +43,6 @@ export function AdvisorPage({
   analyzeExhausted,
   openUpgrade,
   handleAdvisorAction,
-  onActionClick,
   featureLocks,
   chatFeed,
   advisorLoading,
@@ -87,11 +80,9 @@ export function AdvisorPage({
             const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
             const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
             const badge = item.badge;
-            const disabled = locked || advisorLoading;
             return (
               <button
                 key={item.action}
-                disabled={disabled}
                 onClick={() =>
                   locked
                     ? openUpgrade(lockedByQuota ? 'analyze_exhausted' : 'feature_locked')
@@ -100,8 +91,8 @@ export function AdvisorPage({
                 className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
                   locked
                     ? 'border-dashed border-white/20 bg-white/5 opacity-80'
-                    : `border-white/10 bg-white/5 ${disabled ? '' : 'hover:border-primary'}`
-                } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+                    : 'border-white/10 bg-white/5 hover:border-primary'
+                }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-white">{item.label}</p>
@@ -176,10 +167,10 @@ export function AdvisorPage({
                         const pct = Math.round((ct.amount / max) * 100);
                         return (
                           <div key={ct.category} className="space-y-1">
-                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
-                            <span className="truncate">{ct.category}</span>
-                            <span className="whitespace-nowrap font-semibold">{formatPesos(ct.amount)}</span>
-                          </div>
+                            <div className="flex items-center justify-between text-[11px] text-slate-200">
+                              <span>{ct.category}</span>
+                              <span className="font-semibold">{formatPesos(ct.amount)}</span>
+                            </div>
                             <div className="h-2 rounded-full bg-white/10">
                               <div
                                 className="h-full rounded-full bg-primary"
@@ -189,17 +180,6 @@ export function AdvisorPage({
                           </div>
                         );
                       })}
-                    </div>
-                  )}
-                  {item.actionData && item.from === 'ia' && (
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => onActionClick(item.actionData!)}
-                        className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-primary"
-                      >
-                        {item.actionData.label}
-                      </button>
                     </div>
                   )}
                   {item.tone && item.from === 'ia' && (

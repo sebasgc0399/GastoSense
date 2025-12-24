@@ -2,11 +2,7 @@ import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchTransactionsRange, listenTransactions } from '../services/transactions';
 import type { Budget, IaQuota, Template, Transaction } from '../types';
-import { monthRangeIso, previousMonthRange } from '../utils/dates';
-import { buildCategorySpendMap, sumByType, topCategories } from '../utils/txAgg';
-import { useCategoriesController } from './useCategoriesController';
-import type { CategoryResolver } from '../utils/categoryResolver';
-import { buildCategoryResolver, resolveCanonicalCategoryId, resolveCategoryLabel } from '../utils/categoryResolver';
+import { monthEndIso, monthStartIso, previousMonthRange } from '../utils/dates';
 
 export type SmartCard = {
   id: string;
@@ -40,7 +36,6 @@ export interface HomeMonthControllerResult {
   availableBalance: number;
   topExpenses: { category: string; amount: number }[];
   categorySpendMap: Record<string, number>;
-  categoryResolver: CategoryResolver;
   previousMonth: { expense: number; income: number } | null;
   recurringTemplates: Template[];
   smartCards: SmartCard[];
@@ -71,8 +66,6 @@ export function useHomeMonthController({
   const [previousMonth, setPreviousMonth] = useState<{ expense: number; income: number } | null>(null);
   const [smartCards, setSmartCards] = useState<SmartCard[]>([]);
   const [smartCardIndex, setSmartCardIndex] = useState(0);
-  const { categories } = useCategoriesController({ userId, includeArchived: true });
-  const categoryResolver = useMemo(() => buildCategoryResolver(categories), [categories]);
 
   useEffect(() => {
     if (userId) return;
@@ -82,7 +75,8 @@ export function useHomeMonthController({
 
   useEffect(() => {
     if (!userId) return;
-    const { startDate: start, endDate: end } = monthRangeIso(currentMonth);
+    const start = monthStartIso(currentMonth);
+    const end = monthEndIso(currentMonth);
     const unsubscribe = listenTransactions({
       userId,
       startDate: start,
@@ -100,8 +94,8 @@ export function useHomeMonthController({
     fetchTransactionsRange({ userId, startDate: range.start, endDate: range.end })
       .then((prev) => {
         if (cancelled) return;
-        const expense = sumByType(prev, 'expense');
-        const income = sumByType(prev, 'income');
+        const expense = prev.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+        const income = prev.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
         setPreviousMonth({ expense, income });
       })
       .catch((err) => console.error(err));
@@ -112,35 +106,36 @@ export function useHomeMonthController({
 
   const monthTransactions = useMemo(() => (userId ? homeMonthTransactions : []), [homeMonthTransactions, userId]);
 
-  const monthlyExpense = useMemo(() => sumByType(monthTransactions, 'expense'), [monthTransactions]);
-  const monthlyIncome = useMemo(() => sumByType(monthTransactions, 'income'), [monthTransactions]);
+  const monthlyExpense = useMemo(
+    () => monthTransactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
+    [monthTransactions],
+  );
+  const monthlyIncome = useMemo(
+    () => monthTransactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
+    [monthTransactions],
+  );
   const availableBalance = useMemo(() => monthlyIncome - monthlyExpense, [monthlyIncome, monthlyExpense]);
 
-  const categorySpendMap = useMemo(
-    () => buildCategorySpendMap(monthTransactions, categoryResolver),
-    [monthTransactions, categoryResolver],
-  );
+  const topExpenses = useMemo(() => {
+    const byCat: Record<string, number> = {};
+    monthTransactions
+      .filter((t) => t.type === 'expense')
+      .forEach((tx) => {
+        byCat[tx.category] = (byCat[tx.category] || 0) + tx.amount;
+      });
+    return Object.entries(byCat)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([category, amount]) => ({ category, amount }));
+  }, [monthTransactions]);
 
-  const topExpenses = useMemo(() => topCategories(categorySpendMap, 3), [categorySpendMap]);
-
-  const resolveCategoryLabelSafe = useCallback(
-    (categoryId: string) => resolveCategoryLabel(categoryId, categoryResolver) ?? 'Categoría eliminada',
-    [categoryResolver],
-  );
-
-  const normalizedBudgetPerCategory = useMemo(() => {
-    const perCategory = budget?.perCategory ?? {};
-    const normalized: Record<string, number> = {};
-    for (const [rawId, rawValue] of Object.entries(perCategory)) {
-      const canonicalId = resolveCanonicalCategoryId(rawId, categoryResolver);
-      const budgetValue = typeof rawValue === 'number' ? rawValue : Number(rawValue);
-      if (!Number.isFinite(budgetValue)) continue;
-      const prev = normalized[canonicalId];
-      if (prev === undefined) normalized[canonicalId] = budgetValue;
-      else normalized[canonicalId] = Math.max(prev, budgetValue);
-    }
-    return normalized;
-  }, [budget?.perCategory, categoryResolver]);
+  const categorySpendMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    monthTransactions.forEach((tx) => {
+      map[tx.category] = (map[tx.category] || 0) + tx.amount;
+    });
+    return map;
+  }, [monthTransactions]);
 
   const recurringTemplates = useMemo(() => templates.filter((t) => t.recurring), [templates]);
 
@@ -207,11 +202,11 @@ export function useHomeMonthController({
     const today = new Date();
 
     const categoryPercents =
-      Object.keys(normalizedBudgetPerCategory).length > 0
-        ? Object.entries(normalizedBudgetPerCategory).map(([categoryId, limit]) => {
-            const spent = categorySpendMap[categoryId] || 0;
+      budget?.perCategory && Object.keys(budget.perCategory).length
+        ? Object.entries(budget.perCategory).map(([cat, limit]) => {
+            const spent = categorySpendMap[cat] || 0;
             const percent = limit ? (spent / limit) * 100 : 0;
-            return { categoryId, label: resolveCategoryLabelSafe(categoryId), spent, limit, percent };
+            return { cat, spent, limit, percent };
           })
         : [];
 
@@ -228,14 +223,14 @@ export function useHomeMonthController({
         id: 'budget_over_100',
         slot: 1,
         title: 'Presupuesto excedido',
-        body: `Te pasaste ${formatPesos(overCat.spent - overCat.limit)} en ${overCat.label} este mes.`,
+        body: `Te pasaste ${formatPesos(overCat.spent - overCat.limit)} en ${overCat.cat} este mes.`,
         primaryAction: {
           label: 'Ajustar tope',
-          onClick: () => openBudgets(overCat.categoryId),
+          onClick: () => openBudgets(overCat.cat),
         },
         secondaryAction: {
           label: 'Ver movimientos',
-          onClick: () => openMovements(overCat.categoryId),
+          onClick: () => openMovements(overCat.cat),
         },
       });
     } else if (nearCat) {
@@ -243,19 +238,19 @@ export function useHomeMonthController({
         id: 'budget_near_100',
         slot: 1,
         title: 'Presupuesto al límite',
-        body: `Vas en ${Math.round(nearCat.percent)}% de tu tope en ${nearCat.label}. Te quedan ${formatPesos(
+        body: `Vas en ${Math.round(nearCat.percent)}% de tu tope en ${nearCat.cat}. Te quedan ${formatPesos(
           nearCat.limit - nearCat.spent,
         )}.`,
         primaryAction: {
           label: 'Ajustar tope',
-          onClick: () => openBudgets(nearCat.categoryId),
+          onClick: () => openBudgets(nearCat.cat),
         },
         secondaryAction: {
           label: 'Ver movimientos',
-          onClick: () => openMovements(nearCat.categoryId),
+          onClick: () => openMovements(nearCat.cat),
         },
       });
-    } else if (Object.keys(normalizedBudgetPerCategory).length === 0) {
+    } else if (!budget?.perCategory || Object.keys(budget.perCategory || {}).length === 0) {
       cards.push({
         id: 'create_budget',
         slot: 1,
@@ -269,14 +264,13 @@ export function useHomeMonthController({
     }
 
     // Slot 2: optimización presupuesto
-    const topWithoutBudget = topExpenses.find((t) => !normalizedBudgetPerCategory[t.category]);
+    const topWithoutBudget = topExpenses.find((t) => !(budget?.perCategory && budget.perCategory[t.category]));
     if (topWithoutBudget) {
-      const topWithoutBudgetLabel = resolveCategoryLabelSafe(topWithoutBudget.category);
       cards.push({
         id: 'set_cap_top_category',
         slot: 2,
-        title: `Fija un tope para ${topWithoutBudgetLabel}`,
-        body: `${topWithoutBudgetLabel} ya suma ${formatPesos(topWithoutBudget.amount)} este mes.`,
+        title: `Fija un tope para ${topWithoutBudget.category}`,
+        body: `${topWithoutBudget.category} ya suma ${formatPesos(topWithoutBudget.amount)} este mes.`,
         primaryAction: {
           label: 'Ver presupuesto',
           onClick: () => openBudgets(topWithoutBudget.category),
@@ -290,10 +284,10 @@ export function useHomeMonthController({
           id: 'redistribute_budget',
           slot: 2,
           title: 'Redistribuye tu presupuesto',
-          body: `Te sobra ${formatPesos(surplus.limit - surplus.spent)} en ${surplus.label} y falta en ${deficit.label}.`,
+          body: `Te sobra ${formatPesos(surplus.limit - surplus.spent)} en ${surplus.cat} y falta en ${deficit.cat}.`,
           primaryAction: {
             label: 'Mover tope',
-            onClick: () => openBudgets(deficit.categoryId),
+            onClick: () => openBudgets(deficit.cat),
           },
         });
       } else if (surplus && dayOfMonth > 15) {
@@ -301,10 +295,10 @@ export function useHomeMonthController({
           id: 'lower_budget',
           slot: 2,
           title: 'Presupuesto holgado',
-          body: `En ${surplus.label} usas menos del 40% del tope. ¿Bajamos para ahorrar más?`,
+          body: `En ${surplus.cat} usas menos del 40% del tope. ¿Bajamos para ahorrar más?`,
           primaryAction: {
             label: 'Ajustar tope',
-            onClick: () => openBudgets(surplus.categoryId),
+            onClick: () => openBudgets(surplus.cat),
           },
         });
       }
@@ -416,15 +410,14 @@ export function useHomeMonthController({
         },
       });
     } else if (topExpenses[0]) {
-      const topExpenseLabel = resolveCategoryLabelSafe(topExpenses[0].category);
       cards.push({
         id: 'top_category_story',
         slot: 4,
         title: 'Categoría que marca el mes',
-        body: `${topExpenseLabel} es tu gasto principal: ${formatPesos(topExpenses[0].amount)} este mes.`,
+        body: `${topExpenses[0].category} es tu gasto principal: ${formatPesos(topExpenses[0].amount)} este mes.`,
         primaryAction: {
           label: 'Pedir consejo',
-          onClick: () => openAdvisor({ category: topExpenseLabel }),
+          onClick: () => openAdvisor({ category: topExpenses[0].category }),
         },
       });
     }
@@ -439,6 +432,7 @@ export function useHomeMonthController({
     const timeoutId = window.setTimeout(() => setSmartCards(finalCards), 0);
     return () => window.clearTimeout(timeoutId);
   }, [
+    budget?.perCategory,
     categorySpendMap,
     dayOfMonth,
     daysElapsed,
@@ -456,8 +450,6 @@ export function useHomeMonthController({
     openQuickAdd,
     previousMonth,
     recurringTemplates,
-    normalizedBudgetPerCategory,
-    resolveCategoryLabelSafe,
     topExpenses,
     todayStart,
     transactions,
@@ -502,7 +494,6 @@ export function useHomeMonthController({
     availableBalance,
     topExpenses,
     categorySpendMap,
-    categoryResolver,
     previousMonth,
     recurringTemplates,
     smartCards,

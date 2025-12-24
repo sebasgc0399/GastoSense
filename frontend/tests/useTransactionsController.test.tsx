@@ -63,7 +63,7 @@ describe('useTransactionsController', () => {
     const list: Transaction[] = Array.from({ length: 5 }, (_, i) => ({
       id: `t${i + 1}`,
       amount: i + 1,
-      categoryId: 'food',
+      category: 'Food',
       note: '',
       type: 'expense',
       date: '2025-12-01',

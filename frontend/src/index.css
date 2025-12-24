@@ -11,11 +11,8 @@
   --card-shadow: none;
   --text: #e2e8f0;
   --text-muted: #94a3b8;
-  --muted: var(--text-muted);
-  --text-on-primary: #ffffff;
   --primary: #0ea5e9;
   --accent: #22c55e;
-  --modal-overlay: rgba(2, 6, 23, 0.6);
   --modal-surface: rgba(15, 23, 42, 0.92);
   --modal-border: rgba(255, 255, 255, 0.18);
   --modal-header: rgba(255, 255, 255, 0.08);
@@ -48,11 +45,8 @@
   --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --text: #1e293b;
   --text-muted: #64748b;
-  --muted: var(--text-muted);
-  --text-on-primary: #ffffff;
   --primary: #0ea5e9;
   --accent: #0f766e;
-  --modal-overlay: rgba(15, 23, 42, 0.35);
   --modal-surface: #ffffff;
   --modal-border: #e2e8f0;
   --modal-header: #f8fafc;
@@ -76,18 +70,9 @@
   --blob-3: #e0f2fe;
 }
 
-html,
-body {
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
-  touch-action: manipulation;
-  position: fixed;
-}
-
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
   background-color: var(--bg);
   color: var(--text);
@@ -95,30 +80,7 @@ body {
 }
 
 #root {
-  height: 100%;
-  overflow-y: auto;
-}
-
-.modal-overlay {
-  touch-action: none;
-  overscroll-behavior: none;
-}
-
-@media (orientation: landscape) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
-  #root::before {
-    content: 'Gira tu telefono para continuar';
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    padding: 2rem;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 1rem;
-    font-weight: 600;
-  }
+  min-height: 100vh;
 }
 
 /* Reutilizables */
