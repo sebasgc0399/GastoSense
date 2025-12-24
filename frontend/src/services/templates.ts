@@ -14,7 +14,7 @@ export async function fetchTemplates(userId: string): Promise<Template[]> {
     return {
       id: docSnap.id,
       name: data.name ?? '',
-      category: data.category ?? '',
+      categoryId: data.categoryId ?? data.category ?? '',
       amount: data.amount ?? undefined,
       note: data.note ?? undefined,
       paymentMethod: data.paymentMethod ?? undefined,
@@ -37,7 +37,10 @@ export async function saveTemplate(name: string, payload: Partial<TransactionInp
     recurring: (payload as { recurring?: boolean })?.recurring ?? false,
     createdAt: new Date().toISOString(),
   };
-  if (payload.category) data.category = payload.category;
+  if (payload.categoryId && payload.type !== 'income') {
+    data.categoryId = payload.categoryId;
+    data.category = payload.categoryId;
+  }
   if (typeof payload.amount === 'number') data.amount = payload.amount;
   if (payload.note) data.note = payload.note;
   if (payload.paymentMethod) data.paymentMethod = payload.paymentMethod;
@@ -56,7 +59,10 @@ export async function updateTemplate(
   const ref = doc(db, COLLECTION, id);
   const data: Record<string, unknown> = { updatedAt: new Date().toISOString(), userId };
   if (payload.name) data.name = payload.name.trim();
-  if (payload.category) data.category = payload.category;
+  if (payload.categoryId && payload.type !== 'income') {
+    data.categoryId = payload.categoryId;
+    data.category = payload.categoryId;
+  }
   if (typeof payload.amount === 'number') data.amount = payload.amount;
   if (payload.note !== undefined) data.note = payload.note;
   if (payload.paymentMethod) data.paymentMethod = payload.paymentMethod;

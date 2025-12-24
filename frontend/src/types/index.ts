@@ -6,7 +6,7 @@ export type PaymentMethod = 'efectivo' | 'debito' | 'credito' | 'digital' | 'otr
 
 export interface TransactionInput {
   amount: number;
-  category: string;
+  categoryId: string;
   note?: string;
   type: TransactionType;
   date: string;
@@ -18,9 +18,13 @@ export interface Transaction extends TransactionInput {
   userId?: string;
 }
 
+export type CategoryFallbackReason = 'explicit_other' | 'no_match' | 'ambiguous' | 'empty';
+
 export interface ParsedTransactionSuggestion extends TransactionInput {
   confidence?: number;
   rawText?: string;
+  categoryFallback?: boolean;
+  categoryFallbackReason?: CategoryFallbackReason;
 }
 
 export interface SpendingSummaryCard {
@@ -37,10 +41,20 @@ export interface Budget {
   updatedAt?: string;
 }
 
+export interface Category {
+  id: string; // Ej: 'comida' (mantiene compatibilidad)
+  label: string; // Ej: 'Alimentacion'
+  icon: string; // Nombre del icono Lucide (Ej: 'Utensils')
+  color?: string;
+  order: number;
+  isArchived?: boolean;
+  isSystem?: boolean;
+}
+
 export interface Template {
   id: string;
   name: string;
-  category: string;
+  categoryId?: string;
   amount?: number;
   note?: string;
   paymentMethod?: PaymentMethod;

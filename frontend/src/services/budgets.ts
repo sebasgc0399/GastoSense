@@ -20,21 +20,45 @@ export async function getBudget(userId: string, month: string): Promise<Budget |
   };
 }
 
-export async function saveBudget(
-  userId: string,
-  month: string,
-  payload: { total: number; perCategory?: Record<string, number> },
-) {
+export async function saveBudgetTotal({
+  uid,
+  month,
+  total,
+}: {
+  uid: string;
+  month: string;
+  total: number;
+}) {
   const db = getFirestoreDb();
-  const ref = doc(db, COLLECTION, `${userId}_${month}`);
+  const ref = doc(db, COLLECTION, `${uid}_${month}`);
   await setDoc(
     ref,
     {
       month,
-      total: payload.total,
-      perCategory: payload.perCategory ?? {},
+      total,
       updatedAt: serverTimestamp(),
-      userId,
+    },
+    { merge: true },
+  );
+}
+
+export async function saveBudgetPerCategory({
+  uid,
+  month,
+  perCategory,
+}: {
+  uid: string;
+  month: string;
+  perCategory: Record<string, number>;
+}) {
+  const db = getFirestoreDb();
+  const ref = doc(db, COLLECTION, `${uid}_${month}`);
+  await setDoc(
+    ref,
+    {
+      month,
+      perCategory,
+      updatedAt: serverTimestamp(),
     },
     { merge: true },
   );

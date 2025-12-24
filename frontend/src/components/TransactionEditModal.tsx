@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { frequentCategories, paymentMethods } from '../data/frequentCategories';
+import { useEffect, useMemo, useState } from 'react';
+import { paymentMethods } from '../data/frequentCategories';
+import { useCategoriesController } from '../hooks/useCategoriesController';
 import { ResponsiveSelect } from './ResponsiveSelect';
 import type { Transaction, TransactionInput } from '../types';
 
@@ -9,18 +10,29 @@ interface Props {
   onClose: () => void;
   onSave: (id: string, payload: TransactionInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  userId?: string | null;
 }
 
-export function TransactionEditModal({ open, transaction, onClose, onSave, onDelete }: Props) {
+export function TransactionEditModal({ open, transaction, onClose, onSave, onDelete, userId }: Props) {
   const [form, setForm] = useState<TransactionInput | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const resolvedUserId = userId ?? transaction?.userId ?? null;
+  const { categories } = useCategoriesController({ userId: resolvedUserId, includeArchived: true });
+  const categoryOptions = useMemo(() => {
+    const options = categories.map((cat) => ({ value: cat.id, label: cat.label }));
+    const currentId = form?.categoryId;
+    if (currentId && !options.some((opt) => opt.value === currentId)) {
+      options.unshift({ value: currentId, label: 'Categoría eliminada' });
+    }
+    return options;
+  }, [categories, form?.categoryId]);
 
   useEffect(() => {
     if (transaction) {
       setForm({
         amount: transaction.amount,
-        category: transaction.category,
+        categoryId: transaction.categoryId,
         note: transaction.note ?? '',
         type: transaction.type,
         paymentMethod: transaction.paymentMethod,
@@ -97,9 +109,9 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
           <div>
             <label className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">Categoría</label>
             <ResponsiveSelect
-              value={form.category}
-              onChange={(val) => handleChange('category', val)}
-              options={frequentCategories.map((cat) => ({ value: cat.id, label: cat.label }))}
+              value={form.categoryId}
+              onChange={(val) => handleChange('categoryId', val)}
+              options={categoryOptions}
               title="Categoría"
             />
           </div>

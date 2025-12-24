@@ -1,8 +1,11 @@
 import type React from 'react';
 import { BudgetCard } from '../components/BudgetCard';
-import { CategoryBudgets } from '../components/CategoryBudgets';
+import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
+import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { TopExpensesChart } from '../components/TopExpensesChart';
 import { CardStat } from '../components/stats/CardStat';
+import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
+import type { CategorySpendItem } from '../components/charts/CategorySpendChart';
 import type { Budget, Template } from '../types';
 
 type SmartCard = {
@@ -24,9 +27,8 @@ export interface HomePageProps {
   budget: Budget | null;
   handleSaveBudget: (total: number) => Promise<void>;
   budgetSaving: boolean;
-  categoryBudgetsRef: React.RefObject<HTMLDivElement | null>;
-  handleSaveCategoryBudgets: (perCategory: Record<string, number>) => Promise<void>;
-  topExpenses: { category: string; amount: number }[];
+  onEditCategoryBudgets: () => void;
+  topExpenseItems: CategorySpendItem[];
   smartCards: SmartCard[];
   smartCardIndex: number;
   setSmartCardIndex: React.Dispatch<React.SetStateAction<number>>;
@@ -34,8 +36,10 @@ export interface HomePageProps {
   handleNextInsight: () => void;
   handleTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
   handleTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
+  resolveCategoryLabel: (categoryId?: string) => string;
   recurringTemplates: Template[];
   handleUseTemplate: (tpl: Template) => void;
+  handleEditTemplate: (tpl: Template) => void;
   handleDeleteTemplate: (id: string) => Promise<void>;
 }
 
@@ -49,9 +53,8 @@ export function HomePage({
   budget,
   handleSaveBudget,
   budgetSaving,
-  categoryBudgetsRef,
-  handleSaveCategoryBudgets,
-  topExpenses,
+  onEditCategoryBudgets,
+  topExpenseItems,
   smartCards,
   smartCardIndex,
   setSmartCardIndex,
@@ -59,13 +62,34 @@ export function HomePage({
   handleNextInsight,
   handleTouchStart,
   handleTouchEnd,
+  resolveCategoryLabel,
   recurringTemplates,
   handleUseTemplate,
+  handleEditTemplate,
   handleDeleteTemplate,
 }: HomePageProps) {
+  const summaryItems = [
+    { label: 'Gasto mensual', value: monthlyExpense, tone: 'danger' as const },
+    { label: 'Ingreso mensual', value: monthlyIncome, tone: 'success' as const },
+    {
+      label: 'Saldo disponible',
+      value: availableBalance,
+      tone: availableBalance >= 0 ? ('success' as const) : ('danger' as const),
+    },
+  ];
+
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <ReferenceMonthCard
+        currentMonth={currentMonth}
+        defaultMonth={defaultMonth}
+        onChange={setCurrentMonth}
+        description="Cambia el mes para ver presupuestos y totales."
+      />
+
+      <StatsSummaryCard className="sm:hidden" items={summaryItems} />
+
+      <div className="hidden gap-3 sm:grid sm:grid-cols-3">
         <CardStat title="Gasto mensual" value={monthlyExpense} tone="danger" subtitle="Objetivo: no pasar presupuesto." />
         <CardStat title="Ingreso mensual" value={monthlyIncome} tone="success" subtitle="Suma ingresos fijos." />
         <CardStat
@@ -76,35 +100,23 @@ export function HomePage({
         />
       </div>
 
-      <div className="card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs uppercase text-[var(--text-muted)]">Mes de referencia</p>
-          <p className="text-sm text-[var(--text-muted)]">Cambia el mes para ver presupuestos y totales.</p>
-        </div>
-        <input
-          type="month"
-          value={currentMonth}
-          onChange={(e) => setCurrentMonth(e.target.value || defaultMonth)}
-          className="input w-full sm:w-auto sm:min-w-[180px]"
-        />
-      </div>
-
-      <div className="card p-0">
-        <BudgetCard
-          month={currentMonth}
-          totalExpense={monthlyExpense}
-          budget={budget}
-          onSave={handleSaveBudget}
-          loading={budgetSaving}
-        />
-      </div>
-
-      <div className="card p-0" ref={categoryBudgetsRef}>
-        <CategoryBudgets perCategory={budget?.perCategory} onSave={handleSaveCategoryBudgets} />
-      </div>
+      <BudgetCard
+        month={currentMonth}
+        totalExpense={monthlyExpense}
+        budget={budget}
+        onSave={handleSaveBudget}
+        loading={budgetSaving}
+      />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <TopExpensesChart data={topExpenses} />
+        <TopExpensesChart
+          items={topExpenseItems}
+          mode="spent"
+          onModeChange={() => {}}
+          budgetModeAvailable={false}
+          showModeToggle={false}
+          onEditBudgets={onEditCategoryBudgets}
+        />
         <div className="card">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Tarjetas inteligentes</h2>
@@ -115,7 +127,7 @@ export function HomePage({
             {smartCards.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                  <span>{smartCards.length > 1 ? 'Desliza para ver más' : 'Sugerencia destacada'}</span>
+                  <span>{smartCards.length > 1 ? 'Desliza para ver mas' : 'Sugerencia destacada'}</span>
                   {smartCards.length > 1 && (
                     <div className="flex gap-2">
                       <button
@@ -192,56 +204,16 @@ export function HomePage({
         </div>
       </div>
 
-      <div className="card">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Recordatorios recurrentes</h2>
-          <span className="text-xs text-[var(--text-muted)]">Plantillas marcadas como recurrentes</span>
-        </div>
-        {recurringTemplates.length === 0 && (
-          <p className="text-sm text-[var(--text-muted)]">A£n no tienes plantillas recurrentes.</p>
-        )}
-        <div className="space-y-3">
-          {recurringTemplates.map((tpl) => (
-            <div
-              key={tpl.id}
-              className="flex flex-col gap-3 rounded-xl border border-[var(--card-border)] bg-[var(--card)]/60 px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-[var(--text)]">{tpl.name}</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                  <span className="rounded-full bg-[var(--input-bg)] px-2 py-1 capitalize">
-                    {tpl.frequency ?? 'mensual'}
-                  </span>
-                  {tpl.category && <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">Cat: {tpl.category}</span>}
-                  {tpl.amount ? (
-                    <span className="rounded-full bg-[var(--input-bg)] px-2 py-1">${tpl.amount.toLocaleString()}</span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
-                  onClick={() => handleUseTemplate(tpl)}
-                >
-                  Registrar
-                </button>
-                <button
-                  className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
-                  onClick={() => handleUseTemplate(tpl)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="text-xs font-semibold text-[var(--error-text)] hover:underline"
-                  onClick={() => handleDeleteTemplate(tpl.id)}
-                >
-                  Borrar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RecurringTemplatesCard
+        templates={recurringTemplates}
+        title="Recordatorios recurrentes"
+        subtitle="Plantillas marcadas como recurrentes"
+        emptyState="Aun no tienes plantillas recurrentes."
+        resolveCategoryLabel={resolveCategoryLabel}
+        onUseTemplate={handleUseTemplate}
+        onEditTemplate={handleEditTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+      />
     </section>
   );
 }

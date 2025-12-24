@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomNav, type TabKey } from './components/BottomNav';
 import { QuickAddSheet } from './components/QuickAddSheet';
+import { BudgetManagerSheet } from './components/BudgetManagerSheet';
+import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { TransactionEditModal } from './components/TransactionEditModal';
 import { UpgradeModal } from './components/UpgradeModal';
 import { LimitsHelpModal } from './components/LimitsHelpModal';
 import { useAuth } from './context/AuthContext';
 import { LoginHero } from './components/LoginHero';
 import { useThemeMode } from './context/ThemeContext';
-import { AdvisorPage } from './pages/AdvisorPage';
+import { AdvisorPage, type AdvisorPageProps } from './pages/AdvisorPage';
 import { HomePage } from './pages/HomePage';
+import { MetricsPage } from './pages/MetricsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { callParseTransactionPhrase } from './services/functions';
@@ -21,6 +24,8 @@ import {
   useTemplatesController,
   useTransactionsController,
 } from './hooks';
+import { topCategories } from './utils/txAgg';
+import { resolveCanonicalCategoryId, resolveCategoryLabel, truncateCategoryId } from './utils/categoryResolver';
 import {
   createTransaction,
   deleteTransaction,
@@ -32,14 +37,20 @@ import type {
   TransactionInput,
   UserRole,
 } from './types';
-import { monthStartIso, todayIso } from './utils/dates';
+import { monthRangeIso, todayIso } from './utils/dates';
 import { isResourceExhausted as isResourceExhaustedError, mapAiError as mapAiErrorMessage } from './utils/aiErrors';
 import { formatPesos } from './utils/format';
 function App() {
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useThemeMode();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
+  type SettingsOpenSource = 'header' | 'upgrade_modal' | 'other';
+  const prevTabRef = useRef<TabKey>('home');
+  const settingsOpenSourceRef = useRef<SettingsOpenSource>('other');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  type TransactionsSortBy = 'date_desc' | 'amount_desc';
+  const [txSortBy, setTxSortBy] = useState<TransactionsSortBy>('date_desc');
   const openQuickAddSheet = useCallback(() => setShowQuickAdd(true), []);
   const {
     filters,
@@ -52,23 +63,35 @@ function App() {
     txPageSize,
     paginatedTransactions,
     totalTxPages,
-  } = useTransactionsController({ userId: user?.uid });
+  } = useTransactionsController({ userId: user?.uid, sortBy: txSortBy });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const defaultMonth = todayIso().slice(0, 7);
-  const [currentMonth, setCurrentMonth] = useState(defaultMonth);
+  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+
+  const setSelectedMonthFromMetrics = useCallback((next: string | ((prev: string) => string)) => {
+    setSelectedMonth((prev) => {
+      const nextMonth = typeof next === 'function' ? next(prev) : next;
+      if (prev !== nextMonth) {
+        trackEvent('metrics_month_changed', { fromMonth: prev, toMonth: nextMonth });
+      }
+      return nextMonth;
+    });
+  }, []);
   const { budget, budgetSaving, handleSaveBudget, handleSaveCategoryBudgets } = useBudgetController({
     userId: user?.uid,
-    currentMonth,
+    currentMonth: selectedMonth,
   });
   const {
     templates,
     recurringTemplates,
     selectedTemplate,
+    selectedTemplateIntent,
     clearSelectedTemplate,
     saveTemplate: handleSaveTemplate,
     updateTemplate: handleUpdateTemplate,
     deleteTemplate: handleDeleteTemplate,
     handleUseTemplate,
+    handleEditTemplate,
   } = useTemplatesController({ userId: user?.uid, onOpenQuickAdd: openQuickAddSheet });
   const {
     userProfile,
@@ -133,28 +156,129 @@ function App() {
     [iaQuota],
   );
 
-  const categoryBudgetsRef = useRef<HTMLDivElement | null>(null);
+  const [showCategoryBudgets, setShowCategoryBudgets] = useState(false);
+  const [budgetFocusCategory, setBudgetFocusCategory] = useState<string | null>(null);
   const scrollToPlans = useCallback(
     () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     [plansRef],
   );
-  const scrollToBudgets = useCallback(
-    () => categoryBudgetsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-    [categoryBudgetsRef],
-  );
+
+  const openSettings = useCallback((source: SettingsOpenSource = 'other') => {
+    settingsOpenSourceRef.current = source;
+    setActiveTab('settings');
+  }, []);
+
+  type AiActionData = Parameters<AdvisorPageProps['onActionClick']>[0];
+
+  const normalizeTextForMatch = useCallback((value: string) => {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/-{2,}/g, '-')
+      .trim();
+  }, []);
+
+  const subtractDaysIso = useCallback((iso: string, days: number) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+    const d = new Date(`${iso}T00:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return iso;
+    d.setUTCDate(d.getUTCDate() - days);
+    return d.toISOString().slice(0, 10);
+  }, []);
 
   const openBudgets = useCallback((category?: string) => {
+    setBudgetFocusCategory(category ?? null);
     setActiveTab('home');
     trackEvent('smart_card_click', { action: 'budgets', category });
-    // Scroll al bloque de presupuestos; si ya está en pantalla, hará scroll suave
-    setTimeout(() => scrollToBudgets(), 100);
-  }, [scrollToBudgets]);
+    setShowCategoryBudgets(true);
+  }, []);
 
-  const openMovements = useCallback((category?: string) => {
-    txHandleFiltersChange({ startDate: monthStartIso(), endDate: todayIso(), category: category || 'all' });
-    setActiveTab('transactions');
-    trackEvent('smart_card_click', { action: 'movements', category });
-  }, [txHandleFiltersChange]);
+  const closeCategoryBudgets = useCallback(() => {
+    setShowCategoryBudgets(false);
+    setBudgetFocusCategory(null);
+  }, []);
+
+  const openMovements = useCallback(
+    (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
+      const { startDate, endDate } = monthRangeIso(selectedMonth);
+      setTxSortBy(opts?.sortBy ?? 'date_desc');
+      txHandleFiltersChange({ startDate, endDate, category: category || 'all', search: '' });
+      setActiveTab('transactions');
+      trackEvent('smart_card_click', { action: 'movements', category });
+    },
+    [selectedMonth, txHandleFiltersChange],
+  );
+
+  const handleAiActionClick = useCallback(
+    (actionData: AiActionData) => {
+      const fail = () => window.alert('No pudimos ejecutar esta acción automáticamente.');
+      if (!actionData) return;
+
+      try {
+        if (actionData.type === 'NAVIGATE_FILTER') {
+          const payload = (actionData.payload ?? {}) as Record<string, unknown>;
+          const period = typeof payload.period === 'string' ? payload.period : null;
+          const categoryRaw = typeof payload.category === 'string' ? payload.category : null;
+          const noteRaw = typeof payload.note === 'string' ? payload.note : null;
+
+          const nowIso = todayIso();
+          const { startDate: monthStart, endDate: monthEnd } = monthRangeIso(selectedMonth, nowIso);
+
+          const startDate =
+            period === 'last_7_days'
+              ? (() => {
+                  const candidate = subtractDaysIso(monthEnd, 6);
+                  return candidate < monthStart ? monthStart : candidate;
+                })()
+              : monthStart;
+
+          const categoryNormalized = categoryRaw ? normalizeTextForMatch(categoryRaw) : 'all';
+          const search = noteRaw ? noteRaw.trim() : '';
+
+          setTxSortBy('date_desc');
+          txHandleFiltersChange({
+            startDate,
+            endDate: monthEnd,
+            category: categoryNormalized || 'all',
+            search,
+          });
+          setActiveTab('transactions');
+          trackEvent('advisor_action_click', {
+            type: actionData.type,
+            period: period ?? 'current_month',
+            category: categoryNormalized || 'all',
+            hasSearch: Boolean(search),
+          });
+          return;
+        }
+
+        if (actionData.type === 'OPEN_BUDGET') {
+          const payload = (actionData.payload ?? {}) as Record<string, unknown>;
+          const categoryRaw = typeof payload.category === 'string' ? payload.category : undefined;
+          const category = categoryRaw ? normalizeTextForMatch(categoryRaw) : undefined;
+          openBudgets(category);
+          trackEvent('advisor_action_click', { type: actionData.type, category: category ?? null });
+          return;
+        }
+
+        if (actionData.type === 'OPEN_MODAL') {
+          window.alert('Esta acción aún no está disponible.');
+          trackEvent('advisor_action_click', { type: actionData.type });
+          return;
+        }
+
+        console.warn('Acción de IA no soportada:', actionData);
+        fail();
+      } catch (err) {
+        console.error('Error ejecutando acción de IA', err);
+        fail();
+      }
+    },
+    [normalizeTextForMatch, openBudgets, selectedMonth, subtractDaysIso, txHandleFiltersChange],
+  );
 
   const openQuickAdd = useCallback((mode?: 'income' | 'expense') => {
     setShowQuickAdd(true);
@@ -170,11 +294,11 @@ function App() {
     trackEvent('smart_card_click', { action: 'advisor', ...context });
   }, []);
 
-  const openPlans = useCallback(() => {
-    setActiveTab('settings');
+  const openPlans = useCallback((source: SettingsOpenSource = 'other') => {
+    openSettings(source);
     trackEvent('smart_card_click', { action: 'plans' });
     setTimeout(() => scrollToPlans(), 120);
-  }, [scrollToPlans]);
+  }, [openSettings, scrollToPlans]);
 
   const {
     monthTransactions,
@@ -183,6 +307,7 @@ function App() {
     availableBalance,
     topExpenses,
     categorySpendMap,
+    categoryResolver,
     previousMonth,
     smartCards,
     smartCardIndex,
@@ -193,7 +318,7 @@ function App() {
     handleTouchEnd,
   } = useHomeMonthController({
     userId: user?.uid,
-    currentMonth,
+    currentMonth: selectedMonth,
     budget,
     templates,
     transactions,
@@ -206,6 +331,71 @@ function App() {
     openAdvisor,
     handleUseTemplate,
   });
+
+  const expenseCategories = useMemo(() => topCategories(categorySpendMap, Number.POSITIVE_INFINITY), [categorySpendMap]);
+  const topExpenseItems = useMemo(
+    () =>
+      topExpenses.map((item) => {
+        const label = resolveCategoryLabel(item.category, categoryResolver);
+        return {
+          categoryId: item.category,
+          label: label ?? 'Categoría eliminada',
+          fallbackId: label ? undefined : truncateCategoryId(item.category),
+          spent: item.amount,
+        };
+      }),
+    [categoryResolver, topExpenses],
+  );
+  const resolveTemplateCategoryLabel = useCallback(
+    (categoryId?: string) => {
+      if (!categoryId) return '';
+      const canonicalId = resolveCanonicalCategoryId(categoryId, categoryResolver);
+      const label = resolveCategoryLabel(canonicalId, categoryResolver);
+      if (label) return label;
+      const hasCategories = Object.keys(categoryResolver.categoriesById).length > 0;
+      return hasCategories ? 'Categoria eliminada' : categoryId;
+    },
+    [categoryResolver],
+  );
+  const advisorTopCategories = useMemo(
+    () =>
+      topExpenseItems.map((item) => ({
+        category: item.label,
+        amount: item.spent,
+      })),
+    [topExpenseItems],
+  );
+
+  const metricsViewedPayload = useMemo(
+    () => ({
+      month: selectedMonth,
+      selectedMonth,
+      txCount: monthTransactions.length,
+      hasIncome: monthlyIncome > 0 || monthTransactions.some((t) => t.type === 'income'),
+      hasBudget: (budget?.total ?? 0) > 0,
+      expense: monthlyExpense,
+      income: monthlyIncome,
+    }),
+    [budget?.total, monthTransactions, monthlyExpense, monthlyIncome, selectedMonth],
+  );
+
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    if (prev === activeTab) return;
+
+    trackEvent('tab_changed', { from: prev, to: activeTab });
+
+    if (activeTab === 'metrics') {
+      trackEvent('metrics_viewed', metricsViewedPayload);
+    }
+
+    if (activeTab === 'settings') {
+      trackEvent('settings_opened', { source: settingsOpenSourceRef.current });
+      settingsOpenSourceRef.current = 'other';
+    }
+
+    prevTabRef.current = activeTab;
+  }, [activeTab, metricsViewedPayload]);
 
   const getWeekKey = useCallback(() => {
     if (iaQuota?.week) return iaQuota.week;
@@ -250,11 +440,11 @@ function App() {
   );
 
   const handleFiltersChange = useCallback(
-    (next: { startDate: string; endDate: string; category: string }) => {
-      const { startDate, endDate, category } = next;
+    (next: { startDate: string; endDate: string; category: string; search: string }) => {
+      const { startDate, endDate, category, search } = next;
       // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
       if (startDate && endDate && startDate > endDate) {
-        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category });
+        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category, search });
       } else {
         txHandleFiltersChange(next);
       }
@@ -264,13 +454,14 @@ function App() {
 
   const lastTransactionsSummary = useMemo(
     () =>
-      monthTransactions.slice(0, 3).map((t) => ({
+      monthTransactions.map((t) => ({
         amount: t.amount,
-        category: t.category,
+        category: resolveCategoryLabel(t.categoryId, categoryResolver) ?? t.categoryId,
+        note: t.note,
         type: t.type,
         date: t.date,
       })),
-    [monthTransactions],
+    [categoryResolver, monthTransactions],
   );
 
   const {
@@ -288,10 +479,10 @@ function App() {
     profileAdvisorMode: userProfile?.advisorMode,
     userRole: userProfile?.role,
     iaQuota,
-    currentMonth,
+    currentMonth: selectedMonth,
     monthlyExpense,
     monthlyIncome,
-    topCategories: topExpenses,
+    topCategories: advisorTopCategories,
     budgetTotal: budget?.total,
     budgetPerCategory: budget?.perCategory,
     previousMonth,
@@ -325,11 +516,49 @@ function App() {
       });
       const data = resp.data as { parsed: ParsedTransactionSuggestion };
       await refreshQuota();
-      return data.parsed;
-    } catch (err) {
-      if (isResourceExhausted(err)) {
-        triggerUpgradeOnce('parse_exhausted');
-      }
+        const raw = data.parsed as ParsedTransactionSuggestion & {
+          category?: string;
+          categoryId?: string;
+          categoryFallback?: boolean;
+          categoryFallbackReason?: ParsedTransactionSuggestion['categoryFallbackReason'];
+        };
+        const parsedType = raw.type === 'income' ? 'income' : 'expense';
+        const rawCategory =
+          typeof raw.categoryId === 'string' ? raw.categoryId : typeof raw.category === 'string' ? raw.category : '';
+        const normalizedRawCategory = typeof rawCategory === 'string' ? rawCategory.trim().toLowerCase() : '';
+        const hasCategories = Object.keys(categoryResolver?.categoriesById ?? {}).length > 0;
+        let categoryId = '';
+        let categoryFallbackReason = raw.categoryFallbackReason;
+        if (parsedType === 'expense') {
+          if (normalizedRawCategory === 'otros') {
+            categoryId = 'otros';
+            categoryFallbackReason = categoryFallbackReason ?? 'explicit_other';
+          } else {
+            const resolvedCategoryId = resolveCanonicalCategoryId(rawCategory, categoryResolver);
+            const isValid = !hasCategories || !!categoryResolver?.categoriesById?.[resolvedCategoryId];
+            if (!resolvedCategoryId || resolvedCategoryId === 'ingreso' || !isValid) {
+              categoryId = 'otros';
+              if (!categoryFallbackReason) {
+                categoryFallbackReason = normalizedRawCategory ? 'no_match' : 'empty';
+              }
+            } else {
+              categoryId = resolvedCategoryId;
+            }
+          }
+        }
+        const categoryFallback = parsedType === 'expense' && categoryId === 'otros';
+        if (!categoryFallback) {
+          categoryFallbackReason = undefined;
+        } else if (!categoryFallbackReason) {
+          categoryFallbackReason = normalizedRawCategory ? 'no_match' : 'empty';
+        }
+        const baseConfidence = typeof raw.confidence === 'number' ? raw.confidence : 0.6;
+        const confidence = categoryFallback ? Math.min(baseConfidence, 0.4) : baseConfidence;
+        return { ...raw, type: parsedType, categoryId, categoryFallback, categoryFallbackReason, confidence };
+      } catch (err) {
+        if (isResourceExhausted(err)) {
+          triggerUpgradeOnce('parse_exhausted');
+        }
       throw new Error(mapAiError(err, 'parse'));
     }
   };
@@ -381,6 +610,13 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
+              onClick={() => openSettings('header')}
+            >
+              <img src="/icons/Gear_64.svg" alt="" aria-hidden="true" className="h-4 w-4 opacity-90" />
+              <span>Config</span>
+            </button>
+            <button
               className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
               onClick={logout}
             >
@@ -396,15 +632,14 @@ function App() {
             monthlyExpense={monthlyExpense}
             monthlyIncome={monthlyIncome}
             availableBalance={availableBalance}
-            currentMonth={currentMonth}
+            currentMonth={selectedMonth}
             defaultMonth={defaultMonth}
-            setCurrentMonth={setCurrentMonth}
+            setCurrentMonth={setSelectedMonth}
             budget={budget}
             handleSaveBudget={handleSaveBudget}
             budgetSaving={budgetSaving}
-            categoryBudgetsRef={categoryBudgetsRef}
-            handleSaveCategoryBudgets={handleSaveCategoryBudgets}
-            topExpenses={topExpenses}
+            onEditCategoryBudgets={openBudgets}
+            topExpenseItems={topExpenseItems}
             smartCards={smartCards}
             smartCardIndex={smartCardIndex}
             setSmartCardIndex={setSmartCardIndex}
@@ -412,8 +647,10 @@ function App() {
             handleNextInsight={handleNextInsight}
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
+            resolveCategoryLabel={resolveTemplateCategoryLabel}
             recurringTemplates={recurringTemplates}
             handleUseTemplate={handleUseTemplate}
+            handleEditTemplate={handleEditTemplate}
             handleDeleteTemplate={handleDeleteTemplate}
           />
         )}
@@ -430,8 +667,28 @@ function App() {
             setTxPage={setTxPage}
             budget={budget}
             categorySpendMap={categorySpendMap}
+            categoryResolver={categoryResolver}
+            userId={user?.uid}
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
+          />
+        )}
+        {activeTab === 'metrics' && (
+          <MetricsPage
+            currentMonth={selectedMonth}
+            defaultMonth={defaultMonth}
+            setCurrentMonth={setSelectedMonthFromMetrics}
+            monthTransactions={monthTransactions}
+            monthlyExpense={monthlyExpense}
+            monthlyIncome={monthlyIncome}
+            availableBalance={availableBalance}
+            budget={budget}
+            expenseCategories={expenseCategories}
+            categoryResolver={categoryResolver}
+            previousMonth={previousMonth}
+            onOpenQuickAdd={() => openQuickAdd('expense')}
+            onViewMovements={() => openMovements()}
+            onAdjustBudget={() => openBudgets()}
           />
         )}
         {activeTab === 'advisor' && (
@@ -442,6 +699,7 @@ function App() {
             analyzeExhausted={analyzeExhausted}
             openUpgrade={openUpgrade}
             handleAdvisorAction={handleAdvisorAction}
+            onActionClick={handleAiActionClick}
             featureLocks={featureLocks}
             chatFeed={chatFeed}
             advisorLoading={advisorLoading}
@@ -495,12 +753,14 @@ function App() {
         )}
       </main>
 
-      <button
-        onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
-      >
-        <span className="text-lg">+</span> Registrar gasto
-      </button>
+      {!(activeTab === 'metrics' && monthTransactions.length === 0) && (
+        <button
+          onClick={() => setShowQuickAdd(true)}
+          className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
+        >
+          <span className="text-lg">+</span> Registrar gasto
+        </button>
+      )}
 
       <BottomNav value={activeTab} onChange={setActiveTab} />
 
@@ -515,17 +775,38 @@ function App() {
         onSaveTemplate={handleSaveTemplate}
         onDeleteTemplate={handleDeleteTemplate}
         onUpdateTemplate={handleUpdateTemplate}
+        userId={user?.uid}
+        onOpenSettings={() => setShowCategoryManager(true)}
         selectedTemplate={selectedTemplate}
+        selectedTemplateIntent={selectedTemplateIntent}
         onClearSelectedTemplate={clearSelectedTemplate}
+        onClearTemplate={clearSelectedTemplate}
       />
 
-      <TransactionEditModal
-        open={!!selectedTx}
-        transaction={selectedTx}
-        onClose={() => setSelectedTx(null)}
-        onSave={handleUpdateTransaction}
-        onDelete={handleDeleteTransaction}
+      <CategoryManagerModal
+        open={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        userId={user?.uid}
       />
+
+      <BudgetManagerSheet
+        open={showCategoryBudgets}
+        onClose={closeCategoryBudgets}
+        userId={user?.uid}
+        perCategory={budget?.perCategory}
+        categorySpendMap={categorySpendMap}
+        onSave={handleSaveCategoryBudgets}
+        focusCategoryId={budgetFocusCategory}
+      />
+
+        <TransactionEditModal
+          open={!!selectedTx}
+          transaction={selectedTx}
+          userId={user?.uid}
+          onClose={() => setSelectedTx(null)}
+          onSave={handleUpdateTransaction}
+          onDelete={handleDeleteTransaction}
+        />
 
       <UpgradeModal
         open={showUpgradeModal}
@@ -533,7 +814,7 @@ function App() {
         context={upgradeContext}
         role={(iaQuota?.role as UserRole) || userProfile?.role || 'free'}
         plans={plans}
-        onGoToPlans={openPlans}
+        onGoToPlans={() => openPlans('upgrade_modal')}
       />
 
       <LimitsHelpModal open={showLimitsHelp} onClose={() => setShowLimitsHelp(false)} />
@@ -542,3 +823,4 @@ function App() {
 }
 
 export default App;
+

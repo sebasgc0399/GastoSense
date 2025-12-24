@@ -8,11 +8,6 @@ import { setUserAdvisorMode } from '../src/services/users';
 
 vi.mock('../src/services/functions', () => ({
   callAnalyzeSummary: vi.fn(),
-  callAnalyzeMonthlyDeep: vi.fn(),
-}));
-
-vi.mock('../src/services/transactions', () => ({
-  fetchTransactionsRange: vi.fn(),
 }));
 
 vi.mock('../src/services/users', () => ({
@@ -131,6 +126,7 @@ describe('useAdvisorController', () => {
           { amount: 20, category: 'Taxi', type: 'expense', date: '2025-12-09', merchant: 'X' } as never,
           { amount: 30, category: 'Salary', type: 'income', date: '2025-12-08', rawText: 'nope' } as never,
           { amount: 40, category: 'Other', type: 'expense', date: '2025-12-07', extra: true } as never,
+          { amount: 5, category: 'Old', type: 'expense', date: '2025-11-01', note: 'old' } as never,
         ],
         openUpgrade: vi.fn(),
         triggerUpgradeOnce: vi.fn(),
@@ -151,11 +147,16 @@ describe('useAdvisorController', () => {
     };
     const last = arg.summary?.lastTransactions ?? [];
 
-    expect(last).toHaveLength(3);
+    expect(last).toHaveLength(4);
     last.forEach((tx) => {
-      expect(Object.keys(tx).sort()).toEqual(['amount', 'category', 'date', 'type']);
+      const allowed = ['amount', 'category', 'date', 'type', 'note'];
+      expect(Object.keys(tx).every((k) => allowed.includes(k))).toBe(true);
+      expect(tx.amount).toEqual(expect.any(Number));
+      expect(tx.category).toEqual(expect.any(String));
+      expect(tx.date).toEqual(expect.any(String));
+      expect(tx.type).toEqual(expect.any(String));
     });
+    expect(last[0]?.note).toBe('secret');
     expect(refreshQuota).toHaveBeenCalledTimes(1);
   });
 });
-
