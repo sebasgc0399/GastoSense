@@ -42,7 +42,7 @@ export function DayHeader({ date, dayNet, count }: DayHeaderProps) {
   const movLabel = count === 1 ? 'mov' : 'movs';
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+    <div className="flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
       <div className="flex flex-col">
         <p className="text-sm font-semibold text-slate-100">{primary}</p>
         {secondary ? <p className="text-[11px] text-slate-400">{secondary}</p> : null}
