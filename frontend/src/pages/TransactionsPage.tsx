@@ -1,5 +1,6 @@
 ﻿﻿import type React from 'react';
 import { useMemo, useState } from 'react';
+import { Lock } from 'lucide-react';
 import { CardMini } from '../components/stats/CardMini';
 import { StatsSummaryCard, type SummaryItem, type SummaryTone } from '../components/stats/StatsSummaryCard';
 import { DayHeader } from '../components/transactions/DayHeader';
@@ -128,7 +129,7 @@ export function TransactionsPage({
               : 'cursor-not-allowed border-white/5 bg-white/5 text-white/60 hover:border-white/10'
           }`}
         >
-          {!canExport && <span aria-hidden="true">{'\u{1F512}'}</span>}
+          {!canExport && <Lock aria-hidden="true" className="h-3 w-3" />}
           <span>Exportar</span>
         </button>
       </div>
