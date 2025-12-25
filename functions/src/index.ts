@@ -1038,14 +1038,39 @@ export const suggestCategoryIcon = onCall(
     } as const;
 
     const system =
-      "Sugiere un icono de Lucide para la categoria. " +
+      "Elige el icono de Lucide MAS cercano y especifico para esta categoria. " +
+      "La entrada puede venir en espanol con tildes; interpreta el significado. " +
       "Devuelve SOLO JSON valido segun el esquema con el campo icon. " +
-      "Usa el nombre exacto en PascalCase (ej: Scissors, ShoppingBag). " +
-      "Ejemplo: Barberia -> Scissors.";
+      "El valor debe ser un nombre REAL de icono de Lucide en PascalCase (no inventes nombres). " +
+      "Evita 'Tag' salvo que no exista una opcion razonable. " +
+      "Ejemplos: Gasolina/Combustible -> Fuel. Barberia/Peluqueria -> Scissors. " +
+      "Mercado/Supermercado -> ShoppingCart. Renta/Arriendo -> Home. Transporte -> Bus o Car. " +
+      "Internet/WiFi -> Wifi.";
 
     try {
       const primaryModel = "o4-mini";
       const fallbackModel = "gpt-5-mini";
+      const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+      const isTransientError = (err: unknown) => {
+        const anyErr = err as {
+          status?: number;
+          statusCode?: number;
+          code?: string;
+          message?: string;
+          response?: {status?: number};
+        };
+        const status = anyErr?.status ?? anyErr?.statusCode ?? anyErr?.response?.status;
+        if (typeof status === "number") {
+          return [408, 429, 500, 502, 503, 504, 529].includes(status);
+        }
+        const code = typeof anyErr?.code === "string" ? anyErr.code : "";
+        if (code) {
+          return ["ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "EAI_AGAIN", "ENOTFOUND"].includes(code);
+        }
+        const message = typeof anyErr?.message === "string" ? anyErr.message : "";
+        if (!message) return false;
+        return /timeout|timed out|rate limit|temporarily unavailable|socket hang up/i.test(message);
+      };
       const createIconResponse = (model: string) =>
         client.responses.create({
           model,
@@ -1062,18 +1087,30 @@ export const suggestCategoryIcon = onCall(
           reasoning: {effort: "low"},
           max_output_tokens: 120,
         });
+      const createIconResponseWithRetry = async (model: string) => {
+        try {
+          return await createIconResponse(model);
+        } catch (error) {
+          if (!isTransientError(error)) {
+            throw error;
+          }
+          console.warn(`[suggestCategoryIcon] ${model} transient error, retrying once.`, error);
+          await wait(300);
+          return await createIconResponse(model);
+        }
+      };
 
       let response: Awaited<ReturnType<typeof createIconResponse>>;
       let modelUsed = primaryModel;
       try {
-        response = await createIconResponse(primaryModel);
+        response = await createIconResponseWithRetry(primaryModel);
       } catch (error) {
         console.warn(
           `[suggestCategoryIcon] ${primaryModel} failed, retrying ${fallbackModel}.`,
           error,
         );
         modelUsed = fallbackModel;
-        response = await createIconResponse(fallbackModel);
+        response = await createIconResponseWithRetry(fallbackModel);
       }
       console.info(`[suggestCategoryIcon] model=${modelUsed}`);
 
