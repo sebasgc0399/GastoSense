@@ -169,6 +169,8 @@ export function TransactionsPage({
             {group.items.map((tx) => {
               const canonicalCategoryId = resolveCanonicalCategoryId(tx.categoryId, categoryResolver);
               const displayCategory = resolveCategoryLabel(canonicalCategoryId, categoryResolver) ?? tx.categoryId;
+              const categoryIcon =
+                canonicalCategoryId === 'otros' ? undefined : categoryResolver.categoriesById[canonicalCategoryId]?.icon;
               const rawBudgetValue = budget?.perCategory?.[canonicalCategoryId];
               const budgetValue =
                 typeof rawBudgetValue === 'number'
@@ -193,6 +195,7 @@ export function TransactionsPage({
                   key={tx.id}
                   tx={tx}
                   displayCategory={displayCategory}
+                  categoryIcon={categoryIcon}
                   budgetState={budgetState}
                   budgetValue={budgetValue}
                   spentInCategory={spentInCategory}

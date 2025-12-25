@@ -2,12 +2,14 @@ import { useEffect, useRef } from 'react';
 import type React from 'react';
 import type { Transaction } from '../../types';
 import { useConfirm } from '../../hooks/useConfirm';
+import { CategoryIcon } from '../ui/CategoryIcon';
 
 export type BudgetState = 'none' | 'unlimited' | 'limited';
 
 export interface TransactionItemCardProps {
   tx: Transaction;
   displayCategory: string;
+  categoryIcon?: string;
   spentInCategory: number;
   budgetState: BudgetState;
   budgetValue?: number;
@@ -21,6 +23,7 @@ export interface TransactionItemCardProps {
 export function TransactionItemCard({
   tx,
   displayCategory,
+  categoryIcon,
   spentInCategory,
   budgetState,
   budgetValue,
@@ -46,7 +49,12 @@ export function TransactionItemCard({
       ? `${rawPaymentMethod.charAt(0).toLocaleUpperCase('es-CO')}${rawPaymentMethod.slice(1)}`
       : rawPaymentMethod;
   const metaLine = [showDate ? tx.date : null, normalizedPaymentMethod || null].filter(Boolean).join(' \u00b7 ');
+  const normalizedDisplayCategory = displayCategory.trim();
+  const isOtherCategory = normalizedDisplayCategory.toLocaleLowerCase('es-CO') === 'otros';
   const showCategoryChip = Boolean(displayCategory) && displayCategory !== title;
+  const showCategoryIcon = Boolean(categoryIcon) && Boolean(displayCategory) && !isOtherCategory;
+  const showCategoryIconInTitle = showCategoryIcon && !showCategoryChip;
+  const showCategoryIconInChip = showCategoryIcon && showCategoryChip;
   const safeBudgetValue = typeof budgetValue === 'number' ? budgetValue : 0;
   const budgetAmount = budgetState === 'limited' ? `$${safeBudgetValue.toLocaleString()}` : 'Sin tope';
   const showPercent = hasLimit && safeBudgetValue > 0 && typeof percentUsed === 'number';
@@ -157,7 +165,12 @@ export function TransactionItemCard({
       onPointerCancel={handleCardPointerCancel}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-sm font-medium text-white line-clamp-2">{title}</p>
+        <p className="min-w-0 flex-1 text-sm font-medium text-white line-clamp-2">
+          {showCategoryIconInTitle && (
+            <CategoryIcon name={categoryIcon!} size={14} className="mr-1 inline-block align-text-bottom" />
+          )}
+          {title}
+        </p>
         <div className="flex items-start gap-2">
           <p
             className={`shrink-0 text-base font-bold tabular-nums ${isExpense ? 'text-red-300' : 'text-emerald-300'}`}
@@ -204,8 +217,9 @@ export function TransactionItemCard({
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
         {metaLine ? <span>{metaLine}</span> : null}
         {showCategoryChip && (
-          <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
-            {displayCategory}
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
+            {showCategoryIconInChip && <CategoryIcon name={categoryIcon!} size={12} className="shrink-0" />}
+            <span>{displayCategory}</span>
           </span>
         )}
       </div>
