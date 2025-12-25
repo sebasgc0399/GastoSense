@@ -139,11 +139,26 @@ function App() {
   const isPrivilegedRole = (role?: UserRole) => role === 'admin';
   const isPaidRole = (role?: UserRole) =>
     role === 'paid_byok' || role === 'paid_managed' || role === 'gifted_managed';
+  const resolveAdvisorRoleBase = (profileRole?: UserRole, quotaRole?: UserRole): UserRole => {
+    if (profileRole === 'admin' || quotaRole === 'admin') return 'admin';
+    if (isPaidRole(profileRole)) return profileRole as UserRole;
+    if (isPaidRole(quotaRole)) return quotaRole as UserRole;
+    return 'free';
+  };
   const canExport = isPrivilegedRole(roleFromProfile) || isPrivilegedRole(roleFromQuota)
     ? true
     : isPaidRole(roleFromProfile)
       ? hasActiveMembership
       : false;
+  const advisorRoleBase = resolveAdvisorRoleBase(roleFromProfile, roleFromQuota);
+  const advisorEffectiveRole: UserRole =
+    advisorRoleBase === 'admin'
+      ? 'admin'
+      : isPaidRole(advisorRoleBase)
+        ? hasActiveMembership
+          ? advisorRoleBase
+          : 'free'
+        : 'free';
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
     'parse_exhausted',
@@ -522,7 +537,7 @@ function App() {
   } = useAdvisorController({
     userId: user?.uid,
     profileAdvisorMode: userProfile?.advisorMode,
-    userRole: userProfile?.role,
+    userRole: advisorEffectiveRole,
     iaQuota,
     currentMonth: selectedMonth,
     monthlyExpense,

@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react';
 import { FeatureLockCard } from '../components/FeatureLockCard';
 import { RobotAvatar } from '../components/RobotAvatar';
 import type { AdvisorMode } from '../types';
@@ -84,33 +85,36 @@ export function AdvisorPage({
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {advisorQuickActions.map((item) => {
-            const locked = item.locked || (item.requiresAnalyze && analyzeExhausted);
-            const lockedByQuota = item.requiresAnalyze && analyzeExhausted;
+            const lockedByPlan = item.locked;
+            const lockedByQuota = !lockedByPlan && item.requiresAnalyze && analyzeExhausted;
+            const locked = lockedByPlan || lockedByQuota;
             const badge = item.badge;
-            const disabled = locked || advisorLoading;
+            const disabled = advisorLoading;
             return (
               <button
                 key={item.action}
                 disabled={disabled}
-                onClick={() =>
-                  locked
-                    ? openUpgrade(lockedByQuota ? 'analyze_exhausted' : 'feature_locked')
-                    : handleAdvisorAction(item.action)
-                }
+                aria-disabled={locked}
+                onClick={() => {
+                  if (lockedByPlan) {
+                    openUpgrade('feature_locked');
+                    return;
+                  }
+                  if (lockedByQuota) return;
+                  void handleAdvisorAction(item.action);
+                }}
                 className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
                   locked
-                    ? 'border-dashed border-white/20 bg-white/5 opacity-80'
+                    ? 'border-dashed border-white/20 bg-white/5'
                     : `border-white/10 bg-white/5 ${disabled ? '' : 'hover:border-primary'}`
-                } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+                } ${disabled ? 'cursor-not-allowed opacity-50' : locked ? 'opacity-80' : ''}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-white">{item.label}</p>
                   {badge && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
                       {locked && (
-                        <span aria-hidden="true" className="text-[11px] leading-none">
-                          ??
-                        </span>
+                        <Lock aria-hidden="true" className="h-3 w-3" />
                       )}
                       <span>{badge}</span>
                     </span>
@@ -119,7 +123,7 @@ export function AdvisorPage({
                 <p className="text-xs text-slate-300">{item.description}</p>
                 {locked && (
                   <p className="text-[11px] font-medium text-primary">
-                    {lockedByQuota ? 'Límite semanal alcanzado. Se renueva el lunes.' : 'Toca para ver cómo desbloquearlo'}
+                    {lockedByQuota ? 'Limite semanal alcanzado. Se renueva el lunes.' : 'Toca para ver como desbloquearlo'}
                   </p>
                 )}
               </button>
@@ -232,3 +236,4 @@ export function AdvisorPage({
     </section>
   );
 }
+
