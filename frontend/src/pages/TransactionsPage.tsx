@@ -27,6 +27,8 @@ export interface TransactionsPageProps {
   setSelectedTx: React.Dispatch<React.SetStateAction<Transaction | null>>;
   handleDeleteTransaction: (id: string) => Promise<void>;
   shouldIgnoreTransactionClick?: () => boolean;
+  canExport: boolean;
+  onExportLocked: () => void;
 }
 
 export function TransactionsPage({
@@ -46,6 +48,8 @@ export function TransactionsPage({
   setSelectedTx,
   handleDeleteTransaction,
   shouldIgnoreTransactionClick,
+  canExport,
+  onExportLocked,
 }: TransactionsPageProps) {
   const totals = transactions.reduce(
     (acc, tx) => {
@@ -67,6 +71,13 @@ export function TransactionsPage({
     { label: 'Saldo (filtro)', value: balanceTotal, tone: balanceTone },
   ];
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const handleExportClick = () => {
+    if (canExport) {
+      setIsExportOpen(true);
+    } else {
+      onExportLocked();
+    }
+  };
   const groupedTransactions = useMemo(() => {
     const groups: Array<{
       date: string;
@@ -109,10 +120,16 @@ export function TransactionsPage({
         </div>
         <button
           type="button"
-          onClick={() => setIsExportOpen(true)}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:border-white/20 hover:bg-white/10"
+          onClick={handleExportClick}
+          aria-disabled={!canExport}
+          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+            canExport
+              ? 'border-white/10 bg-white/5 text-white hover:border-white/20 hover:bg-white/10'
+              : 'cursor-not-allowed border-white/5 bg-white/5 text-white/60 hover:border-white/10'
+          }`}
         >
-          Exportar
+          {!canExport && <span aria-hidden="true">{'\u{1F512}'}</span>}
+          <span>Exportar</span>
         </button>
       </div>
 
@@ -218,6 +235,7 @@ export function TransactionsPage({
         onClose={() => setIsExportOpen(false)}
         transactions={transactions}
         filters={filters}
+        budget={budget}
         categoryResolver={categoryResolver}
       />
     </section>

@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Transaction } from '../../types';
+import type { Budget, Transaction } from '../../types';
 import type { CategoryResolver } from '../../utils/categoryResolver';
-import { downloadTextFile, transactionsToCsv } from '../../utils/exporters/csv';
+import {
+  buildExportColumns,
+  buildExportRows,
+  downloadBlobFile,
+  downloadTextFile,
+  transactionsToCsv,
+  transactionsToJson,
+  type ExportFormat,
+} from '../../utils/exporters/csv';
 
 interface ExportTransactionsModalProps {
   open: boolean;
   transactions: Transaction[];
   filters: { startDate: string; endDate: string; category: string; search: string };
+  budget?: Budget | null;
   categoryResolver: CategoryResolver;
   onClose: () => void;
 }
@@ -15,6 +24,7 @@ export function ExportTransactionsModal({
   open,
   transactions,
   filters,
+  budget,
   categoryResolver,
   onClose,
 }: ExportTransactionsModalProps) {
@@ -22,6 +32,8 @@ export function ExportTransactionsModal({
   const [includePaymentMethod, setIncludePaymentMethod] = useState(true);
   const [includeCategory, setIncludeCategory] = useState(true);
   const [signedAmounts, setSignedAmounts] = useState(true);
+  const [includeBudgetStats, setIncludeBudgetStats] = useState(false);
+  const [format, setFormat] = useState<ExportFormat>('csv');
   const [downloading, setDownloading] = useState(false);
 
   const countLabel = useMemo(() => (transactions.length === 1 ? 'movimiento' : 'movimientos'), [transactions.length]);
@@ -37,23 +49,47 @@ export function ExportTransactionsModal({
 
   if (!open) return null;
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (downloading) return;
     setDownloading(true);
-    window.setTimeout(() => {
-      const csvContent = transactionsToCsv(transactions, categoryResolver, {
-        includeNote,
-        includePaymentMethod,
-        includeCategory,
-        signedAmounts,
-      });
-      const start = filters.startDate || 'inicio';
-      const end = filters.endDate || 'fin';
-      const filename = `gastosense_movimientos_${start}_a_${end}.csv`;
-      downloadTextFile(filename, csvContent);
+    const exportOptions = {
+      includeNote,
+      includePaymentMethod,
+      includeCategory,
+      signedAmounts,
+      includeBudgetStats,
+    };
+    const budgetContext = { perCategory: budget?.perCategory };
+    const start = filters.startDate || 'inicio';
+    const end = filters.endDate || 'fin';
+    const baseFilename = `gastosense_movimientos_${start}_a_${end}`;
+
+    try {
+      if (format === 'csv') {
+        const csvContent = transactionsToCsv(transactions, categoryResolver, exportOptions, budgetContext);
+        downloadTextFile(`${baseFilename}.csv`, csvContent);
+      } else if (format === 'json') {
+        const jsonContent = transactionsToJson(transactions, categoryResolver, exportOptions, budgetContext);
+        downloadTextFile(`${baseFilename}.json`, jsonContent, 'application/json;charset=utf-8');
+      } else {
+        const XLSX = await import('xlsx');
+        const rows = buildExportRows(transactions, categoryResolver, exportOptions, budgetContext);
+        const columns = buildExportColumns(exportOptions);
+        const worksheet = XLSX.utils.json_to_sheet(rows, { header: columns });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos');
+        const data = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        downloadBlobFile(`${baseFilename}.xlsx`, blob);
+      }
       setDownloading(false);
       onClose();
-    }, 0);
+    } catch (err) {
+      console.error('No pudimos exportar movimientos', err);
+      setDownloading(false);
+    }
   };
 
   return (
@@ -92,22 +128,40 @@ export function ExportTransactionsModal({
                 <input
                   type="radio"
                   name="export-format"
-                  checked={true}
-                  readOnly
+                  checked={format === 'csv'}
+                  onChange={() => setFormat('csv')}
                   className="mt-1 accent-emerald-400"
                 />
                 <span>
-                  <span className="font-semibold text-[var(--text)]">CSV</span>{' '}
+                  <span className="font-semibold text-[var(--text)]">CSV (recomendado)</span>{' '}
                   <span className="text-[var(--text-muted)]">(Compatible con Excel/Google Sheets)</span>
                 </span>
               </label>
-              <label className="flex items-start gap-2 text-[var(--text-muted)] opacity-60">
-                <input type="radio" name="export-format" disabled className="mt-1" />
-                <span>Excel (.xlsx) &mdash; Pr&oacute;ximamente</span>
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="export-format"
+                  checked={format === 'xlsx'}
+                  onChange={() => setFormat('xlsx')}
+                  className="mt-1 accent-emerald-400"
+                />
+                <span>
+                  <span className="font-semibold text-[var(--text)]">Excel (.xlsx)</span>{' '}
+                  <span className="text-[var(--text-muted)]">(Mejor formato: tablas y anchos)</span>
+                </span>
               </label>
-              <label className="flex items-start gap-2 text-[var(--text-muted)] opacity-60">
-                <input type="radio" name="export-format" disabled className="mt-1" />
-                <span>JSON &mdash; Pr&oacute;ximamente</span>
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="export-format"
+                  checked={format === 'json'}
+                  onChange={() => setFormat('json')}
+                  className="mt-1 accent-emerald-400"
+                />
+                <span>
+                  <span className="font-semibold text-[var(--text)]">JSON</span>{' '}
+                  <span className="text-[var(--text-muted)]">(Backup / soporte)</span>
+                </span>
               </label>
             </div>
           </div>
@@ -150,6 +204,15 @@ export function ExportTransactionsModal({
                   className="accent-emerald-400"
                 />
                 <span>Montos con signo</span>
+              </label>
+              <label className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={includeBudgetStats}
+                  onChange={(event) => setIncludeBudgetStats(event.target.checked)}
+                  className="accent-emerald-400"
+                />
+                <span>Incluir presupuesto y % usado (seg&uacute;n este rango)</span>
               </label>
             </div>
           </div>

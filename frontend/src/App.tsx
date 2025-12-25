@@ -133,6 +133,17 @@ function App() {
     handleAdminSaveUser,
     handleCopyUid,
   } = useSettingsController({ userUid: user?.uid, logout });
+  const roleFromProfile = userProfile?.role as UserRole | undefined;
+  const roleFromQuota = iaQuota?.role as UserRole | undefined;
+  const hasActiveMembership = hasActiveSubscription;
+  const isPrivilegedRole = (role?: UserRole) => role === 'admin';
+  const isPaidRole = (role?: UserRole) =>
+    role === 'paid_byok' || role === 'paid_managed' || role === 'gifted_managed';
+  const canExport = isPrivilegedRole(roleFromProfile) || isPrivilegedRole(roleFromQuota)
+    ? true
+    : isPaidRole(roleFromProfile)
+      ? hasActiveMembership
+      : false;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
     'parse_exhausted',
@@ -706,6 +717,8 @@ function App() {
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
             shouldIgnoreTransactionClick={shouldIgnoreTransactionClick}
+            canExport={canExport}
+            onExportLocked={() => openUpgrade('feature_locked')}
           />
         )}
         {activeTab === 'metrics' && (
