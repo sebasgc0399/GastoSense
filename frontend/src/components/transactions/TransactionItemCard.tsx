@@ -40,6 +40,12 @@ export function TransactionItemCard({
   const title = tx.note?.trim() ? tx.note : displayCategory;
   const amountLabel = `${isExpense ? '-' : '+'}$${tx.amount.toLocaleString()}`;
   const ariaLabel = `Editar movimiento: ${title}, ${amountLabel}, ${tx.date}`;
+  const rawPaymentMethod = tx.paymentMethod?.trim() ?? '';
+  const normalizedPaymentMethod =
+    rawPaymentMethod && rawPaymentMethod === rawPaymentMethod.toLocaleLowerCase('es-CO')
+      ? `${rawPaymentMethod.charAt(0).toLocaleUpperCase('es-CO')}${rawPaymentMethod.slice(1)}`
+      : rawPaymentMethod;
+  const metaLine = [showDate ? tx.date : null, normalizedPaymentMethod || null].filter(Boolean).join(' \u00b7 ');
   const showCategoryChip = Boolean(displayCategory) && displayCategory !== title;
   const safeBudgetValue = typeof budgetValue === 'number' ? budgetValue : 0;
   const budgetAmount = budgetState === 'limited' ? `$${safeBudgetValue.toLocaleString()}` : 'Sin tope';
@@ -151,9 +157,11 @@ export function TransactionItemCard({
       onPointerCancel={handleCardPointerCancel}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-sm font-semibold text-white line-clamp-2">{title}</p>
+        <p className="min-w-0 flex-1 text-sm font-medium text-white line-clamp-2">{title}</p>
         <div className="flex items-start gap-2">
-          <p className={`shrink-0 text-base font-bold ${isExpense ? 'text-red-300' : 'text-emerald-300'}`}>
+          <p
+            className={`shrink-0 text-base font-bold tabular-nums ${isExpense ? 'text-red-300' : 'text-emerald-300'}`}
+          >
             {isExpense ? '-' : '+'}${tx.amount.toLocaleString()}
           </p>
           <details
@@ -194,10 +202,7 @@ export function TransactionItemCard({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-        <span>
-          {showDate ? `${tx.date} · ` : ''}
-          {tx.paymentMethod}
-        </span>
+        {metaLine ? <span>{metaLine}</span> : null}
         {showCategoryChip && (
           <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
             {displayCategory}

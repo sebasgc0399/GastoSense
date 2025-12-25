@@ -66,13 +66,33 @@ export function TransactionsPage({
     { label: 'Saldo (filtro)', value: balanceTotal, tone: balanceTone },
   ];
   const groupedTransactions = useMemo(() => {
-    const groups: Array<{ date: string; items: Transaction[] }> = [];
+    const groups: Array<{
+      date: string;
+      items: Transaction[];
+      dayIncome: number;
+      dayExpense: number;
+      dayNet: number;
+      count: number;
+    }> = [];
     for (const tx of paginatedTransactions) {
       const lastGroup = groups[groups.length - 1];
+      const income = tx.type === 'income' ? tx.amount : 0;
+      const expense = tx.type === 'expense' ? tx.amount : 0;
       if (!lastGroup || lastGroup.date !== tx.date) {
-        groups.push({ date: tx.date, items: [tx] });
+        groups.push({
+          date: tx.date,
+          items: [tx],
+          dayIncome: income,
+          dayExpense: expense,
+          dayNet: income - expense,
+          count: 1,
+        });
       } else {
         lastGroup.items.push(tx);
+        lastGroup.dayIncome += income;
+        lastGroup.dayExpense += expense;
+        lastGroup.dayNet = lastGroup.dayIncome - lastGroup.dayExpense;
+        lastGroup.count += 1;
       }
     }
     return groups;
@@ -102,7 +122,7 @@ export function TransactionsPage({
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {transactions.length === 0 && (
           <p className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
             Aún no hay movimientos en este rango. Agrega el primero.
@@ -110,7 +130,13 @@ export function TransactionsPage({
         )}
         {groupedTransactions.map((group) => (
           <div key={group.date} className="space-y-2">
-            <DayHeader date={group.date} />
+            <DayHeader
+              date={group.date}
+              dayIncome={group.dayIncome}
+              dayExpense={group.dayExpense}
+              dayNet={group.dayNet}
+              count={group.count}
+            />
             {group.items.map((tx) => {
               const canonicalCategoryId = resolveCanonicalCategoryId(tx.categoryId, categoryResolver);
               const displayCategory = resolveCategoryLabel(canonicalCategoryId, categoryResolver) ?? tx.categoryId;

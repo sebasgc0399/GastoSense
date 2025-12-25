@@ -1,5 +1,9 @@
 export interface DayHeaderProps {
   date: string;
+  dayIncome: number;
+  dayExpense: number;
+  dayNet: number;
+  count: number;
 }
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat('es-CO', { month: 'short' });
@@ -25,18 +29,28 @@ const formatMonth = (value: string) => {
   return `${lower.charAt(0).toLocaleUpperCase('es-CO')}${lower.slice(1)}`;
 };
 
-export function DayHeader({ date }: DayHeaderProps) {
+export function DayHeader({ date, dayNet, count }: DayHeaderProps) {
   const parsedDate = parseIsoDate(date);
   const currentYear = new Date().getFullYear();
   const primary = parsedDate ? `${formatMonth(MONTH_FORMATTER.format(parsedDate))} ${parsedDate.getDate()}` : date;
   const weekday = parsedDate ? WEEKDAY_FORMATTER.format(parsedDate).toLocaleLowerCase('es-CO') : '';
   const yearSuffix = parsedDate && parsedDate.getFullYear() !== currentYear ? ` ${parsedDate.getFullYear()}` : '';
   const secondary = weekday ? `${weekday}${yearSuffix}` : '';
+  const absNet = Math.abs(dayNet);
+  const netPrefix = dayNet < 0 ? '-' : dayNet > 0 ? '+' : '';
+  const netLabel = `${netPrefix ? `${netPrefix} ` : ''}$${absNet.toLocaleString('es-CO')}`;
+  const movLabel = count === 1 ? 'mov' : 'movs';
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 shadow-sm backdrop-blur-sm">
-      <p className="text-xs font-semibold text-slate-200">{primary}</p>
-      {secondary ? <p className="text-[11px] text-slate-400">{secondary}</p> : null}
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+      <div className="flex flex-col">
+        <p className="text-sm font-semibold text-slate-100">{primary}</p>
+        {secondary ? <p className="text-[11px] text-slate-400">{secondary}</p> : null}
+      </div>
+      <div className="text-right text-sm">
+        <span className="font-semibold text-slate-200 tabular-nums">{netLabel}</span>
+        <span className="text-slate-400">{` \u00b7 ${count} ${movLabel}`}</span>
+      </div>
     </div>
   );
 }
