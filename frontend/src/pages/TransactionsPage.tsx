@@ -1,6 +1,8 @@
 ﻿﻿import type React from 'react';
+import { useMemo } from 'react';
 import { CardMini } from '../components/stats/CardMini';
 import { StatsSummaryCard, type SummaryItem, type SummaryTone } from '../components/stats/StatsSummaryCard';
+import { DayHeader } from '../components/transactions/DayHeader';
 import { TransactionItemCard, type BudgetState } from '../components/transactions/TransactionItemCard';
 import { TransactionsFiltersPanel } from '../components/transactions/TransactionsFiltersPanel';
 import type { Budget, Transaction } from '../types';
@@ -63,6 +65,18 @@ export function TransactionsPage({
     { label: 'Ingreso (filtro)', value: totals.income, tone: 'success' },
     { label: 'Saldo (filtro)', value: balanceTotal, tone: balanceTone },
   ];
+  const groupedTransactions = useMemo(() => {
+    const groups: Array<{ date: string; items: Transaction[] }> = [];
+    for (const tx of paginatedTransactions) {
+      const lastGroup = groups[groups.length - 1];
+      if (!lastGroup || lastGroup.date !== tx.date) {
+        groups.push({ date: tx.date, items: [tx] });
+      } else {
+        lastGroup.items.push(tx);
+      }
+    }
+    return groups;
+  }, [paginatedTransactions]);
 
   return (
     <section className="space-y-4 pb-5">
@@ -94,46 +108,52 @@ export function TransactionsPage({
             Aún no hay movimientos en este rango. Agrega el primero.
           </p>
         )}
-        {paginatedTransactions.map((tx) => {
-          const canonicalCategoryId = resolveCanonicalCategoryId(tx.categoryId, categoryResolver);
-          const displayCategory = resolveCategoryLabel(canonicalCategoryId, categoryResolver) ?? tx.categoryId;
-          const rawBudgetValue = budget?.perCategory?.[canonicalCategoryId];
-          const budgetValue =
-            typeof rawBudgetValue === 'number'
-              ? rawBudgetValue
-              : typeof rawBudgetValue === 'string'
-                ? Number(rawBudgetValue)
-                : undefined;
-          const hasBudgetValue = typeof budgetValue === 'number' && Number.isFinite(budgetValue);
-          const budgetState: BudgetState = !hasBudgetValue ? 'none' : budgetValue > 0 ? 'limited' : 'unlimited';
-          const spentInCategory = categorySpendMap[canonicalCategoryId] ?? 0;
-          const percentUsed =
-            budgetState === 'limited' && typeof budgetValue === 'number' && budgetValue > 0
-              ? Math.round((spentInCategory / budgetValue) * 100)
-              : undefined;
-          const excessAmount =
-            budgetState === 'limited' && typeof budgetValue === 'number' && spentInCategory > budgetValue
-              ? spentInCategory - budgetValue
-              : undefined;
+        {groupedTransactions.map((group) => (
+          <div key={group.date} className="space-y-2">
+            <DayHeader date={group.date} />
+            {group.items.map((tx) => {
+              const canonicalCategoryId = resolveCanonicalCategoryId(tx.categoryId, categoryResolver);
+              const displayCategory = resolveCategoryLabel(canonicalCategoryId, categoryResolver) ?? tx.categoryId;
+              const rawBudgetValue = budget?.perCategory?.[canonicalCategoryId];
+              const budgetValue =
+                typeof rawBudgetValue === 'number'
+                  ? rawBudgetValue
+                  : typeof rawBudgetValue === 'string'
+                    ? Number(rawBudgetValue)
+                    : undefined;
+              const hasBudgetValue = typeof budgetValue === 'number' && Number.isFinite(budgetValue);
+              const budgetState: BudgetState = !hasBudgetValue ? 'none' : budgetValue > 0 ? 'limited' : 'unlimited';
+              const spentInCategory = categorySpendMap[canonicalCategoryId] ?? 0;
+              const percentUsed =
+                budgetState === 'limited' && typeof budgetValue === 'number' && budgetValue > 0
+                  ? Math.round((spentInCategory / budgetValue) * 100)
+                  : undefined;
+              const excessAmount =
+                budgetState === 'limited' && typeof budgetValue === 'number' && spentInCategory > budgetValue
+                  ? spentInCategory - budgetValue
+                  : undefined;
 
-          return (
-            <TransactionItemCard
-              key={tx.id}
-              tx={tx}
-              displayCategory={displayCategory}
-              budgetState={budgetState}
-              budgetValue={budgetValue}
-              spentInCategory={spentInCategory}
-              percentUsed={percentUsed}
-              excessAmount={excessAmount}
-              onEdit={(transaction) => {
-                if (shouldIgnoreTransactionClick?.()) return;
-                setSelectedTx(transaction);
-              }}
-              onDelete={handleDeleteTransaction}
-            />
-          );
-        })}
+              return (
+                <TransactionItemCard
+                  key={tx.id}
+                  tx={tx}
+                  displayCategory={displayCategory}
+                  budgetState={budgetState}
+                  budgetValue={budgetValue}
+                  spentInCategory={spentInCategory}
+                  percentUsed={percentUsed}
+                  excessAmount={excessAmount}
+                  showDate={false}
+                  onEdit={(transaction) => {
+                    if (shouldIgnoreTransactionClick?.()) return;
+                    setSelectedTx(transaction);
+                  }}
+                  onDelete={handleDeleteTransaction}
+                />
+              );
+            })}
+          </div>
+        ))}
         {transactions.length > txPageSize && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
             <button

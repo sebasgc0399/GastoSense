@@ -15,6 +15,7 @@ export interface TransactionItemCardProps {
   excessAmount?: number;
   onEdit: (tx: Transaction) => void;
   onDelete: (id: string) => void | Promise<void>;
+  showDate?: boolean;
 }
 
 export function TransactionItemCard({
@@ -27,6 +28,7 @@ export function TransactionItemCard({
   excessAmount,
   onEdit,
   onDelete,
+  showDate = true,
 }: TransactionItemCardProps) {
   const confirm = useConfirm();
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
@@ -193,7 +195,8 @@ export function TransactionItemCard({
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
         <span>
-          {tx.date} · {tx.paymentMethod}
+          {showDate ? `${tx.date} · ` : ''}
+          {tx.paymentMethod}
         </span>
         {showCategoryChip && (
           <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
