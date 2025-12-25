@@ -268,7 +268,7 @@ export function MetricsPage({
             <div className="card">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">
-                  {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto del mes'}
+                  {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
                 </h3>
                 <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
               </div>
@@ -313,12 +313,14 @@ export function MetricsPage({
                 >
                   {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
                 </button>
-                <button
-                  className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
-                  onClick={() => onViewMovements()}
-                >
-                  Ver movimientos
-                </button>
+                {hasBudget && (
+                  <button
+                    className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                    onClick={() => onViewMovements()}
+                  >
+                    Ver movimientos
+                  </button>
+                )}
               </div>
             </div>
 
