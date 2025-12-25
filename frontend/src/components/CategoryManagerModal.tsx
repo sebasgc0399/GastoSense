@@ -1,10 +1,11 @@
-﻿import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Loader2, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { isCategoryDuplicateError, useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
 import { updateCategory as updateCategoryDoc } from '../services/categories';
 import type { Category } from '../types';
+import { isValidAiIconName } from '../utils/iconLibrary';
 import { CategoryIcon } from './ui/CategoryIcon';
 import { IconPicker } from './ui/IconPicker';
 
@@ -12,6 +13,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   userId?: string | null;
+  onSuggestIcon?: (label: string) => Promise<string>;
 }
 
 type ViewMode = 'list' | 'form' | 'icons';
@@ -26,7 +28,7 @@ const ensureFallbackLast = (list: Category[]) => {
   return [...rest, fallback];
 };
 
-export function CategoryManagerModal({ open, onClose, userId }: Props) {
+export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: Props) {
   const {
     categories,
     loading,
@@ -45,6 +47,10 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
   const [view, setView] = useState<ViewMode>('list');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [iconSuggesting, setIconSuggesting] = useState(false);
+  const [iconSuggestError, setIconSuggestError] = useState<string | null>(null);
+  const [iconSuggestNotice, setIconSuggestNotice] = useState<string | null>(null);
+  const iconSuggestTimeoutRef = useRef<number | null>(null);
   const [duplicateArchivedId, setDuplicateArchivedId] = useState<string | null>(null);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -54,6 +60,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     [categories, editingId],
   );
   const isEditingFallback = editingCategory?.id === FALLBACK_CATEGORY_ID;
+  const showSuggestButton = Boolean(onSuggestIcon);
 
   const headerTitle = useMemo(() => {
     if (view === 'icons') return 'Selecciona un ícono';
@@ -77,6 +84,13 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     setFormState({ label: '', icon: DEFAULT_ICON });
     setFormError(null);
     setDuplicateArchivedId(null);
+    setIconSuggesting(false);
+    setIconSuggestError(null);
+    setIconSuggestNotice(null);
+    if (iconSuggestTimeoutRef.current) {
+      window.clearTimeout(iconSuggestTimeoutRef.current);
+      iconSuggestTimeoutRef.current = null;
+    }
     setView('list');
   }, []);
 
@@ -85,6 +99,14 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
       resetForm();
     }
   }, [open, resetForm]);
+
+  useEffect(() => {
+    return () => {
+      if (iconSuggestTimeoutRef.current) {
+        window.clearTimeout(iconSuggestTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -235,6 +257,48 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     }
     resetForm();
   };
+
+  const handleSuggestIcon = useCallback(async () => {
+    const trimmed = formState.label.trim();
+    if (!trimmed) {
+      if (iconSuggestTimeoutRef.current) {
+        window.clearTimeout(iconSuggestTimeoutRef.current);
+      }
+      setIconSuggestError(null);
+      setIconSuggestNotice('Pon un nombre para sugerir con IA.');
+      iconSuggestTimeoutRef.current = window.setTimeout(() => {
+        setIconSuggestNotice(null);
+        iconSuggestTimeoutRef.current = null;
+      }, 2500);
+      return;
+    }
+    if (!onSuggestIcon) {
+      setIconSuggestError('No se pudo sugerir el icono.');
+      return;
+    }
+    if (iconSuggestTimeoutRef.current) {
+      window.clearTimeout(iconSuggestTimeoutRef.current);
+      iconSuggestTimeoutRef.current = null;
+    }
+    setIconSuggestNotice(null);
+    setIconSuggestError(null);
+    setIconSuggesting(true);
+    try {
+      const suggested = await onSuggestIcon(trimmed);
+      const icon = suggested.trim();
+      if (!icon || !isValidAiIconName(icon)) {
+        setIconSuggestError('No se pudo sugerir un icono valido.');
+        return;
+      }
+      setFormState((prev) => ({ ...prev, icon }));
+      setView('form');
+    } catch (err) {
+      const message = (err as Error)?.message || 'No se pudo sugerir el icono.';
+      setIconSuggestError(message);
+    } finally {
+      setIconSuggesting(false);
+    }
+  }, [formState.label, onSuggestIcon]);
 
   const handleSave = async () => {
     if (saving) return;
@@ -609,6 +673,8 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                     setFormState((prev) => ({ ...prev, label: e.target.value }));
                     if (formError) setFormError(null);
                     if (duplicateArchivedId) setDuplicateArchivedId(null);
+                    if (iconSuggestError) setIconSuggestError(null);
+                    if (iconSuggestNotice) setIconSuggestNotice(null);
                   }}
                   placeholder="Ej. Suscripciones"
                   disabled={isEditingFallback}
@@ -620,7 +686,11 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                 <label className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">Ícono</label>
                 <button
                   type="button"
-                  onClick={() => setView('icons')}
+                  onClick={() => {
+                    setIconSuggestError(null);
+                    setIconSuggestNotice(null);
+                    setView('icons');
+                  }}
                   className="flex w-full items-center justify-between rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] hover:border-primary"
                 >
                   <span className="flex items-center gap-2">
@@ -694,18 +764,44 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                   <p className="text-sm font-semibold text-[var(--text)]">Selecciona un ícono</p>
                   <p className="text-xs text-[var(--text-muted)]">Toca un ícono para elegirlo.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setView('form')}
-                  className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text)] hover:border-primary"
-                >
-                  Cerrar
-                </button>
+                <div className="flex items-center gap-2">
+                  {showSuggestButton && (
+                    <button
+                      type="button"
+                      onClick={handleSuggestIcon}
+                      disabled={iconSuggesting}
+                      title="Sugerir con IA"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Sugerir con IA"
+                    >
+                      {iconSuggesting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setView('form')}
+                    className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text)] hover:border-primary"
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
               <div className="max-h-[60vh] overflow-y-auto px-4 py-4">
+                {iconSuggestNotice && (
+                  <p className="mb-3 text-xs text-white/70">{iconSuggestNotice}</p>
+                )}
+                {iconSuggestError && (
+                  <p className="mb-3 text-xs text-[var(--error-text)]">{iconSuggestError}</p>
+                )}
                 <IconPicker
                   selectedIcon={formState.icon}
                   onSelect={(icon) => {
+                    setIconSuggestError(null);
+                    setIconSuggestNotice(null);
                     setFormState((prev) => ({ ...prev, icon }));
                     setView('form');
                   }}
@@ -718,6 +814,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     </div>
   , document.body);
 }
+
 
 
 

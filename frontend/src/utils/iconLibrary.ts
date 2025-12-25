@@ -1,3 +1,5 @@
+import { iconNames } from 'lucide-react/dynamic';
+
 export const ICON_LIBRARY = [
   'Wallet',
   'CreditCard',
@@ -50,3 +52,14 @@ export const ICON_LIBRARY = [
   'Calculator',
   'Calendar',
 ] as const;
+
+const toPascalCase = (value: string) =>
+  value
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+
+const AI_ICON_SET = new Set(iconNames.map(toPascalCase));
+
+export const isValidAiIconName = (name: string) => AI_ICON_SET.has(name);

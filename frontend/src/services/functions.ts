@@ -13,6 +13,7 @@ const functions = getFunctions(app, 'us-central1');
 
 export const callAnalyzeSummary = httpsCallable(functions, 'analyzeSummary');
 export const callParseTransactionPhrase = httpsCallable(functions, 'parseTransactionPhrase');
+export const callSuggestCategoryIcon = httpsCallable(functions, 'suggestCategoryIcon');
 export const callTranscribeAudio = httpsCallable(functions, 'transcribeAudio');
 export const callGetUserProfile = httpsCallable(functions, 'getUserProfile');
 export const callSetUserOpenAIKey = httpsCallable(functions, 'setUserOpenAIKey');

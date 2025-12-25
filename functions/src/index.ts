@@ -9,6 +9,7 @@ import {onSchedule} from "firebase-functions/v2/scheduler";
 import {setGlobalOptions} from "firebase-functions/v2/options";
 import OpenAI from "openai";
 import {toFile} from "openai/uploads";
+import {AI_ICON_LIBRARY} from "./aiIconLibrary";
 
 setGlobalOptions({region: "us-central1", maxInstances: 10});
 
@@ -134,6 +135,7 @@ interface CategoryCatalogCacheEntry {
 
 const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000;
 const FALLBACK_CATEGORY_ID = "otros";
+const AI_ICON_SET = new Set<string>(AI_ICON_LIBRARY);
 const categoryCatalogCache = new Map<
   string,
   CategoryCatalogCacheEntry
@@ -1005,6 +1007,103 @@ export const parseTransactionPhrase = onCall(
 /**
  * Callable: genera recomendaciones del asesor IA según modo y resumen.
  */
+/**
+ * Callable: sugiere un icono para una categoria usando la lista permitida.
+ */
+export const suggestCategoryIcon = onCall(
+  {secrets: [openAIApiKey]},
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesion.");
+    }
+    const {label} = request.data as {label?: string};
+    if (!label || typeof label !== "string") {
+      throw new HttpsError("invalid-argument", "Debes enviar un campo 'label'.");
+    }
+    const trimmed = label.trim();
+    if (!trimmed) {
+      throw new HttpsError("invalid-argument", "Debes enviar un campo 'label'.");
+    }
+
+    const {client, profile, effectiveRoleForLimit} = await resolveOpenAIClient(request.auth.uid);
+    await checkRateLimit(request.auth.uid, "parse", profile, effectiveRoleForLimit);
+
+    const schema = {
+      type: "object",
+      properties: {
+        icon: {type: "string", minLength: 2, maxLength: 40, pattern: "^[A-Z][A-Za-z0-9]*$"},
+      },
+      required: ["icon"],
+      additionalProperties: false,
+    } as const;
+
+    const system =
+      "Sugiere un icono de Lucide para la categoria. " +
+      "Devuelve SOLO JSON valido segun el esquema con el campo icon. " +
+      "Usa el nombre exacto en PascalCase (ej: Scissors, ShoppingBag). " +
+      "Ejemplo: Barberia -> Scissors.";
+
+    try {
+      const primaryModel = "o4-mini";
+      const fallbackModel = "gpt-5-mini";
+      const createIconResponse = (model: string) =>
+        client.responses.create({
+          model,
+          instructions: system,
+          input: trimmed,
+          text: {
+            format: {
+              type: "json_schema",
+              name: "category_icon",
+              schema,
+              strict: true,
+            },
+          },
+          reasoning: {effort: "low"},
+          max_output_tokens: 120,
+        });
+
+      let response: Awaited<ReturnType<typeof createIconResponse>>;
+      let modelUsed = primaryModel;
+      try {
+        response = await createIconResponse(primaryModel);
+      } catch (error) {
+        console.warn(
+          `[suggestCategoryIcon] ${primaryModel} failed, retrying ${fallbackModel}.`,
+          error,
+        );
+        modelUsed = fallbackModel;
+        response = await createIconResponse(fallbackModel);
+      }
+      console.info(`[suggestCategoryIcon] model=${modelUsed}`);
+
+      const raw = response.output_text?.trim();
+      const parsed = raw ? (JSON.parse(raw) as {icon?: string}) : {};
+      const iconValue = typeof parsed.icon === "string" ? parsed.icon.trim() : "";
+      const normalizeIconName = (value: string) => {
+        if (!value) return "";
+        if (value.includes("-")) {
+          return value
+            .split("-")
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join("");
+        }
+        if (value === value.toLowerCase()) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+        return value;
+      };
+      const normalized = normalizeIconName(iconValue);
+      const icon = AI_ICON_SET.has(normalized) ? normalized : "Tag";
+      return {icon};
+    } catch (error) {
+      console.error("[suggestCategoryIcon] error", error);
+      throw new HttpsError("internal", "No se pudo sugerir el icono.");
+    }
+  },
+);
+
 const advisorActionPlaybook: Record<string, string> = {
   "Espejo diario":
     "Objetivo: Foto instantánea del 'Ahora'. Enfócate SOLO en el ritmo de gasto vs días del mes.\n" +

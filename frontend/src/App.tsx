@@ -14,7 +14,7 @@ import { HomePage } from './pages/HomePage';
 import { MetricsPage } from './pages/MetricsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
-import { callParseTransactionPhrase } from './services/functions';
+import { callParseTransactionPhrase, callSuggestCategoryIcon } from './services/functions';
 import { trackEvent } from './services/analytics';
 import {
   useAdvisorController,
@@ -623,6 +623,28 @@ function App() {
     }
   };
 
+  const handleSuggestCategoryIcon = useCallback(
+    async (label: string): Promise<string> => {
+      const trimmed = label.trim();
+      if (!trimmed) {
+        throw new Error('Escribe el nombre primero.');
+      }
+      try {
+        const resp = await callSuggestCategoryIcon({ label: trimmed });
+        const data = resp.data as { icon?: string };
+        await refreshQuota();
+        const icon = typeof data.icon === 'string' ? data.icon.trim() : '';
+        return icon || 'Tag';
+      } catch (err) {
+        if (isResourceExhausted(err)) {
+          openUpgrade('parse_exhausted');
+        }
+        throw new Error(mapAiError(err, 'parse'));
+      }
+    },
+    [isResourceExhausted, mapAiError, openUpgrade, refreshQuota],
+  );
+
   const loaderMessage = useMemo(() => {
     const pendingTransactions = user && !transactionsReady;
     const pendingProfile = user && profileLoading;
@@ -850,6 +872,7 @@ function App() {
         open={showCategoryManager}
         onClose={() => setShowCategoryManager(false)}
         userId={user?.uid}
+        onSuggestIcon={handleSuggestCategoryIcon}
       />
 
       <BudgetManagerSheet
