@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import crypto from "crypto";
 import {defineSecret} from "firebase-functions/params";
 import {HttpsError, onCall, onRequest} from "firebase-functions/v2/https";
+import {onDocumentWritten} from "firebase-functions/v2/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {setGlobalOptions} from "firebase-functions/v2/options";
 import OpenAI from "openai";
@@ -694,6 +695,18 @@ function isoDateWithOffset(daysFromNow: number, offsetMinutes?: number): string 
   const targetMs = nowMs + daysFromNow * 86_400_000;
   return new Date(targetMs - offset * 60_000).toISOString().slice(0, 10);
 }
+
+export const updateCategoriesUpdatedAt = onDocumentWritten(
+  "users/{uid}/categories/{categoryId}",
+  async (event) => {
+    const uid = event.params.uid;
+    if (!uid) return;
+    await firestore.doc(`users/${uid}`).set(
+      {categoriesUpdatedAt: admin.firestore.FieldValue.serverTimestamp()},
+      {merge: true},
+    );
+  },
+);
 
 /**
  * Callable: transcribe audio (<=10s) a texto usando Whisper.

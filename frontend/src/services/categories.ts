@@ -8,7 +8,6 @@ import {
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
   setDoc,
   where,
   updateDoc,
@@ -71,12 +70,6 @@ const buildCategoryData = (payload: CategoryDraft): Record<string, unknown> => {
   return data;
 };
 
-const touchCategoriesUpdatedAt = async (userId: string): Promise<void> => {
-  const db = getFirestoreDb();
-  const userRef = doc(db, 'users', userId);
-  await setDoc(userRef, { categoriesUpdatedAt: serverTimestamp() }, { merge: true });
-};
-
 export async function getUserCategories(userId: string): Promise<Category[]> {
   const db = getFirestoreDb();
   const ref = collection(db, 'users', userId, COLLECTION);
@@ -111,8 +104,6 @@ export async function seedDefaultCategories(userId: string): Promise<void> {
     isArchived: false,
     isSystem: true,
   });
-  const userRef = doc(db, 'users', userId);
-  batch.set(userRef, { categoriesUpdatedAt: serverTimestamp() }, { merge: true });
   await batch.commit();
 }
 
@@ -121,7 +112,6 @@ export async function createCategory(userId: string, payload: CategoryDraft): Pr
   const categoryId = payload.id ?? (await getUniqueCategoryId(userId, payload.label));
   const ref = doc(db, 'users', userId, COLLECTION, categoryId);
   await setDoc(ref, buildCategoryData(payload));
-  await touchCategoriesUpdatedAt(userId);
   return ref.id;
 }
 
@@ -148,7 +138,6 @@ export async function updateCategory(
   }
   if (Object.keys(data).length === 0) return;
   await updateDoc(ref, data);
-  await touchCategoriesUpdatedAt(userId);
 }
 
 export async function archiveCategory(userId: string, id: string): Promise<void> {
@@ -214,7 +203,6 @@ export async function deleteCategoryConditional(
   if (usageByLegacySnapshot.empty) {
     const catRef = doc(db, 'users', userId, COLLECTION, id);
     await deleteDoc(catRef);
-    await touchCategoriesUpdatedAt(userId);
     return;
   }
 

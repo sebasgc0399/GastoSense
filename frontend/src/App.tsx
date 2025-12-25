@@ -47,6 +47,7 @@ function App() {
   type SettingsOpenSource = 'header' | 'upgrade_modal' | 'other';
   const prevTabRef = useRef<TabKey>('home');
   const settingsOpenSourceRef = useRef<SettingsOpenSource>('other');
+  const suppressTxClickUntilRef = useRef(0);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   type TransactionsSortBy = 'date_desc' | 'amount_desc';
@@ -132,6 +133,32 @@ function App() {
     handleAdminSaveUser,
     handleCopyUid,
   } = useSettingsController({ userUid: user?.uid, logout });
+  const roleFromProfile = userProfile?.role as UserRole | undefined;
+  const roleFromQuota = iaQuota?.role as UserRole | undefined;
+  const hasActiveMembership = hasActiveSubscription;
+  const isPrivilegedRole = (role?: UserRole) => role === 'admin';
+  const isPaidRole = (role?: UserRole) =>
+    role === 'paid_byok' || role === 'paid_managed' || role === 'gifted_managed';
+  const resolveAdvisorRoleBase = (profileRole?: UserRole, quotaRole?: UserRole): UserRole => {
+    if (profileRole === 'admin' || quotaRole === 'admin') return 'admin';
+    if (isPaidRole(profileRole)) return profileRole as UserRole;
+    if (isPaidRole(quotaRole)) return quotaRole as UserRole;
+    return 'free';
+  };
+  const canExport = isPrivilegedRole(roleFromProfile) || isPrivilegedRole(roleFromQuota)
+    ? true
+    : isPaidRole(roleFromProfile)
+      ? hasActiveMembership
+      : false;
+  const advisorRoleBase = resolveAdvisorRoleBase(roleFromProfile, roleFromQuota);
+  const advisorEffectiveRole: UserRole =
+    advisorRoleBase === 'admin'
+      ? 'admin'
+      : isPaidRole(advisorRoleBase)
+        ? hasActiveMembership
+          ? advisorRoleBase
+          : 'free'
+        : 'free';
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
     'parse_exhausted',
@@ -162,6 +189,19 @@ function App() {
     () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     [plansRef],
   );
+  const scrollToMonthlyBudget = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const target = document.getElementById('monthly-budget-card');
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const targetCenter = rect.top + scrollTop + rect.height / 2;
+    const desiredTop = targetCenter - window.innerHeight / 2;
+    const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const clampedTop = Math.min(Math.max(0, desiredTop), maxTop);
+
+    window.scrollTo({ top: clampedTop, behavior: 'smooth' });
+  }, []);
 
   const openSettings = useCallback((source: SettingsOpenSource = 'other') => {
     settingsOpenSourceRef.current = source;
@@ -201,15 +241,35 @@ function App() {
     setBudgetFocusCategory(null);
   }, []);
 
+  const openMonthlyBudget = useCallback(() => {
+    closeCategoryBudgets();
+    setActiveTab('home');
+    setTimeout(() => scrollToMonthlyBudget(), 120);
+  }, [closeCategoryBudgets, scrollToMonthlyBudget]);
+
   const openMovements = useCallback(
-    (category?: string, opts?: { sortBy?: TransactionsSortBy }) => {
+    (category?: string, opts?: { sortBy?: TransactionsSortBy; suppressTxClick?: boolean }) => {
       const { startDate, endDate } = monthRangeIso(selectedMonth);
+      if (opts?.suppressTxClick) {
+        suppressTxClickUntilRef.current = Date.now() + 500;
+      }
       setTxSortBy(opts?.sortBy ?? 'date_desc');
       txHandleFiltersChange({ startDate, endDate, category: category || 'all', search: '' });
       setActiveTab('transactions');
       trackEvent('smart_card_click', { action: 'movements', category });
     },
     [selectedMonth, txHandleFiltersChange],
+  );
+  const shouldIgnoreTransactionClick = useCallback(
+    () => Date.now() < suppressTxClickUntilRef.current,
+    [],
+  );
+  const handleViewCategory = useCallback(
+    (categoryId: string) => {
+      openMovements(categoryId);
+      closeCategoryBudgets();
+    },
+    [closeCategoryBudgets, openMovements],
   );
 
   const handleAiActionClick = useCallback(
@@ -477,7 +537,7 @@ function App() {
   } = useAdvisorController({
     userId: user?.uid,
     profileAdvisorMode: userProfile?.advisorMode,
-    userRole: userProfile?.role,
+    userRole: advisorEffectiveRole,
     iaQuota,
     currentMonth: selectedMonth,
     monthlyExpense,
@@ -671,6 +731,9 @@ function App() {
             userId={user?.uid}
             setSelectedTx={setSelectedTx}
             handleDeleteTransaction={handleDeleteTransaction}
+            shouldIgnoreTransactionClick={shouldIgnoreTransactionClick}
+            canExport={canExport}
+            onExportLocked={() => openUpgrade('feature_locked')}
           />
         )}
         {activeTab === 'metrics' && (
@@ -687,8 +750,8 @@ function App() {
             categoryResolver={categoryResolver}
             previousMonth={previousMonth}
             onOpenQuickAdd={() => openQuickAdd('expense')}
-            onViewMovements={() => openMovements()}
-            onAdjustBudget={() => openBudgets()}
+            onViewMovements={(categoryId, opts) => openMovements(categoryId, opts)}
+            onAdjustBudget={openMonthlyBudget}
           />
         )}
         {activeTab === 'advisor' && (
@@ -797,6 +860,7 @@ function App() {
         categorySpendMap={categorySpendMap}
         onSave={handleSaveCategoryBudgets}
         focusCategoryId={budgetFocusCategory}
+        onViewCategory={handleViewCategory}
       />
 
         <TransactionEditModal

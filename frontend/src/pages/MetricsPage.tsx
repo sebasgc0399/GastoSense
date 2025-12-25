@@ -28,7 +28,7 @@ interface MetricsPageProps {
   categoryResolver: CategoryResolver;
   previousMonth: { expense: number; income: number } | null;
   onOpenQuickAdd: () => void;
-  onViewMovements: () => void;
+  onViewMovements: (categoryId?: string, opts?: { suppressTxClick?: boolean }) => void;
   onAdjustBudget: () => void;
 }
 
@@ -241,7 +241,7 @@ export function MetricsPage({
             </button>
             <button
               className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
-              onClick={onViewMovements}
+              onClick={() => onViewMovements()}
             >
               Ver movimientos
             </button>
@@ -267,7 +267,9 @@ export function MetricsPage({
           <div className="grid grid-cols-1 gap-3">
             <div className="card">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">{hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}</h3>
+                <h3 className="text-lg font-semibold text-white">
+                  {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
+                </h3>
                 <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
               </div>
 
@@ -279,6 +281,11 @@ export function MetricsPage({
                       ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
                     </span>
                   </div>
+                  <p className="mt-2 text-xs text-[var(--muted)]">
+                    {budgetTotal - monthlyExpense >= 0
+                      ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
+                      : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
+                  </p>
                   <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
                     <div
                       className={`h-full rounded-full ${
@@ -304,12 +311,12 @@ export function MetricsPage({
                   className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
                   onClick={onAdjustBudget}
                 >
-                  Ajustar presupuesto
+                  {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
                 </button>
                 {hasBudget && (
                   <button
                     className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
-                    onClick={onViewMovements}
+                    onClick={() => onViewMovements()}
                   >
                     Ver movimientos
                   </button>
@@ -383,6 +390,7 @@ export function MetricsPage({
               mode={effectiveCategoriesMode}
               onModeChange={handleCategoriesModeChange}
               budgetModeAvailable={budgetModeAvailable}
+              onCategoryNavigate={(categoryId) => onViewMovements(categoryId, { suppressTxClick: true })}
               showViewAll={shouldShowViewAll}
               onViewAll={() => {
                 trackEvent('metrics_top_categories_modal_opened', {

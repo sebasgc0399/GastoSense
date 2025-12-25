@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useCategoriesController } from '../hooks/useCategoriesController';
+import { isCategoryDuplicateError, useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
 import { updateCategory as updateCategoryDoc } from '../services/categories';
 import type { Category } from '../types';
@@ -45,6 +45,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
   const [view, setView] = useState<ViewMode>('list');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [duplicateArchivedId, setDuplicateArchivedId] = useState<string | null>(null);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     setEditingId(null);
     setFormState({ label: '', icon: DEFAULT_ICON });
     setFormError(null);
+    setDuplicateArchivedId(null);
     setView('list');
   }, []);
 
@@ -115,6 +117,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     const label = cat.id === FALLBACK_CATEGORY_ID ? FALLBACK_CATEGORY_LABEL : cat.label;
     setFormState({ label, icon: cat.icon });
     setFormError(null);
+    setDuplicateArchivedId(null);
     setView('form');
   }, []);
 
@@ -122,6 +125,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
     setEditingId(null);
     setFormState({ label: '', icon: DEFAULT_ICON });
     setFormError(null);
+    setDuplicateArchivedId(null);
     setView('form');
   }, []);
 
@@ -242,6 +246,7 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
 
     setSaving(true);
     setFormError(null);
+    setDuplicateArchivedId(null);
     try {
       if (editingId) {
         const updates = isEditingFallback
@@ -258,7 +263,32 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
       resetForm();
     } catch (err) {
       console.error(err);
+      if (isCategoryDuplicateError(err)) {
+        if (err.code === 'duplicate_archived') {
+          setFormError('Ya existe pero esta archivada. Quieres reactivarla?');
+          setDuplicateArchivedId(err.categoryId);
+        } else {
+          setFormError('Ya existe una categoria con ese nombre.');
+        }
+        return;
+      }
       setFormError('No se pudo guardar la categoría.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReactivateDuplicate = async () => {
+    if (!duplicateArchivedId || saving) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      const nextOrder = orderedCategories.length;
+      await updateCategoryAction(duplicateArchivedId, { isArchived: false, order: nextOrder });
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      setFormError('No se pudo reactivar la categoria.');
     } finally {
       setSaving(false);
     }
@@ -575,7 +605,11 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
                 <input
                   type="text"
                   value={formState.label}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, label: e.target.value }))}
+                  onChange={(e) => {
+                    setFormState((prev) => ({ ...prev, label: e.target.value }));
+                    if (formError) setFormError(null);
+                    if (duplicateArchivedId) setDuplicateArchivedId(null);
+                  }}
                   placeholder="Ej. Suscripciones"
                   disabled={isEditingFallback}
                   className="w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
@@ -598,6 +632,16 @@ export function CategoryManagerModal({ open, onClose, userId }: Props) {
               </div>
 
               {formError && <p className="text-xs text-[var(--error-text)]">{formError}</p>}
+              {duplicateArchivedId && (
+                <button
+                  type="button"
+                  onClick={handleReactivateDuplicate}
+                  disabled={saving}
+                  className="w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary disabled:opacity-60"
+                >
+                  Reactivar categoria
+                </button>
+              )}
             </div>
           )}
         </div>

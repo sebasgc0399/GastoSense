@@ -1,3 +1,4 @@
+﻿import { useEffect, useState } from 'react';
 import { CategorySpendChart } from './charts/CategorySpendChart';
 import type { CategorySpendItem, CategorySpendMode } from './charts/CategorySpendChart';
 
@@ -13,6 +14,8 @@ interface Props {
   showModeToggle?: boolean;
   onEditBudgets?: () => void;
   editBudgetsLabel?: string;
+  onCategoryNavigate?: (categoryId: string) => void;
+  enableCategoryNavigate?: boolean;
 }
 
 export function TopExpensesChart({
@@ -21,18 +24,37 @@ export function TopExpensesChart({
   onModeChange,
   budgetModeAvailable,
   budgetModeHelperText = 'Define presupuestos por categoría para comparar.',
-  limit = 3,
+  limit,
   showViewAll,
   onViewAll,
   showModeToggle = true,
   onEditBudgets,
   editBudgetsLabel = 'Editar presupuestos por categoría',
+  onCategoryNavigate,
+  enableCategoryNavigate,
 }: Props) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    if (mq.addEventListener) {
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
+    }
+    mq.addListener(update);
+    return () => mq.removeListener(update);
+  }, []);
+
+  const resolvedLimit = typeof limit === 'number' ? limit : isMobile ? 5 : 3;
   const guideText = !budgetModeAvailable ? 'Para ver Presupuesto, define topes por categoría.' : null;
   const highlightEdit = !budgetModeAvailable && onEditBudgets;
   const editButtonClass = highlightEdit
     ? 'h-9 rounded-xl border border-primary/50 bg-primary/10 px-3 text-xs font-semibold text-[var(--text)] hover:border-primary hover:bg-primary/20'
     : 'h-9 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 text-xs font-semibold text-[var(--text)] hover:bg-white/5 hover:border-primary';
+  const canViewAll = Boolean(showViewAll && onViewAll && items.length > resolvedLimit);
 
   return (
     <div className="card">
@@ -48,7 +70,7 @@ export function TopExpensesChart({
                 {editBudgetsLabel}
               </button>
             )}
-            {showViewAll && onViewAll && (
+            {canViewAll && (
               <button className="text-xs font-semibold text-primary hover:underline" onClick={onViewAll}>
                 Ver todas
               </button>
@@ -91,7 +113,13 @@ export function TopExpensesChart({
         </div>
       </div>
 
-      <CategorySpendChart items={items} mode={mode} limit={limit} />
+      <CategorySpendChart
+        items={items}
+        mode={mode}
+        limit={resolvedLimit}
+        onCategoryNavigate={onCategoryNavigate}
+        enableCategoryNavigate={enableCategoryNavigate}
+      />
     </div>
   );
 }

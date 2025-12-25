@@ -100,13 +100,15 @@ export function HomePage({
         />
       </div>
 
-      <BudgetCard
-        month={currentMonth}
-        totalExpense={monthlyExpense}
-        budget={budget}
-        onSave={handleSaveBudget}
-        loading={budgetSaving}
-      />
+      <div id="monthly-budget-card">
+        <BudgetCard
+          month={currentMonth}
+          totalExpense={monthlyExpense}
+          budget={budget}
+          onSave={handleSaveBudget}
+          loading={budgetSaving}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <TopExpensesChart

@@ -1,5 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
+import { todayIso } from '../../utils/dates';
 
 export type EvolutionChartPoint = { date: string; day: number; amount: number };
 
@@ -18,6 +19,13 @@ export type EvolutionChartProps = {
 };
 
 const fmtCOP = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}`;
+const formatTooltipDate = (iso: string) => {
+  const parts = iso.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) return iso;
+  const [year, month, day] = parts;
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' }).format(date);
+};
 
 export function EvolutionChart({
   view,
@@ -31,8 +39,8 @@ export function EvolutionChart({
   const seriesData = view === 'daily' ? daily : cumulative;
   const xLabels = seriesData.map((d) => String(d.day).padStart(2, '0'));
   const lastDayLabel = xLabels.length ? xLabels[xLabels.length - 1] : '01';
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const todayPoint = isCurrentMonth ? daily.find((d) => d.date === todayIso) : undefined;
+  const today = todayIso();
+  const todayPoint = isCurrentMonth ? daily.find((d) => d.date === today) : undefined;
   const todayLabel = todayPoint ? String(todayPoint.day).padStart(2, '0') : null;
 
   const tickSet = new Set<string>(['01', '15', lastDayLabel]);
@@ -46,6 +54,7 @@ export function EvolutionChart({
     if (!point) return '';
 
     const amount = point.amount;
+    const dateLabel = formatTooltipDate(point.date);
     const hasAvg = avgDailyExpense > 0;
     const delta = hasAvg ? amount - avgDailyExpense : null;
     const deltaLabel = delta !== null ? `${delta >= 0 ? '+' : '-'}${fmtCOP(Math.abs(delta))}` : null;
@@ -53,7 +62,7 @@ export function EvolutionChart({
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <div style="font-weight:600;color:#F8FAFC;">${point.date}</div>
+        <div style="font-weight:600;color:#F8FAFC;">${dateLabel}</div>
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
           <span style="color:#94A3B8;">Gasto del día</span>
           <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(amount)}</span>
@@ -75,6 +84,7 @@ export function EvolutionChart({
     if (!point) return '';
 
     const acc = point.amount;
+    const dateLabel = formatTooltipDate(point.date);
     const pct = budgetTotal && budgetTotal > 0 ? Math.round((acc / budgetTotal) * 100) : null;
     const hasPace = typeof paceIdeal?.[idx]?.amount === 'number' && Number.isFinite(paceIdeal[idx].amount);
     const delta = hasPace ? acc - paceIdeal[idx].amount : null;
@@ -83,7 +93,7 @@ export function EvolutionChart({
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <div style="font-weight:600;color:#F8FAFC;">${point.date}</div>
+        <div style="font-weight:600;color:#F8FAFC;">${dateLabel}</div>
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
           <span style="color:#94A3B8;">Acumulado</span>
           <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(acc)}</span>

@@ -17,7 +17,7 @@ interface AllCategoriesModalProps {
   budgetModeAvailable: boolean;
   budgetModeHelperText?: string;
   onClose: () => void;
-  onViewMovements?: () => void;
+  onViewMovements?: (categoryId?: string, opts?: { suppressTxClick?: boolean }) => void;
 }
 
 export function AllCategoriesModal({
@@ -105,7 +105,7 @@ export function AllCategoriesModal({
             subtitle={monthLabel}
             items={visibleItems}
             mode={mode}
-            showFallbackId={true}
+            showFallbackId={false}
           />
         </div>
 

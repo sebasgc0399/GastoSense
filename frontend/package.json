@@ -20,7 +20,8 @@
     "firebase": "^12.6.0",
     "lucide-react": "^0.474.0",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react-dom": "^19.2.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

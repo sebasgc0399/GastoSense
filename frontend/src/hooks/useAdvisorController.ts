@@ -191,7 +191,7 @@ export function useAdvisorController({
     [advisorMode, userId],
   );
 
-  const iaRole: UserRole = (userRole as UserRole) || (iaQuota?.role as UserRole) || 'free';
+  const iaRole: UserRole = (userRole as UserRole) || 'free';
   const isFreeRole = iaRole === 'free';
 
   const parseExhausted =
