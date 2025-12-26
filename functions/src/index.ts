@@ -42,6 +42,15 @@ const wompiPlanProPromoEnd = process.env.WOMPI_PLAN_PRO_PROMO_END || "";
 const wompiPublicKey = process.env.WOMPI_PUBLIC_KEY || "";
 const wompiIntegrityKey = process.env.WOMPI_INTEGRITY_KEY || "";
 const wompiRedirectUrl = process.env.WOMPI_REDIRECT_URL || "";
+const advisorFreeChatRateLimit = Number(process.env.ADVISOR_FREE_CHAT_RATE_LIMIT || 30);
+const advisorFreeChatMaxDays = 31;
+const advisorFreeChatMaxTx = 300;
+const advisorFreeChatSampleRecent = 50;
+const advisorFreeChatSampleOld = 50;
+const advisorFreeChatSampleTop = 200;
+const advisorFreeChatSummaryMaxChars = 1500;
+const advisorFreeChatTurnMaxChars = 600;
+const advisorFreeChatMaxTurns = 4;
 
 type UserRole = "admin" | "free" | "paid_byok" | "paid_managed" | "gifted_managed";
 type KeyPreference = "byok" | "managed";
@@ -82,6 +91,34 @@ interface ResolvedUserProfile {
 }
 
 type AdvisorMode = "amable" | "reganon";
+
+type AdvisorChatTurnRole = "user" | "assistant";
+
+interface AdvisorChatTurn {
+  role: AdvisorChatTurnRole;
+  text: string;
+  at: number;
+}
+
+interface AdvisorChatSessionDoc {
+  createdAt?: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
+  updatedAt?: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
+  tone?: AdvisorMode;
+  rangeFrom?: string;
+  rangeTo?: string;
+  conversationSummary?: string;
+  lastTurns?: AdvisorChatTurn[];
+  lastContextHash?: string;
+  messageCount?: number;
+}
+
+type AdvisorFreeChatTx = {
+  date: string;
+  type: "expense" | "income";
+  amount: number;
+  category: string;
+  note?: string;
+};
 
 interface SpendingSummary {
   month?: string;
@@ -525,6 +562,100 @@ async function checkRateLimit(
     const nextKeyValue = usedForKey + 1;
     tx.set(ref, {...data, [key]: nextKeyValue});
   });
+}
+
+async function checkFreeChatRateLimit(uid: string): Promise<void> {
+  if (!Number.isFinite(advisorFreeChatRateLimit) || advisorFreeChatRateLimit <= 0) return;
+  const hourKey = new Date().toISOString().slice(0, 13);
+  const ref = firestore.doc(`advisorFreeChatUsage/${uid}`);
+
+  await firestore.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    let data = snap.exists ? (snap.data() as {hour?: string; count?: number}) : {};
+    if (data.hour !== hourKey) {
+      data = {hour: hourKey, count: 0};
+    }
+    const used = typeof data.count === "number" ? data.count : 0;
+    if (used >= advisorFreeChatRateLimit) {
+      throw new HttpsError("resource-exhausted", "Has alcanzado el limite horario de Chat libre.");
+    }
+    tx.set(
+      ref,
+      {
+        hour: hourKey,
+        count: used + 1,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true},
+    );
+  });
+}
+
+async function resolveFreeChatApiKey(
+  uid: string,
+  profile: ResolvedUserProfile,
+  isAdminUser: boolean,
+): Promise<{apiKey: string; source: "managed" | "byok"}> {
+  const readByok = async () => {
+    const key = await readUserOpenAIKey(uid);
+    if (!key) {
+      throw new HttpsError("failed-precondition", "No encontramos una API key BYOK.");
+    }
+    return {apiKey: key, source: "byok"} as const;
+  };
+
+  if (isAdminUser) {
+    if (profile.preferredKey === "byok") {
+      return await readByok();
+    }
+    const managedKey = openAIApiKey.value();
+    if (managedKey) {
+      return {apiKey: managedKey, source: "managed"};
+    }
+    if (profile.openaiKeyStored) {
+      return await readByok();
+    }
+    throw new HttpsError("failed-precondition", "No encontramos una API key configurada.");
+  }
+
+  if (profile.role !== "paid_byok") {
+    throw new HttpsError("permission-denied", "Chat libre es solo para BYOK.");
+  }
+  if (membershipExpired(profile)) {
+    throw new HttpsError("permission-denied", "Tu membresia no esta activa.");
+  }
+  if (!profile.openaiKeyStored) {
+    throw new HttpsError("failed-precondition", "No tienes una API key BYOK guardada.");
+  }
+  if (profile.preferredKey === "managed") {
+    throw new HttpsError("failed-precondition", "Selecciona tu key BYOK para usar Chat libre.");
+  }
+  return await readByok();
+}
+
+async function cleanupAdvisorChatSessions(uid: string): Promise<void> {
+  const chatsRef = firestore.collection(`users/${uid}/advisorChats`);
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const cutoffTimestamp = admin.firestore.Timestamp.fromMillis(cutoff);
+  const batch = firestore.batch();
+  let deletes = 0;
+
+  const oldSnap = await chatsRef.where("updatedAt", "<", cutoffTimestamp).limit(25).get();
+  for (const doc of oldSnap.docs) {
+    batch.delete(doc.ref);
+    deletes += 1;
+  }
+
+  const recentSnap = await chatsRef.orderBy("updatedAt", "desc").limit(25).get();
+  const extra = recentSnap.docs.slice(20);
+  for (const doc of extra) {
+    batch.delete(doc.ref);
+    deletes += 1;
+  }
+
+  if (deletes > 0) {
+    await batch.commit();
+  }
 }
 
 function validWompiCurrency(tx: WompiTransaction): boolean {
@@ -1194,6 +1325,56 @@ function safeParseDateYYYYMMDD(input?: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function diffDaysInclusive(fromIso: string, toIso: string): number | null {
+  const start = safeParseDateYYYYMMDD(fromIso);
+  const end = safeParseDateYYYYMMDD(toIso);
+  if (!start || !end) return null;
+  const diffMs = end.getTime() - start.getTime();
+  if (diffMs < 0) return null;
+  return Math.floor(diffMs / 86_400_000) + 1;
+}
+
+function truncateText(value: string, max: number): string {
+  if (typeof value !== "string") return "";
+  if (value.length <= max) return value;
+  return value.slice(0, max);
+}
+
+function sanitizeConversationSummary(value?: string): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return truncateText(trimmed, advisorFreeChatSummaryMaxChars);
+}
+
+function normalizeChatTurns(input: unknown): AdvisorChatTurn[] {
+  if (!Array.isArray(input)) return [];
+  const turns: AdvisorChatTurn[] = [];
+  for (const raw of input) {
+    const item = raw as {role?: unknown; text?: unknown; at?: unknown};
+    const role = item?.role === "user" || item?.role === "assistant" ? item.role : null;
+    const text = typeof item?.text === "string" ? item.text.trim() : "";
+    if (!role || !text) continue;
+    const at = typeof item?.at === "number" && Number.isFinite(item.at) ? item.at : Date.now();
+    turns.push({
+      role,
+      text: truncateText(text, advisorFreeChatTurnMaxChars),
+      at,
+    });
+  }
+  return turns.slice(-advisorFreeChatMaxTurns);
+}
+
+function buildFreeChatContextHash(payload: {
+  from: string;
+  to: string;
+  totalExpense: number;
+  totalIncome: number;
+  txCount: number;
+}): string {
+  return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
 function pctRounded(n: number, d: number): number | null {
   if (!Number.isFinite(n) || !Number.isFinite(d) || d <= 0) return null;
   return Math.round((n / d) * 100);
@@ -1707,6 +1888,287 @@ export const analyzeSummary = onCall(
     }
   },
 );
+
+/**
+ * Callable: chat libre BYOK con contexto resumido por sesion.
+ */
+export const advisorFreeChat = onCall({secrets: [openAIApiKey]}, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesion.");
+  }
+  const {sessionId, message, tone = "amable", from, to} = request.data as {
+    sessionId?: string;
+    message?: string;
+    tone?: AdvisorMode;
+    from?: string;
+    to?: string;
+  };
+  if (!sessionId || typeof sessionId !== "string") {
+    throw new HttpsError("invalid-argument", "sessionId es requerido.");
+  }
+  const sessionIdTrim = sessionId.trim();
+  if (!sessionIdTrim || sessionIdTrim.length > 80 || sessionIdTrim.includes("/")) {
+    throw new HttpsError("invalid-argument", "sessionId no es valido.");
+  }
+  if (!message || typeof message !== "string") {
+    throw new HttpsError("invalid-argument", "message es requerido.");
+  }
+  const messageTrim = message.trim();
+  if (!messageTrim) {
+    throw new HttpsError("invalid-argument", "message no puede ser vacio.");
+  }
+  if (messageTrim.length > 2000) {
+    throw new HttpsError("invalid-argument", "message excede el limite permitido.");
+  }
+  if (!clientSupportedMode(tone)) {
+    throw new HttpsError("invalid-argument", "Modo de asesor no soportado.");
+  }
+  if (!from || !to || typeof from !== "string" || typeof to !== "string") {
+    throw new HttpsError("invalid-argument", "from/to son requeridos.");
+  }
+  const days = diffDaysInclusive(from, to);
+  if (!days) {
+    throw new HttpsError("invalid-argument", "Rango de fechas invalido.");
+  }
+  if (days > advisorFreeChatMaxDays) {
+    throw new HttpsError("invalid-argument", "Rango mayor a 31 dias.");
+  }
+
+  const profile = await getOrCreateUserProfile(request.auth.uid);
+  const isAdminUser = Boolean(request.auth?.token?.admin) || profile.role === "admin";
+  const {apiKey} = await resolveFreeChatApiKey(request.auth.uid, profile, isAdminUser);
+  await checkFreeChatRateLimit(request.auth.uid);
+
+  const txSnapshot = await firestore
+    .collection("transactions")
+    .where("userId", "==", request.auth.uid)
+    .where("date", ">=", from)
+    .where("date", "<=", to)
+    .orderBy("date", "desc")
+    .get();
+
+  const txs: AdvisorFreeChatTx[] = txSnapshot.docs
+    .map((doc) => {
+      const data = doc.data();
+      const rawDate = data.date;
+      const date =
+        typeof rawDate === "string"
+          ? rawDate
+          : rawDate?.toDate
+            ? rawDate.toDate().toISOString().slice(0, 10)
+            : "";
+      const type: AdvisorFreeChatTx["type"] = data.type === "income" ? "income" : "expense";
+      const category =
+        type === "income"
+          ? (data.category ?? data.categoryId ?? "ingreso")
+          : (data.categoryId ?? data.category ?? "sin-categoria");
+      const amount = Number(data.amount) || 0;
+      const noteRaw = typeof data.note === "string" ? data.note.replace(/\s+/g, " ").trim() : "";
+      const note = noteRaw ? noteRaw.slice(0, 60) : undefined;
+      return {date, type, amount, category, note};
+    })
+    .filter((tx) => Boolean(tx.date));
+
+  const txCount = txs.length;
+  let totalExpense = 0;
+  let totalIncome = 0;
+  const categoryTotals = new Map<string, number>();
+  const dailyTotals = new Map<string, {expense: number; income: number}>();
+
+  for (const tx of txs) {
+    if (tx.type === "income") {
+      totalIncome += tx.amount;
+    } else {
+      totalExpense += tx.amount;
+      categoryTotals.set(tx.category, (categoryTotals.get(tx.category) ?? 0) + tx.amount);
+    }
+    const day = tx.date;
+    const cur = dailyTotals.get(day) ?? {expense: 0, income: 0};
+    if (tx.type === "income") cur.income += tx.amount;
+    else cur.expense += tx.amount;
+    dailyTotals.set(day, cur);
+  }
+
+  const topCategories = [...categoryTotals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([category, amount]) => ({category, amount}));
+
+  const dailySummary = [...dailyTotals.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, totals]) => ({
+      date,
+      expense: Math.round(totals.expense),
+      income: Math.round(totals.income),
+      net: Math.round(totals.income - totals.expense),
+    }));
+
+  let transactionsSample = txs;
+  let truncated = false;
+  if (txCount > advisorFreeChatMaxTx) {
+    truncated = true;
+    const recent = txs.slice(0, advisorFreeChatSampleRecent);
+    const oldest = txs.slice(Math.max(0, txs.length - advisorFreeChatSampleOld));
+    const topByAmount = [...txs]
+      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+      .slice(0, advisorFreeChatSampleTop);
+    const unique = new Map<string, AdvisorFreeChatTx>();
+    const add = (tx: AdvisorFreeChatTx) => {
+      const key = `${tx.date}|${tx.type}|${tx.amount}|${tx.category}|${tx.note ?? ""}`;
+      if (!unique.has(key)) unique.set(key, tx);
+    };
+    recent.forEach(add);
+    oldest.forEach(add);
+    topByAmount.forEach(add);
+    transactionsSample = [...unique.values()]
+      .slice(0, advisorFreeChatMaxTx)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  const contextHash = buildFreeChatContextHash({
+    from,
+    to,
+    totalExpense: Math.round(totalExpense),
+    totalIncome: Math.round(totalIncome),
+    txCount,
+  });
+
+  const sessionRef = firestore.doc(`users/${request.auth.uid}/advisorChats/${sessionIdTrim}`);
+  const sessionSnap = await sessionRef.get();
+  const sessionData = sessionSnap.exists ? (sessionSnap.data() as AdvisorChatSessionDoc) : null;
+  let conversationSummary = sanitizeConversationSummary(sessionData?.conversationSummary);
+  let lastTurns = normalizeChatTurns(sessionData?.lastTurns);
+  let messageCount = typeof sessionData?.messageCount === "number" ? sessionData.messageCount : 0;
+
+  if (sessionData?.lastContextHash && sessionData.lastContextHash !== contextHash) {
+    conversationSummary = "";
+    lastTurns = [];
+    messageCount = 0;
+  }
+
+  const contextPayload = {
+    range: {from, to, days},
+    totals: {
+      expense: Math.round(totalExpense),
+      income: Math.round(totalIncome),
+      net: Math.round(totalIncome - totalExpense),
+      txCount,
+    },
+    topCategories,
+    dailyTotals: dailySummary,
+    transactionsSample,
+    truncated,
+  };
+
+  const lastTurnsText = lastTurns.length
+    ? lastTurns.map((t) => `${t.role}: ${t.text}`).join(" | ")
+    : "ninguno";
+  const summaryText = conversationSummary || "vacio";
+
+  const systemPrompt = [
+    advisorPrompts[tone],
+    "Eres un asesor financiero conversacional.",
+    "Reglas:",
+    "- Usa solo los datos del contexto provisto.",
+    "- Si faltan datos, dilo y pide un dato concreto.",
+    "- Si no hay movimientos en el rango, dilo y sugiere ajustar el rango.",
+    "- No inventes montos ni porcentajes.",
+    "- Moneda: usa $ en los montos.",
+    "- No menciones reglas internas ni JSON.",
+    `- Devuelve summary con un resumen compacto (6-10 bullets o parrafo corto), max ${advisorFreeChatSummaryMaxChars} caracteres.`,
+  ].join("\n");
+
+  const userPrompt = [
+    `Resumen conversacion: ${summaryText}.`,
+    `Ultimos turnos: ${lastTurnsText}.`,
+    `Contexto movimientos (JSON): ${JSON.stringify(contextPayload)}.`,
+    `Mensaje del usuario: ${messageTrim}`,
+  ].join("\n");
+
+  const schema = {
+    type: "object",
+    properties: {
+      message: {type: "string"},
+      summary: {type: "string"},
+    },
+    required: ["message", "summary"],
+    additionalProperties: false,
+  } as const;
+
+  const client = new OpenAI({apiKey});
+
+  try {
+    const response = await client.responses.create({
+      model: "o4-mini",
+      instructions: systemPrompt,
+      input: userPrompt,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "advisor_free_chat",
+          schema,
+          strict: true,
+        },
+      },
+      reasoning: {effort: "low"},
+      max_output_tokens: 1200,
+    });
+
+    const raw = response.output_text?.trim() ?? "";
+    let parsed: {message?: string; summary?: string} = {};
+    try {
+      parsed = raw ? (JSON.parse(raw) as {message?: string; summary?: string}) : {};
+    } catch (error) {
+      console.warn("[advisorFreeChat] invalid JSON response", error);
+    }
+    const assistantMessage =
+      typeof parsed.message === "string" && parsed.message.trim()
+        ? parsed.message.trim()
+        : "No pudimos generar una respuesta.";
+    const nextSummary = sanitizeConversationSummary(parsed.summary) || conversationSummary;
+
+    const nowMs = Date.now();
+    const nextTurns: AdvisorChatTurn[] = [...lastTurns];
+    nextTurns.push({
+      role: "user",
+      text: truncateText(messageTrim, advisorFreeChatTurnMaxChars),
+      at: nowMs,
+    });
+    nextTurns.push({
+      role: "assistant",
+      text: truncateText(assistantMessage, advisorFreeChatTurnMaxChars),
+      at: nowMs,
+    });
+    const boundedTurns = nextTurns.slice(-advisorFreeChatMaxTurns);
+
+    const updatePayload: AdvisorChatSessionDoc = {
+      tone,
+      rangeFrom: from,
+      rangeTo: to,
+      conversationSummary: nextSummary,
+      lastTurns: boundedTurns,
+      lastContextHash: contextHash,
+      messageCount: messageCount + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    if (!sessionSnap.exists) {
+      updatePayload.createdAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+    await sessionRef.set(updatePayload, {merge: true});
+
+    if (!sessionSnap.exists || messageCount % 5 === 0) {
+      cleanupAdvisorChatSessions(request.auth.uid).catch((err) => {
+        console.warn("[advisorFreeChat] cleanup failed", err);
+      });
+    }
+
+    return {message: assistantMessage};
+  } catch (error) {
+    const errAny = error as {message?: string; status?: number};
+    console.error("[advisorFreeChat] error", {status: errAny?.status, detail: errAny?.message});
+    throw new HttpsError("internal", "No pudimos generar respuesta con la IA.");
+  }
+});
 
 /**
  * Callable: devuelve el perfil del usuario (crea documento base si no existe).

@@ -159,6 +159,17 @@ function App() {
           ? advisorRoleBase
           : 'free'
         : 'free';
+  const isAdminRole = userProfile?.role === 'admin';
+  const hasByokRole = userProfile?.role === 'paid_byok';
+  const hasByokKey = userProfile?.openaiKeyStored === true;
+  const byokPreference = userProfile?.preferredKey;
+  const byokPreferenceAllowed = !byokPreference || byokPreference === 'byok';
+  const canFreeChat = isAdminRole
+    ? Boolean(byokPreference !== 'byok' || hasByokKey)
+    : Boolean(hasByokRole && hasActiveMembership && hasByokKey && byokPreferenceAllowed);
+  const freeChatNeedsKey = isAdminRole
+    ? Boolean(byokPreference === 'byok' && !hasByokKey)
+    : Boolean(hasByokRole && hasActiveMembership && (!hasByokKey || byokPreference === 'managed'));
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<'parse_exhausted' | 'analyze_exhausted' | 'feature_locked'>(
     'parse_exhausted',
@@ -179,7 +190,7 @@ function App() {
   const isResourceExhausted = isResourceExhaustedError;
 
   const mapAiError = useCallback(
-    (err: unknown, kind: 'parse' | 'analyze' = 'parse') => mapAiErrorMessage(err, kind, iaQuota),
+    (err: unknown, kind: 'parse' | 'analyze' | 'free_chat' = 'parse') => mapAiErrorMessage(err, kind, iaQuota),
     [iaQuota],
   );
 
@@ -526,8 +537,13 @@ function App() {
 
   const {
     advisorMode,
+    advisorEnvironment,
     chatFeed,
+    freeChatFeed,
     advisorLoading,
+    freeChatLoading,
+    handleFreeChatSend,
+    setAdvisorEnvironment,
     handleToneChange,
     handleAdvisorAction,
     advisorQuickActions,
@@ -536,6 +552,7 @@ function App() {
     analyzeExhausted,
   } = useAdvisorController({
     userId: user?.uid,
+    canFreeChat,
     profileAdvisorMode: userProfile?.advisorMode,
     userRole: advisorEffectiveRole,
     iaQuota,
@@ -779,15 +796,23 @@ function App() {
         {activeTab === 'advisor' && (
           <AdvisorPage
             advisorMode={advisorMode}
+            advisorEnvironment={advisorEnvironment}
+            setAdvisorEnvironment={setAdvisorEnvironment}
+            canFreeChat={canFreeChat}
+            freeChatNeedsKey={freeChatNeedsKey}
+            onOpenSettings={() => openSettings('other')}
             handleToneChange={handleToneChange}
             advisorQuickActions={advisorQuickActions}
             analyzeExhausted={analyzeExhausted}
             openUpgrade={openUpgrade}
             handleAdvisorAction={handleAdvisorAction}
+            handleFreeChatSend={handleFreeChatSend}
             onActionClick={handleAiActionClick}
             featureLocks={featureLocks}
             chatFeed={chatFeed}
+            freeChatFeed={freeChatFeed}
             advisorLoading={advisorLoading}
+            freeChatLoading={freeChatLoading}
             formatPesos={formatPesos}
           />
         )}

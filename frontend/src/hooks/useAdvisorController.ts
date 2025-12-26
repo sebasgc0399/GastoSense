@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { callAnalyzeSummary } from '../services/functions';
+import { callAdvisorFreeChat, callAnalyzeSummary } from '../services/functions';
 import { setUserAdvisorMode } from '../services/users';
 import type { AdvisorMode, IaQuota, UserRole } from '../types';
 
@@ -16,6 +16,15 @@ type ChatItem = {
     label: string;
     payload: Record<string, unknown>;
   };
+};
+
+type AdvisorEnvironment = 'actions' | 'free_chat';
+
+type FreeChatItem = {
+  id: string;
+  from: 'user' | 'ia';
+  text: string;
+  ts: number;
 };
 
 type AdvisorQuickAction = {
@@ -72,8 +81,22 @@ function selectLastDays(txs: LastTransactionSummary[], days: number): LastTransa
   return txs.filter((t) => typeof t.date === 'string' && t.date >= startDate && t.date <= endDate);
 }
 
+const FREE_CHAT_STORAGE_PREFIX = 'advisor_free_chat_session:';
+
+function createSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getFreeChatStorageKey(userId: string): string {
+  return `${FREE_CHAT_STORAGE_PREFIX}${userId}`;
+}
+
 export interface UseAdvisorControllerParams {
   userId: string | null | undefined;
+  canFreeChat: boolean;
   profileAdvisorMode: AdvisorMode | null | undefined;
   userRole: UserRole | null | undefined;
   iaQuota: IaQuota | null;
@@ -87,16 +110,21 @@ export interface UseAdvisorControllerParams {
   lastTransactions: LastTransactionSummary[];
   openUpgrade: (ctx: 'parse_exhausted' | 'analyze_exhausted' | 'feature_locked') => void;
   triggerUpgradeOnce: (ctx: 'parse_exhausted' | 'analyze_exhausted') => void;
-  mapAiError: (err: unknown, kind?: 'parse' | 'analyze') => string;
+  mapAiError: (err: unknown, kind?: 'parse' | 'analyze' | 'free_chat') => string;
   isResourceExhausted: (err: unknown) => boolean;
   refreshQuota: () => Promise<void>;
 }
 
 export interface AdvisorControllerResult {
   advisorMode: AdvisorMode;
+  advisorEnvironment: AdvisorEnvironment;
   chatFeed: ChatItem[];
+  freeChatFeed: FreeChatItem[];
   advisorLoading: boolean;
+  freeChatLoading: boolean;
   pushFeedItem: (item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => void;
+  handleFreeChatSend: (payload: { message: string; from: string; to: string }) => Promise<void>;
+  setAdvisorEnvironment: (env: AdvisorEnvironment) => void;
   handleToneChange: (mode: AdvisorMode) => Promise<void>;
   handleAdvisorAction: (action: string) => Promise<void>;
   advisorQuickActions: AdvisorQuickAction[];
@@ -107,6 +135,7 @@ export interface AdvisorControllerResult {
 
 export function useAdvisorController({
   userId,
+  canFreeChat,
   profileAdvisorMode,
   userRole,
   iaQuota,
@@ -132,10 +161,15 @@ export function useAdvisorController({
     }
     return 'amable';
   });
+  const [advisorEnvironment, setAdvisorEnvironment] = useState<AdvisorEnvironment>('actions');
   const [chatFeed, setChatFeed] = useState<ChatItem[]>([]);
+  const [freeChatFeed, setFreeChatFeed] = useState<FreeChatItem[]>([]);
   const [advisorLoading, setAdvisorLoading] = useState(false);
+  const [freeChatLoading, setFreeChatLoading] = useState(false);
+  const [freeChatSessionId, setFreeChatSessionId] = useState<string | null>(null);
   const activeModeRef = useRef<AdvisorMode>(advisorMode);
   const requestSeqRef = useRef(0);
+  const freeChatRequestSeqRef = useRef(0);
 
   useEffect(() => {
     activeModeRef.current = advisorMode;
@@ -152,16 +186,57 @@ export function useAdvisorController({
   }, [profileAdvisorMode]);
 
   useEffect(() => {
-    if (userId) return;
-    const timeoutId = window.setTimeout(() => setChatFeed([]), 0);
+    const timeoutId = window.setTimeout(() => {
+      setChatFeed([]);
+      setFreeChatFeed([]);
+    }, 0);
     setAdvisorLoading(false);
+    setFreeChatLoading(false);
+    setFreeChatSessionId(null);
+    setAdvisorEnvironment('actions');
     return () => window.clearTimeout(timeoutId);
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(getFreeChatStorageKey(userId));
+    } catch {
+      // ignore storage failures
+    }
+    if (stored) {
+      setFreeChatSessionId(stored);
+      return;
+    }
+    const created = createSessionId();
+    setFreeChatSessionId(created);
+    try {
+      localStorage.setItem(getFreeChatStorageKey(userId), created);
+    } catch {
+      // ignore storage failures
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!canFreeChat && advisorEnvironment === 'free_chat') {
+      setAdvisorEnvironment('actions');
+    }
+  }, [advisorEnvironment, canFreeChat]);
 
   const pushFeedItem = useCallback((item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => {
     const id = item.id ?? `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const ts = item.ts ?? Date.now();
     setChatFeed((prev) => {
+      const next = [...prev, { ...item, id, ts }];
+      return next.length > 50 ? next.slice(next.length - 50) : next;
+    });
+  }, []);
+
+  const pushFreeChatItem = useCallback((item: Omit<FreeChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => {
+    const id = item.id ?? `free-chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const ts = item.ts ?? Date.now();
+    setFreeChatFeed((prev) => {
       const next = [...prev, { ...item, id, ts }];
       return next.length > 50 ? next.slice(next.length - 50) : next;
     });
@@ -189,6 +264,54 @@ export function useAdvisorController({
       }
     },
     [advisorMode, userId],
+  );
+
+  const handleFreeChatSend = useCallback(
+    async ({ message, from, to }: { message: string; from: string; to: string }) => {
+      const trimmed = message.trim();
+      if (!trimmed) return;
+      if (!userId) {
+        pushFreeChatItem({
+          from: 'ia',
+          text: 'Inicia sesion para usar Chat libre.',
+        });
+        return;
+      }
+      let sessionId = freeChatSessionId;
+      if (!sessionId) {
+        sessionId = createSessionId();
+        setFreeChatSessionId(sessionId);
+        try {
+          localStorage.setItem(getFreeChatStorageKey(userId), sessionId);
+        } catch {
+          // ignore storage failures
+        }
+      }
+      const requestSeq = (freeChatRequestSeqRef.current += 1);
+      setFreeChatLoading(true);
+      pushFreeChatItem({ from: 'user', text: trimmed });
+      try {
+        const resp = await callAdvisorFreeChat({
+          sessionId,
+          message: trimmed,
+          tone: advisorMode,
+          from,
+          to,
+        });
+        const data = resp.data as { message?: string };
+        const cleanText = (data?.message ?? '').trim() || 'Sin respuesta de IA.';
+        if (freeChatRequestSeqRef.current !== requestSeq) return;
+        pushFreeChatItem({ from: 'ia', text: cleanText });
+      } catch (err) {
+        if (freeChatRequestSeqRef.current !== requestSeq) return;
+        pushFreeChatItem({ from: 'ia', text: mapAiError(err, 'free_chat') });
+      } finally {
+        if (freeChatRequestSeqRef.current === requestSeq) {
+          setFreeChatLoading(false);
+        }
+      }
+    },
+    [advisorMode, freeChatSessionId, mapAiError, pushFreeChatItem, userId],
   );
 
   const iaRole: UserRole = (userRole as UserRole) || 'free';
@@ -441,9 +564,14 @@ export function useAdvisorController({
 
   return {
     advisorMode,
+    advisorEnvironment,
     chatFeed,
+    freeChatFeed,
     advisorLoading,
+    freeChatLoading,
     pushFeedItem,
+    handleFreeChatSend,
+    setAdvisorEnvironment,
     handleToneChange,
     handleAdvisorAction,
     advisorQuickActions,

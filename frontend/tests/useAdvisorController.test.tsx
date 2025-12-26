@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAdvisorController } from '../src/hooks/useAdvisorController';
 import type { IaQuota } from '../src/types';
-import { callAnalyzeSummary } from '../src/services/functions';
+import { callAdvisorFreeChat, callAnalyzeSummary } from '../src/services/functions';
 import { setUserAdvisorMode } from '../src/services/users';
 
 vi.mock('../src/services/functions', () => ({
   callAnalyzeSummary: vi.fn(),
+  callAdvisorFreeChat: vi.fn(),
 }));
 
 vi.mock('../src/services/users', () => ({
@@ -16,6 +17,7 @@ vi.mock('../src/services/users', () => ({
 
 describe('useAdvisorController', () => {
   const callAnalyzeSummaryMock = vi.mocked(callAnalyzeSummary);
+  const callAdvisorFreeChatMock = vi.mocked(callAdvisorFreeChat);
   const setUserAdvisorModeMock = vi.mocked(setUserAdvisorMode);
 
   const baseQuota: IaQuota = {
@@ -34,10 +36,12 @@ describe('useAdvisorController', () => {
 
   it('handleToneChange resets chat and persists localStorage', async () => {
     setUserAdvisorModeMock.mockResolvedValue('reganon');
+    callAdvisorFreeChatMock.mockResolvedValue({ data: { message: 'ok' } } as never);
 
     const { result } = renderHook(() =>
       useAdvisorController({
         userId: 'u1',
+        canFreeChat: true,
         profileAdvisorMode: undefined,
         userRole: 'paid_byok',
         iaQuota: baseQuota,
@@ -76,6 +80,7 @@ describe('useAdvisorController', () => {
     const { result } = renderHook(() =>
       useAdvisorController({
         userId: 'u1',
+        canFreeChat: true,
         profileAdvisorMode: undefined,
         userRole: 'paid_byok',
         iaQuota: { ...baseQuota, analyzeUsed: 10, analyzeLimit: 10 },
@@ -111,6 +116,7 @@ describe('useAdvisorController', () => {
     const { result } = renderHook(() =>
       useAdvisorController({
         userId: 'u1',
+        canFreeChat: true,
         profileAdvisorMode: undefined,
         userRole: 'paid_byok',
         iaQuota: baseQuota,
@@ -158,5 +164,50 @@ describe('useAdvisorController', () => {
     });
     expect(last[0]?.note).toBe('secret');
     expect(refreshQuota).toHaveBeenCalledTimes(1);
+  });
+
+  it('handleFreeChatSend calls advisorFreeChat and appends feed', async () => {
+    callAdvisorFreeChatMock.mockResolvedValue({ data: { message: 'respuesta' } } as never);
+    localStorage.setItem('advisor_free_chat_session:u1', 'session-1');
+
+    const { result } = renderHook(() =>
+      useAdvisorController({
+        userId: 'u1',
+        canFreeChat: true,
+        profileAdvisorMode: undefined,
+        userRole: 'paid_byok',
+        iaQuota: baseQuota,
+        currentMonth: '2025-12',
+        monthlyExpense: 100,
+        monthlyIncome: 50,
+        topCategories: [{ category: 'Food', amount: 100 }],
+        budgetTotal: null,
+        budgetPerCategory: null,
+        previousMonth: null,
+        lastTransactions: [],
+        openUpgrade: vi.fn(),
+        triggerUpgradeOnce: vi.fn(),
+        mapAiError: () => 'err',
+        isResourceExhausted: () => false,
+        refreshQuota: vi.fn().mockResolvedValue(undefined),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleFreeChatSend({
+        message: 'Hola',
+        from: '2025-12-01',
+        to: '2025-12-15',
+      });
+    });
+
+    expect(callAdvisorFreeChatMock).toHaveBeenCalledWith({
+      sessionId: 'session-1',
+      message: 'Hola',
+      tone: 'amable',
+      from: '2025-12-01',
+      to: '2025-12-15',
+    });
+    expect(result.current.freeChatFeed).toHaveLength(2);
   });
 });
