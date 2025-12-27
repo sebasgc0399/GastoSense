@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { callAdvisorFreeChat, callAnalyzeSummary } from '../services/functions';
+import { callAdvisorFreeChat, callAdvisorFreeChatGetSession, callAnalyzeSummary } from '../services/functions';
 import { setUserAdvisorMode } from '../services/users';
 import type { AdvisorMode, IaQuota, UserRole } from '../types';
 
@@ -94,6 +94,7 @@ function getFreeChatStorageKey(userId: string): string {
   return `${FREE_CHAT_STORAGE_PREFIX}${userId}`;
 }
 
+
 export interface UseAdvisorControllerParams {
   userId: string | null | undefined;
   canFreeChat: boolean;
@@ -124,6 +125,12 @@ export interface AdvisorControllerResult {
   freeChatLoading: boolean;
   pushFeedItem: (item: Omit<ChatItem, 'id' | 'ts'> & { id?: string; ts?: number }) => void;
   handleFreeChatSend: (payload: { message: string; from: string; to: string }) => Promise<void>;
+  handleFreeChatReset: () => void;
+  handleFreeChatRecover: () => Promise<{
+    recovered: boolean;
+    rangeFrom?: string;
+    rangeTo?: string;
+  }>;
   setAdvisorEnvironment: (env: AdvisorEnvironment) => void;
   handleToneChange: (mode: AdvisorMode) => Promise<void>;
   handleAdvisorAction: (action: string) => Promise<void>;
@@ -313,6 +320,97 @@ export function useAdvisorController({
     },
     [advisorMode, freeChatSessionId, mapAiError, pushFreeChatItem, userId],
   );
+
+  const handleFreeChatReset = useCallback(() => {
+    freeChatRequestSeqRef.current += 1;
+    setFreeChatLoading(false);
+    setFreeChatFeed([]);
+    if (!userId) {
+      setFreeChatSessionId(null);
+      return;
+    }
+    const nextSessionId = createSessionId();
+    setFreeChatSessionId(nextSessionId);
+    try {
+      localStorage.setItem(getFreeChatStorageKey(userId), nextSessionId);
+    } catch {
+      // ignore storage failures
+    }
+  }, [userId]);
+
+  const handleFreeChatRecover = useCallback(async () => {
+    if (!userId) {
+      pushFreeChatItem({
+        from: 'ia',
+        text: 'Inicia sesion para recuperar el chat.',
+      });
+      return { recovered: false };
+    }
+    const requestSeq = (freeChatRequestSeqRef.current += 1);
+    setFreeChatLoading(true);
+    try {
+      const resp = await callAdvisorFreeChatGetSession({});
+      const data = resp.data as {
+        sessionId?: string;
+        rangeFrom?: string | null;
+        rangeTo?: string | null;
+        lastTurns?: Array<{ role?: 'user' | 'assistant'; text?: string; at?: number }>;
+      };
+      const recoveredSessionId = typeof data?.sessionId === 'string' ? data.sessionId : createSessionId();
+      const turns = Array.isArray(data?.lastTurns) ? data.lastTurns : [];
+      const mapped: FreeChatItem[] = turns
+        .filter((t) => t?.role === 'user' || t?.role === 'assistant')
+        .map((t, index) => {
+          const from: FreeChatItem['from'] = t.role === 'assistant' ? 'ia' : 'user';
+          return {
+            id: `recover-${recoveredSessionId}-${index}`,
+            from,
+            text: typeof t?.text === 'string' ? t.text : '',
+            ts: typeof t?.at === 'number' && Number.isFinite(t.at) ? t.at : Date.now(),
+          };
+        })
+        .filter((t) => t.text);
+
+      if (freeChatRequestSeqRef.current !== requestSeq) {
+        return { recovered: false };
+      }
+
+      setFreeChatFeed(mapped);
+      setFreeChatSessionId(recoveredSessionId);
+      try {
+        localStorage.setItem(getFreeChatStorageKey(userId), recoveredSessionId);
+      } catch {
+        // ignore storage failures
+      }
+      return {
+        recovered: true,
+        rangeFrom: typeof data?.rangeFrom === 'string' ? data.rangeFrom : undefined,
+        rangeTo: typeof data?.rangeTo === 'string' ? data.rangeTo : undefined,
+      };
+    } catch (err) {
+      if (freeChatRequestSeqRef.current !== requestSeq) {
+        return { recovered: false };
+      }
+      const codeRaw = (err as { code?: unknown } | null)?.code;
+      const code = typeof codeRaw === 'string' ? codeRaw : '';
+      if (code.includes('not-found')) {
+        pushFreeChatItem({
+          from: 'ia',
+          text: 'No encontramos un chat anterior para recuperar.',
+        });
+        return { recovered: false };
+      }
+      pushFreeChatItem({
+        from: 'ia',
+        text: mapAiError(err, 'free_chat'),
+      });
+      return { recovered: false };
+    } finally {
+      if (freeChatRequestSeqRef.current === requestSeq) {
+        setFreeChatLoading(false);
+      }
+    }
+  }, [mapAiError, pushFreeChatItem, userId]);
 
   const iaRole: UserRole = (userRole as UserRole) || 'free';
   const isFreeRole = iaRole === 'free';
@@ -571,6 +669,8 @@ export function useAdvisorController({
     freeChatLoading,
     pushFeedItem,
     handleFreeChatSend,
+    handleFreeChatReset,
+    handleFreeChatRecover,
     setAdvisorEnvironment,
     handleToneChange,
     handleAdvisorAction,

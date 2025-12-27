@@ -543,6 +543,8 @@ function App() {
     advisorLoading,
     freeChatLoading,
     handleFreeChatSend,
+    handleFreeChatReset,
+    handleFreeChatRecover,
     setAdvisorEnvironment,
     handleToneChange,
     handleAdvisorAction,
@@ -807,6 +809,8 @@ function App() {
             openUpgrade={openUpgrade}
             handleAdvisorAction={handleAdvisorAction}
             handleFreeChatSend={handleFreeChatSend}
+            handleFreeChatReset={handleFreeChatReset}
+            handleFreeChatRecover={handleFreeChatRecover}
             onActionClick={handleAiActionClick}
             featureLocks={featureLocks}
             chatFeed={chatFeed}

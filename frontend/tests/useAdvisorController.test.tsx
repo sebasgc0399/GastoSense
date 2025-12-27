@@ -9,6 +9,7 @@ import { setUserAdvisorMode } from '../src/services/users';
 vi.mock('../src/services/functions', () => ({
   callAnalyzeSummary: vi.fn(),
   callAdvisorFreeChat: vi.fn(),
+  callAdvisorFreeChatGetSession: vi.fn(),
 }));
 
 vi.mock('../src/services/users', () => ({

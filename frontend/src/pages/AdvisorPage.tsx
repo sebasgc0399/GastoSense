@@ -77,6 +77,8 @@ export interface AdvisorPageProps {
   openUpgrade: (ctx: 'parse_exhausted' | 'analyze_exhausted' | 'feature_locked') => void;
   handleAdvisorAction: (action: string) => Promise<void>;
   handleFreeChatSend: (payload: { message: string; from: string; to: string }) => Promise<void>;
+  handleFreeChatReset: () => void;
+  handleFreeChatRecover: () => Promise<{ recovered: boolean; rangeFrom?: string; rangeTo?: string }>;
   onActionClick: (actionData: NonNullable<ChatItem['actionData']>) => void;
   featureLocks: FeatureLock[];
   chatFeed: ChatItem[];
@@ -99,6 +101,8 @@ export function AdvisorPage({
   openUpgrade,
   handleAdvisorAction,
   handleFreeChatSend,
+  handleFreeChatReset,
+  handleFreeChatRecover,
   onActionClick,
   featureLocks,
   chatFeed,
@@ -120,6 +124,12 @@ export function AdvisorPage({
     if (!canSendFreeChat) return;
     await handleFreeChatSend({ message: freeChatMessage.trim(), from: freeChatFrom, to: freeChatTo });
     setFreeChatMessage('');
+  };
+
+  const handleRecoverClick = async () => {
+    const result = await handleFreeChatRecover();
+    if (result.rangeFrom) setFreeChatFrom(result.rangeFrom);
+    if (result.rangeTo) setFreeChatTo(result.rangeTo);
   };
 
   return (
@@ -379,7 +389,32 @@ export function AdvisorPage({
                   placeholder="Escribe tu mensaje para la IA..."
                   className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
                 />
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    disabled={freeChatLoading}
+                    onClick={() => {
+                      setFreeChatMessage('');
+                      handleFreeChatReset();
+                    }}
+                    className={`rounded-full px-3 py-2 text-[11px] font-semibold ${
+                      freeChatLoading ? 'border border-white/10 bg-white/5 text-slate-400' : 'border border-white/10 text-slate-200'
+                    }`}
+                  >
+                    Nuevo chat
+                  </button>
+                  <button
+                    type="button"
+                    disabled={freeChatLoading}
+                    onClick={() => {
+                      void handleRecoverClick();
+                    }}
+                    className={`rounded-full px-3 py-2 text-[11px] font-semibold ${
+                      freeChatLoading ? 'border border-white/10 bg-white/5 text-slate-400' : 'border border-white/10 text-slate-200'
+                    }`}
+                  >
+                    Recuperar chat
+                  </button>
                   <button
                     type="button"
                     disabled={!canSendFreeChat}

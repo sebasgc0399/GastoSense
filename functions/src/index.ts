@@ -618,6 +618,12 @@ async function resolveFreeChatApiKey(
     throw new HttpsError("failed-precondition", "No encontramos una API key configurada.");
   }
 
+  assertFreeChatAccess(profile, isAdminUser);
+  return await readByok();
+}
+
+function assertFreeChatAccess(profile: ResolvedUserProfile, isAdminUser: boolean): void {
+  if (isAdminUser) return;
   if (profile.role !== "paid_byok") {
     throw new HttpsError("permission-denied", "Chat libre es solo para BYOK.");
   }
@@ -630,7 +636,6 @@ async function resolveFreeChatApiKey(
   if (profile.preferredKey === "managed") {
     throw new HttpsError("failed-precondition", "Selecciona tu key BYOK para usar Chat libre.");
   }
-  return await readByok();
 }
 
 async function cleanupAdvisorChatSessions(uid: string): Promise<void> {
@@ -2168,6 +2173,58 @@ export const advisorFreeChat = onCall({secrets: [openAIApiKey]}, async (request)
     console.error("[advisorFreeChat] error", {status: errAny?.status, detail: errAny?.message});
     throw new HttpsError("internal", "No pudimos generar respuesta con la IA.");
   }
+});
+
+/**
+ * Callable: recupera el ultimo chat libre por sesion.
+ */
+export const advisorFreeChatGetSession = onCall(async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesion.");
+  }
+  const {sessionId} = request.data as {sessionId?: string};
+  const profile = await getOrCreateUserProfile(request.auth.uid);
+  const isAdminUser = Boolean(request.auth?.token?.admin) || profile.role === "admin";
+  assertFreeChatAccess(profile, isAdminUser);
+
+  const userChatsRef = firestore.collection(`users/${request.auth.uid}/advisorChats`);
+  let snap: FirebaseFirestore.DocumentSnapshot;
+  let resolvedSessionId: string;
+
+  if (sessionId && typeof sessionId === "string") {
+    const trimmed = sessionId.trim();
+    if (!trimmed || trimmed.length > 80 || trimmed.includes("/")) {
+      throw new HttpsError("invalid-argument", "sessionId no es valido.");
+    }
+    const sessionRef = userChatsRef.doc(trimmed);
+    snap = await sessionRef.get();
+    resolvedSessionId = trimmed;
+  } else {
+    const latestSnap = await userChatsRef.orderBy("updatedAt", "desc").limit(1).get();
+    if (latestSnap.empty) {
+      throw new HttpsError("not-found", "No encontramos chats previos.");
+    }
+    snap = latestSnap.docs[0];
+    resolvedSessionId = latestSnap.docs[0].id;
+  }
+
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "No encontramos ese chat.");
+  }
+  const data = snap.data() as AdvisorChatSessionDoc;
+  const lastTurns = normalizeChatTurns(data?.lastTurns).map((turn) => ({
+    role: turn.role,
+    text: turn.text,
+    at: turn.at,
+  }));
+
+  return {
+    sessionId: resolvedSessionId,
+    rangeFrom: data?.rangeFrom ?? null,
+    rangeTo: data?.rangeTo ?? null,
+    tone: data?.tone ?? null,
+    lastTurns,
+  };
 });
 
 /**
