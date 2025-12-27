@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Lock } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, Lock, SendHorizontal } from 'lucide-react';
 import { FeatureLockCard } from '../components/FeatureLockCard';
 import { RobotAvatar } from '../components/RobotAvatar';
 import type { AdvisorMode } from '../types';
@@ -114,11 +114,58 @@ export function AdvisorPage({
   const [freeChatFrom, setFreeChatFrom] = useState(() => monthStartIso());
   const [freeChatTo, setFreeChatTo] = useState(() => todayIso());
   const [freeChatMessage, setFreeChatMessage] = useState('');
+  const [freeChatExpanded, setFreeChatExpanded] = useState(false);
+  const [freeChatNearBottom, setFreeChatNearBottom] = useState(true);
+  const [freeChatLastSeenCount, setFreeChatLastSeenCount] = useState(0);
+  const freeChatFeedRef = useRef<HTMLDivElement | null>(null);
+  const freeChatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const freeChatRangeError = useMemo(
     () => validateFreeChatRange(freeChatFrom, freeChatTo),
     [freeChatFrom, freeChatTo],
   );
+  const freeChatMaxVisible = 80;
+  const freeChatHiddenCount = Math.max(0, freeChatFeed.length - freeChatMaxVisible);
+  const freeChatVisible = freeChatExpanded || freeChatHiddenCount === 0 ? freeChatFeed : freeChatFeed.slice(-freeChatMaxVisible);
   const canSendFreeChat = !freeChatRangeError && freeChatMessage.trim().length > 0 && !freeChatLoading;
+  const freeChatRangeLabel = freeChatFrom && freeChatTo ? `${freeChatFrom} -> ${freeChatTo}` : 'Rango sin definir';
+  const freeChatHasNew = !freeChatNearBottom && freeChatFeed.length > freeChatLastSeenCount;
+
+  const handleFreeChatScroll = useCallback(() => {
+    const container = freeChatFeedRef.current;
+    if (!container) return;
+    const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const nearBottom = distance < 80;
+    setFreeChatNearBottom(nearBottom);
+    if (nearBottom) {
+      setFreeChatLastSeenCount(freeChatFeed.length);
+    }
+  }, [freeChatFeed.length]);
+
+  const scrollFreeChatToBottom = useCallback(() => {
+    const container = freeChatFeedRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+    setFreeChatLastSeenCount(freeChatFeed.length);
+  }, [freeChatFeed.length]);
+
+  const resizeFreeChatInput = useCallback(() => {
+    const input = freeChatInputRef.current;
+    if (!input) return;
+    input.style.height = 'auto';
+    const nextHeight = Math.min(Math.max(input.scrollHeight, 44), 120);
+    input.style.height = `${nextHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    if (advisorEnvironment !== 'free_chat') return;
+    if (!freeChatNearBottom) return;
+    requestAnimationFrame(scrollFreeChatToBottom);
+  }, [advisorEnvironment, freeChatFeed.length, freeChatNearBottom, scrollFreeChatToBottom]);
+
+  useEffect(() => {
+    if (advisorEnvironment !== 'free_chat') return;
+    resizeFreeChatInput();
+  }, [advisorEnvironment, freeChatMessage, resizeFreeChatInput]);
 
   const handleFreeChatSubmit = async () => {
     if (!canSendFreeChat) return;
@@ -130,6 +177,8 @@ export function AdvisorPage({
     const result = await handleFreeChatRecover();
     if (result.rangeFrom) setFreeChatFrom(result.rangeFrom);
     if (result.rangeTo) setFreeChatTo(result.rangeTo);
+    setFreeChatExpanded(false);
+    setFreeChatNearBottom(true);
   };
 
   return (
@@ -352,8 +401,12 @@ export function AdvisorPage({
             </div>
           </>
         ) : (
-          <>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="flex h-[70vh] max-h-[75vh] flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5">
+            <div className="shrink-0 space-y-2 border-b border-white/10 p-3">
+              <div className="flex items-center justify-between text-xs text-slate-300">
+                <span>Chat libre</span>
+                <span>{freeChatRangeLabel}</span>
+              </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label className="space-y-1 text-xs text-slate-300">
                   <span>Desde</span>
@@ -374,31 +427,30 @@ export function AdvisorPage({
                   />
                 </label>
               </div>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                 <span>Max 1 mes (31 dias).</span>
                 <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Reganon'}</span>
               </div>
               {freeChatRangeError && (
-                <p className="mt-1 text-[11px] font-medium text-primary">{freeChatRangeError}</p>
+                <p className="text-[11px] font-medium text-primary">{freeChatRangeError}</p>
               )}
-              <div className="mt-3 space-y-2">
-                <textarea
-                  value={freeChatMessage}
-                  onChange={(event) => setFreeChatMessage(event.target.value)}
-                  rows={3}
-                  placeholder="Escribe tu mensaje para la IA..."
-                  className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
-                />
-                <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                <span>La IA usa un resumen + ultimos 2 intercambios.</span>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={freeChatLoading}
-                    onClick={() => {
-                      setFreeChatMessage('');
-                      handleFreeChatReset();
-                    }}
+                      disabled={freeChatLoading}
+                      onClick={() => {
+                        setFreeChatMessage('');
+                        setFreeChatExpanded(false);
+                        setFreeChatNearBottom(true);
+                        setFreeChatLastSeenCount(0);
+                        handleFreeChatReset();
+                      }}
                     className={`rounded-full px-3 py-2 text-[11px] font-semibold ${
-                      freeChatLoading ? 'border border-white/10 bg-white/5 text-slate-400' : 'border border-white/10 text-slate-200'
+                      freeChatLoading
+                        ? 'border border-white/10 bg-white/5 text-slate-400'
+                        : 'border border-white/10 text-slate-200'
                     }`}
                   >
                     Nuevo chat
@@ -410,77 +462,145 @@ export function AdvisorPage({
                       void handleRecoverClick();
                     }}
                     className={`rounded-full px-3 py-2 text-[11px] font-semibold ${
-                      freeChatLoading ? 'border border-white/10 bg-white/5 text-slate-400' : 'border border-white/10 text-slate-200'
+                      freeChatLoading
+                        ? 'border border-white/10 bg-white/5 text-slate-400'
+                        : 'border border-white/10 text-slate-200'
                     }`}
                   >
                     Recuperar chat
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canSendFreeChat}
-                    onClick={() => {
-                      void handleFreeChatSubmit();
-                    }}
-                    className={`rounded-full px-4 py-2 text-xs font-semibold ${
-                      canSendFreeChat ? 'bg-primary text-white' : 'border border-white/10 bg-white/5 text-slate-400'
-                    }`}
-                  >
-                    Enviar
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                <span>Chat libre</span>
-                <span>{freeChatFrom && freeChatTo ? `${freeChatFrom} -> ${freeChatTo}` : 'Rango sin definir'}</span>
-              </div>
-              <div className="flex flex-col gap-3">
-                {freeChatFeed.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-                    Aun no hay mensajes. Envia el primero para iniciar el chat.
-                  </div>
-                )}
-                {freeChatFeed.map((item) => (
-                  <div key={item.id} className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}>
-                    <div
-                      className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                        item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
-                      }`}
+            <div className="relative flex-1 min-h-0">
+              <div
+                ref={freeChatFeedRef}
+                onScroll={handleFreeChatScroll}
+                className={`h-full overflow-y-auto px-3 py-3 ${freeChatNearBottom ? 'pb-4' : 'pb-16'}`}
+              >
+                <div className="flex min-h-full flex-col">
+                  {!freeChatExpanded && freeChatHiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFreeChatExpanded(true)}
+                      className="mb-3 self-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200"
                     >
-                      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
-                        <span>{item.from === 'ia' ? 'IA' : 'Tu'}</span>
-                        <span>
-                          {new Date(item.ts).toLocaleTimeString('es-CO', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <p className="whitespace-pre-line">{item.text}</p>
+                      Ver mensajes anteriores ({freeChatHiddenCount})
+                    </button>
+                  )}
+                  {freeChatVisible.length === 0 ? (
+                    <div className="my-auto rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
+                      Aun no hay mensajes. Envia el primero para iniciar el chat.
                     </div>
-                  </div>
-                ))}
-                {freeChatLoading && (
-                  <div className="flex items-center gap-2 text-xs text-slate-200">
-                    <span className="font-semibold text-white">IA escribiendo</span>
-                    <span className="flex items-center gap-1">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
-                      <span
-                        className="h-2 w-2 animate-bounce rounded-full bg-white"
-                        style={{ animationDelay: '0.15s' }}
-                      />
-                      <span
-                        className="h-2 w-2 animate-bounce rounded-full bg-white"
-                        style={{ animationDelay: '0.3s' }}
-                      />
+                  ) : (
+                    <>
+                      <div className="flex-1" />
+                      <div className="flex flex-col gap-3">
+                        {freeChatVisible.map((item) => (
+                          <div key={item.id} className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}>
+                            <div
+                              className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                                item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
+                                <span>{item.from === 'ia' ? 'IA' : 'Tu'}</span>
+                                <span>
+                                  {new Date(item.ts).toLocaleTimeString('es-CO', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              <p className="whitespace-pre-line">{item.text}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {freeChatLoading && (
+                          <div className="flex justify-start">
+                            <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-sm text-white shadow-sm">
+                              <span className="sr-only">IA escribiendo</span>
+                              <span className="flex items-center gap-1">
+                                <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
+                                <span
+                                  className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                  style={{ animationDelay: '0.15s' }}
+                                />
+                                <span
+                                  className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                  style={{ animationDelay: '0.3s' }}
+                                />
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              {!freeChatNearBottom && (
+                <button
+                  type="button"
+                  aria-label={freeChatHasNew ? 'Bajar a nuevos mensajes' : 'Bajar al final'}
+                  onClick={() => {
+                    scrollFreeChatToBottom();
+                    setFreeChatLastSeenCount(freeChatFeed.length);
+                    setFreeChatNearBottom(true);
+                  }}
+                  className={`absolute bottom-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all duration-200 active:scale-90 ${
+                    freeChatHasNew
+                      ? 'bg-primary text-white shadow-primary/40'
+                      : 'bg-slate-700/80 text-white/80 backdrop-blur-sm hover:bg-slate-600'
+                  }`}
+                >
+                  <ArrowDown className="h-5 w-5" />
+                  {freeChatHasNew && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75 motion-reduce:animate-none" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-slate-950/80 bg-red-500" />
                     </span>
-                  </div>
-                )}
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-white/10 bg-white/5 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={freeChatInputRef}
+                  value={freeChatMessage}
+                  onChange={(event) => setFreeChatMessage(event.target.value)}
+                  onInput={resizeFreeChatInput}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' || event.shiftKey) return;
+                    if (event.nativeEvent instanceof KeyboardEvent && event.nativeEvent.isComposing) return;
+                    event.preventDefault();
+                    void handleFreeChatSubmit();
+                  }}
+                  rows={1}
+                  placeholder="Escribe tu mensaje para la IA..."
+                  className="min-h-[44px] max-h-[120px] w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                />
+                <button
+                  type="button"
+                  aria-label="Enviar mensaje"
+                  disabled={!canSendFreeChat}
+                  onClick={() => {
+                    void handleFreeChatSubmit();
+                  }}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
+                    canSendFreeChat
+                      ? 'bg-primary text-white shadow-primary/40'
+                      : 'border border-white/10 bg-white/5 text-slate-400'
+                  }`}
+                >
+                  <SendHorizontal className="h-5 w-5" />
+                </button>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </section>
