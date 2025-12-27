@@ -135,36 +135,94 @@ const toText = (value: unknown) => {
 const truncateText = (value: string, max: number) => (value.length > max ? value.slice(0, max) : value);
 
 const parseDate = (value: unknown): string | null => {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-  if (typeof value === 'number' && Number.isFinite(value) && value > 20000) {
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+
+  const isValidYMD = (y: number, m: number, d: number) => {
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return false;
+    if (y < 1900 || y > 2100) return false;
+    if (m < 1 || m > 12) return false;
+    if (d < 1 || d > 31) return false;
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  };
+
+  const toIso = (y: number, m: number, d: number) => `${y}-${pad2(m)}-${pad2(d)}`;
+
+  const excelSerialToIso = (serial: number): string | null => {
+    if (!Number.isFinite(serial)) return null;
+    if (serial <= 0) return null;
+    if (serial < 20000) return null;
+
     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    const date = new Date(excelEpoch.getTime() + value * 86400000);
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const ms = excelEpoch.getTime() + serial * 86400000;
+    const dt = new Date(ms);
+    const y = dt.getUTCFullYear();
+    const m = dt.getUTCMonth() + 1;
+    const d = dt.getUTCDate();
+    return isValidYMD(y, m, d) ? toIso(y, m, d) : null;
+  };
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const y = value.getFullYear();
+    const m = value.getMonth() + 1;
+    const d = value.getDate();
+    return isValidYMD(y, m, d) ? toIso(y, m, d) : null;
   }
-  const raw = toText(value);
-  if (!raw) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  const match = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(raw);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
-  const candidate = new Date(year, month - 1, day);
-  if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) {
-    return null;
+
+  if (typeof value === 'number') {
+    const iso = excelSerialToIso(value);
+    if (iso) return iso;
   }
-  const isoMonth = String(month).padStart(2, '0');
-  const isoDay = String(day).padStart(2, '0');
-  return `${year}-${isoMonth}-${isoDay}`;
+
+  const raw0 = toText(value);
+  if (!raw0) return null;
+
+  const rawDatePart = raw0.trim().split(/[T\s]/)[0];
+  if (!rawDatePart) return null;
+
+  if (/^\d{5}$/.test(rawDatePart)) {
+    const asNum = Number(rawDatePart);
+    const iso = excelSerialToIso(asNum);
+    if (iso) return iso;
+  }
+
+  const compact = /^(\d{4})(\d{2})(\d{2})$/.exec(rawDatePart);
+  if (compact) {
+    const y = Number(compact[1]);
+    const m = Number(compact[2]);
+    const d = Number(compact[3]);
+    return isValidYMD(y, m, d) ? toIso(y, m, d) : null;
+  }
+
+  const s = rawDatePart.replace(/\./g, '/').replace(/-/g, '/');
+
+  const ymd = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(s);
+  if (ymd) {
+    const y = Number(ymd[1]);
+    const m = Number(ymd[2]);
+    const d = Number(ymd[3]);
+    return isValidYMD(y, m, d) ? toIso(y, m, d) : null;
+  }
+
+  const dmyOrMdy = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(s);
+  if (dmyOrMdy) {
+    const a = Number(dmyOrMdy[1]);
+    const b = Number(dmyOrMdy[2]);
+    let y = Number(dmyOrMdy[3]);
+
+    if (y < 100) y = y <= 69 ? 2000 + y : 1900 + y;
+
+    let day = a;
+    let month = b;
+    if (a <= 12 && b > 12) {
+      month = a;
+      day = b;
+    }
+
+    return isValidYMD(y, month, day) ? toIso(y, month, day) : null;
+  }
+
+  return null;
 };
 
 const parseType = (value: unknown): TransactionType | null => {
