@@ -372,7 +372,8 @@ export const parseXlsx = async (file: File): Promise<ImportReport> => {
   const XLSX = await import('xlsx');
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(data, { type: 'array' });
-  const sheetName = workbook.SheetNames[0];
+  const sheetName =
+    workbook.SheetNames.find((name) => name.toLowerCase() === 'plantilla') || workbook.SheetNames[0];
   if (!sheetName) {
     return { total: 0, valid: 0, invalid: 0, errors: [], preview: [], rows: [] };
   }

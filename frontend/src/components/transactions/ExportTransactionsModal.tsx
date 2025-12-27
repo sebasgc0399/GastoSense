@@ -3,7 +3,7 @@ import { Upload } from 'lucide-react';
 import { useConfirm } from '../../hooks/useConfirm';
 import { callImportTransactions } from '../../services/functions';
 import type { Budget, Transaction } from '../../types';
-import type { CategoryResolver } from '../../utils/categoryResolver';
+import { normalizeCategoryLabel, type CategoryResolver } from '../../utils/categoryResolver';
 import {
   buildExportColumns,
   buildExportRows,
@@ -49,6 +49,58 @@ const toIsoDate = (date: Date) =>
 
 const addDays = (date: Date, days: number) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+
+const FALLBACK_TEMPLATE_CATEGORIES = [
+  'Comida',
+  'Transporte',
+  'Hogar',
+  'Salud',
+  'Educacion',
+  'Entretenimiento',
+  'Servicios',
+];
+
+const buildTemplateCategories = (resolver?: CategoryResolver, budget?: Budget | null) => {
+  const labels: string[] = [];
+  const categories = resolver ? Object.values(resolver.categoriesById) : [];
+  for (const category of categories) {
+    if (category.isArchived) continue;
+    const trimmed = category.label?.trim();
+    if (trimmed) labels.push(trimmed);
+  }
+
+  if (!labels.length && budget?.perCategory && resolver) {
+    Object.keys(budget.perCategory).forEach((categoryId) => {
+      const label = resolver.categoriesById[categoryId]?.label?.trim();
+      if (label) labels.push(label);
+    });
+  }
+
+  if (!labels.length) {
+    labels.push(...FALLBACK_TEMPLATE_CATEGORIES);
+  }
+
+  const normalizedSet = new Set<string>();
+  const deduped: string[] = [];
+  for (const label of labels) {
+    const normalized = normalizeCategoryLabel(label);
+    if (!normalized || normalizedSet.has(normalized)) continue;
+    normalizedSet.add(normalized);
+    deduped.push(label);
+  }
+
+  const ensureLabel = (value: string) => {
+    const normalized = normalizeCategoryLabel(value);
+    if (!normalized || normalizedSet.has(normalized)) return;
+    normalizedSet.add(normalized);
+    deduped.push(value);
+  };
+
+  ensureLabel('otros');
+  ensureLabel('ingreso');
+
+  return deduped.sort((a, b) => a.localeCompare(b, 'es-CO'));
+};
 
 const parseIsoDate = (value: string): Date | null => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -256,6 +308,28 @@ export function ExportTransactionsModal({
     const worksheet = XLSX.utils.json_to_sheet(rows, { header: columns });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla');
+    const tipos = ['gasto', 'ingreso'];
+    const metodosPago = ['efectivo', 'debito', 'credito', 'digital', 'otro'];
+    const categorias = buildTemplateCategories(categoryResolver, budget);
+    const rowCount = Math.max(tipos.length, metodosPago.length, categorias.length);
+    const maestrosAoA: Array<Array<string>> = [
+      ['GUIA DE REFERENCIA PARA IMPORTACION'],
+      [],
+      ['TIPOS', '', 'METODOS DE PAGO', '', 'TUS CATEGORIAS ACTIVAS'],
+    ];
+    for (let i = 0; i < rowCount; i += 1) {
+      maestrosAoA.push([tipos[i] ?? '', '', metodosPago[i] ?? '', '', categorias[i] ?? '']);
+    }
+    maestrosAoA.push([]);
+    maestrosAoA.push(['NOTAS IMPORTANTES']);
+    maestrosAoA.push(['- Solo se importara la hoja Plantilla. La hoja Maestros es de ayuda.']);
+    maestrosAoA.push([
+      '- Si escribes una categoria que no esta en tu lista, se importara como otros y se guardara [Cat: X] en la nota.',
+    ]);
+    const maestrosWs = XLSX.utils.aoa_to_sheet(maestrosAoA);
+    maestrosWs['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+    maestrosWs['!cols'] = [{ wch: 18 }, { wch: 4 }, { wch: 18 }, { wch: 4 }, { wch: 34 }];
+    XLSX.utils.book_append_sheet(workbook, maestrosWs, 'Maestros');
     const data = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -694,6 +768,7 @@ export function ExportTransactionsModal({
                   <li>Descarga la plantilla y abrela en Excel o Google Sheets.</li>
                   <li>Llena una fila por movimiento con: fecha, tipo, categoria, nota, monto, metodo_pago.</li>
                   <li>Guarda en .xlsx (o CSV si prefieres) y sube el archivo.</li>
+                  <li>Solo se importara la hoja Plantilla. La hoja Maestros es de ayuda.</li>
                   <li>Si Excel muestra un aviso de perdida de datos al guardar CSV, acepta.</li>
                 </ul>
                 <div className="mt-3 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs text-[var(--text-muted)]">
