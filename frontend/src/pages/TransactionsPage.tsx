@@ -1,6 +1,6 @@
 ﻿﻿import type React from 'react';
-import { useMemo, useState } from 'react';
-import { Lock } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowUpDown, Lock } from 'lucide-react';
 import { CardMini } from '../components/stats/CardMini';
 import { StatsSummaryCard, type SummaryItem, type SummaryTone } from '../components/stats/StatsSummaryCard';
 import { DayHeader } from '../components/transactions/DayHeader';
@@ -72,6 +72,7 @@ export function TransactionsPage({
     { label: 'Saldo (filtro)', value: balanceTotal, tone: balanceTone },
   ];
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [importToast, setImportToast] = useState<string | null>(null);
   const handleExportClick = () => {
     if (canExport) {
       setIsExportOpen(true);
@@ -79,6 +80,11 @@ export function TransactionsPage({
       onExportLocked();
     }
   };
+  useEffect(() => {
+    if (!importToast) return;
+    const timer = window.setTimeout(() => setImportToast(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [importToast]);
   const groupedTransactions = useMemo(() => {
     const groups: Array<{
       date: string;
@@ -114,6 +120,11 @@ export function TransactionsPage({
 
   return (
     <section className="space-y-4 pb-5">
+      {importToast && (
+        <div className="fixed bottom-24 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-center text-xs font-semibold text-white shadow-lg backdrop-blur">
+          {importToast}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-white">Movimientos</h2>
@@ -129,8 +140,8 @@ export function TransactionsPage({
               : 'cursor-not-allowed border-white/5 bg-white/5 text-white/60 hover:border-white/10'
           }`}
         >
-          {!canExport && <Lock aria-hidden="true" className="h-3 w-3" />}
-          <span>Exportar</span>
+          {canExport ? <ArrowUpDown aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}
+          <span>Datos</span>
         </button>
       </div>
 
@@ -239,6 +250,8 @@ export function TransactionsPage({
         onClose={() => setIsExportOpen(false)}
         transactions={transactions}
         filters={filters}
+        onChangeFilters={handleFiltersChange}
+        onImportSuccess={(message) => setImportToast(message)}
         budget={budget}
         categoryResolver={categoryResolver}
       />

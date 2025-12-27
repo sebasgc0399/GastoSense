@@ -51,6 +51,8 @@ const advisorFreeChatSampleTop = 200;
 const advisorFreeChatSummaryMaxChars = 1500;
 const advisorFreeChatTurnMaxChars = 600;
 const advisorFreeChatMaxTurns = 4;
+const importRateLimitPerHour = Number(process.env.IMPORT_RATE_LIMIT || 10);
+const importMaxRows = Number(process.env.IMPORT_MAX_ROWS || 1000);
 
 type UserRole = "admin" | "free" | "paid_byok" | "paid_managed" | "gifted_managed";
 type KeyPreference = "byok" | "managed";
@@ -61,6 +63,7 @@ type PlanId = "plan_byok" | "plan_pro";
 type PlanPeriod = "monthly" | "quarterly" | "semiannual" | "annual";
 type TargetPlan = "byok" | "pro";
 type PaymentStatus = "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
+type ImportMode = "append" | "replace_range";
 
 interface UserProfile {
   role: UserRole;
@@ -152,6 +155,15 @@ interface ParsedTransaction {
 }
 
 type CategoryFallbackReason = "explicit_other" | "no_match" | "ambiguous" | "empty";
+
+type ImportRowInput = {
+  date?: unknown;
+  type?: unknown;
+  amount?: unknown;
+  categoryLabel?: unknown;
+  note?: unknown;
+  paymentMethod?: unknown;
+};
 
 interface CategoryCatalogEntry {
   id: string;
@@ -578,6 +590,33 @@ async function checkFreeChatRateLimit(uid: string): Promise<void> {
     const used = typeof data.count === "number" ? data.count : 0;
     if (used >= advisorFreeChatRateLimit) {
       throw new HttpsError("resource-exhausted", "Has alcanzado el limite horario de Chat libre.");
+    }
+    tx.set(
+      ref,
+      {
+        hour: hourKey,
+        count: used + 1,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true},
+    );
+  });
+}
+
+async function checkImportRateLimit(uid: string): Promise<void> {
+  if (!Number.isFinite(importRateLimitPerHour) || importRateLimitPerHour <= 0) return;
+  const hourKey = new Date().toISOString().slice(0, 13);
+  const ref = firestore.doc(`importTransactionsUsage/${uid}`);
+
+  await firestore.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    let data = snap.exists ? (snap.data() as {hour?: string; count?: number}) : {};
+    if (data.hour !== hourKey) {
+      data = {hour: hourKey, count: 0};
+    }
+    const used = typeof data.count === "number" ? data.count : 0;
+    if (used >= importRateLimitPerHour) {
+      throw new HttpsError("resource-exhausted", "Has alcanzado el limite horario de importaciones.");
     }
     tx.set(
       ref,
@@ -1276,6 +1315,223 @@ export const suggestCategoryIcon = onCall(
     }
   },
 );
+
+/**
+ * Callable: importa movimientos desde archivos exportados por GastoSense.
+ */
+export const importTransactions = onCall(async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesion.");
+  }
+  const uid = request.auth.uid;
+  const {mode, rows} = request.data as {
+    mode?: ImportMode;
+    rows?: ImportRowInput[];
+  };
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new HttpsError("invalid-argument", "Debes enviar filas para importar.");
+  }
+  const importMode: ImportMode = mode === "replace_range" ? "replace_range" : "append";
+  if (Number.isFinite(importMaxRows) && rows.length > importMaxRows) {
+    throw new HttpsError("invalid-argument", "El archivo supera el limite permitido.");
+  }
+
+  const profile = await getOrCreateUserProfile(uid);
+  const isPaidRole =
+    profile.role === "paid_byok" || profile.role === "paid_managed" || profile.role === "gifted_managed";
+  const hasActiveMembership = !membershipExpired(profile);
+  if (!(profile.role === "admin" || (isPaidRole && hasActiveMembership))) {
+    throw new HttpsError("permission-denied", "Tu plan no permite importar movimientos.");
+  }
+
+  await checkImportRateLimit(uid);
+
+  const normalizeText = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const clampText = (value: string, max: number) => (value.length > max ? value.slice(0, max) : value);
+  const isValidIsoDate = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    const candidate = new Date(year, month - 1, day);
+    return (
+      candidate.getFullYear() === year &&
+      candidate.getMonth() === month - 1 &&
+      candidate.getDate() === day
+    );
+  };
+  const normalizeType = (value: unknown) => {
+    const raw = normalizeText(value).toLowerCase();
+    if (["gasto", "expense", "egreso"].includes(raw)) return "expense";
+    if (["ingreso", "income"].includes(raw)) return "income";
+    return null;
+  };
+  const normalizeAmount = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) return Math.abs(value);
+    const raw = normalizeText(value);
+    if (!raw) return null;
+    const cleaned = raw.replace(/[^\d,.-]/g, "");
+    if (!cleaned) return null;
+    let normalized = cleaned;
+    if (cleaned.includes(".") && cleaned.includes(",")) {
+      normalized = cleaned.replace(/\./g, "").replace(",", ".");
+    } else if (cleaned.includes(",")) {
+      const parts = cleaned.split(",");
+      if (parts.length === 2 && parts[1].length <= 2) {
+        normalized = parts[0].replace(/\./g, "") + "." + parts[1];
+      } else {
+        normalized = cleaned.replace(/,/g, "");
+      }
+    } else if (cleaned.includes(".")) {
+      const parts = cleaned.split(".");
+      if (parts.length > 2) {
+        normalized = cleaned.replace(/\./g, "");
+      }
+    }
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.abs(parsed);
+  };
+  const normalizePaymentMethod = (value: unknown): ParsedTransaction["paymentMethod"] => {
+    const raw = normalizeText(value).toLowerCase();
+    if (["efectivo", "debito", "credito", "digital", "otro"].includes(raw)) {
+      return raw as ParsedTransaction["paymentMethod"];
+    }
+    return "otro";
+  };
+  const prefixCategoryNote = (note: string, label: string) => {
+    if (!label) return note;
+    const prefix = `[Cat: ${label}]`;
+    if (!note) return prefix;
+    return `${prefix} ${note}`;
+  };
+
+  const normalizedRows: Array<{
+    date: string;
+    type: "expense" | "income";
+    amount: number;
+    categoryLabel: string;
+    note: string;
+    paymentMethod: ParsedTransaction["paymentMethod"];
+  }> = [];
+  let errorsCount = 0;
+
+  for (const row of rows) {
+    if (!row || typeof row !== "object") {
+      errorsCount += 1;
+      continue;
+    }
+    const date = normalizeText(row.date);
+    if (!isValidIsoDate(date)) {
+      errorsCount += 1;
+      continue;
+    }
+    const type = normalizeType(row.type);
+    if (!type) {
+      errorsCount += 1;
+      continue;
+    }
+    const amount = normalizeAmount(row.amount);
+    if (!amount || amount <= 0) {
+      errorsCount += 1;
+      continue;
+    }
+    const categoryLabel = clampText(normalizeText(row.categoryLabel), 80);
+    const note = clampText(normalizeText(row.note), 300);
+    const paymentMethod = normalizePaymentMethod(row.paymentMethod);
+    normalizedRows.push({date, type, amount, categoryLabel, note, paymentMethod});
+  }
+
+  if (normalizedRows.length === 0) {
+    throw new HttpsError("invalid-argument", "No hay filas validas para importar.");
+  }
+
+  const rangeFrom = normalizedRows.reduce((min, row) => (min < row.date ? min : row.date), normalizedRows[0].date);
+  const rangeTo = normalizedRows.reduce((max, row) => (max > row.date ? max : row.date), normalizedRows[0].date);
+
+  const categoryCatalog = await loadUserCategoryCatalog(uid);
+  const categoryLookup = buildCategoryLookup(categoryCatalog);
+
+  if (importMode === "replace_range") {
+    let hasMore = true;
+    while (hasMore) {
+      const snapshot = await firestore
+        .collection("transactions")
+        .where("userId", "==", uid)
+        .where("date", ">=", rangeFrom)
+        .where("date", "<=", rangeTo)
+        .orderBy("date")
+        .limit(450)
+        .get();
+      if (snapshot.empty) {
+        hasMore = false;
+        break;
+      }
+      const batch = firestore.batch();
+      snapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref));
+      await batch.commit();
+      if (snapshot.size < 450) hasMore = false;
+    }
+  }
+
+  const collectionRef = firestore.collection("transactions");
+  let inserted = 0;
+  let batch = firestore.batch();
+  let batchCount = 0;
+  const commitBatch = async () => {
+    await batch.commit();
+    batch = firestore.batch();
+    batchCount = 0;
+  };
+
+  for (const row of normalizedRows) {
+    const label = row.categoryLabel;
+    const normalizedLabel = normalizeCategoryLabel(label);
+    const isIncomeLabel = normalizedLabel === "ingreso" || normalizedLabel === "income";
+    let categoryId = FALLBACK_CATEGORY_ID;
+    if (label) {
+      const resolution = resolveCategoryIdFromCatalog(label, categoryLookup);
+      categoryId = resolution.categoryId;
+    } else if (row.type === "income") {
+      categoryId = "ingreso";
+    }
+    if (row.type === "income" && isIncomeLabel) {
+      categoryId = "ingreso";
+    }
+    let note = row.note;
+    if (categoryId === FALLBACK_CATEGORY_ID && label && normalizedLabel !== FALLBACK_CATEGORY_ID) {
+      note = prefixCategoryNote(note, label);
+    }
+    note = clampText(note, 300);
+
+    const payload: Record<string, unknown> = {
+      amount: row.amount,
+      type: row.type,
+      date: row.date,
+      paymentMethod: row.paymentMethod,
+      userId: uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    if (note) payload.note = note;
+    if (row.type === "expense") {
+      payload.categoryId = categoryId;
+      payload.category = categoryId;
+    } else {
+      payload.category = categoryId || "ingreso";
+    }
+    batch.set(collectionRef.doc(), payload);
+    batchCount += 1;
+    inserted += 1;
+    if (batchCount >= 450) {
+      await commitBatch();
+    }
+  }
+
+  if (batchCount > 0) {
+    await commitBatch();
+  }
+
+  return {inserted, skipped: errorsCount, errorsCount, rangeFrom, rangeTo};
+});
 
 const advisorActionPlaybook: Record<string, string> = {
   "Espejo diario":
