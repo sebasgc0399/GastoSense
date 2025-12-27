@@ -111,6 +111,10 @@ export function AdvisorPage({
   freeChatLoading,
   formatPesos,
 }: AdvisorPageProps) {
+  const [actionsExpanded, setActionsExpanded] = useState(false);
+  const [actionsNearBottom, setActionsNearBottom] = useState(true);
+  const [actionsLastSeenCount, setActionsLastSeenCount] = useState(0);
+  const actionsFeedRef = useRef<HTMLDivElement | null>(null);
   const [freeChatFrom, setFreeChatFrom] = useState(() => monthStartIso());
   const [freeChatTo, setFreeChatTo] = useState(() => todayIso());
   const [freeChatMessage, setFreeChatMessage] = useState('');
@@ -119,16 +123,38 @@ export function AdvisorPage({
   const [freeChatLastSeenCount, setFreeChatLastSeenCount] = useState(0);
   const freeChatFeedRef = useRef<HTMLDivElement | null>(null);
   const freeChatInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const actionsMaxVisible = 10;
+  const actionsHiddenCount = Math.max(0, chatFeed.length - actionsMaxVisible);
+  const actionsVisible = actionsExpanded || actionsHiddenCount === 0 ? chatFeed : chatFeed.slice(-actionsMaxVisible);
+  const actionsHasNew = !actionsNearBottom && chatFeed.length > actionsLastSeenCount;
   const freeChatRangeError = useMemo(
     () => validateFreeChatRange(freeChatFrom, freeChatTo),
     [freeChatFrom, freeChatTo],
   );
-  const freeChatMaxVisible = 80;
+  const freeChatMaxVisible = 10;
   const freeChatHiddenCount = Math.max(0, freeChatFeed.length - freeChatMaxVisible);
   const freeChatVisible = freeChatExpanded || freeChatHiddenCount === 0 ? freeChatFeed : freeChatFeed.slice(-freeChatMaxVisible);
   const canSendFreeChat = !freeChatRangeError && freeChatMessage.trim().length > 0 && !freeChatLoading;
   const freeChatRangeLabel = freeChatFrom && freeChatTo ? `${freeChatFrom} -> ${freeChatTo}` : 'Rango sin definir';
   const freeChatHasNew = !freeChatNearBottom && freeChatFeed.length > freeChatLastSeenCount;
+
+  const handleActionsScroll = useCallback(() => {
+    const container = actionsFeedRef.current;
+    if (!container) return;
+    const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const nearBottom = distance < 80;
+    setActionsNearBottom(nearBottom);
+    if (nearBottom) {
+      setActionsLastSeenCount(chatFeed.length);
+    }
+  }, [chatFeed.length]);
+
+  const scrollActionsToBottom = useCallback(() => {
+    const container = actionsFeedRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+    setActionsLastSeenCount(chatFeed.length);
+  }, [chatFeed.length]);
 
   const handleFreeChatScroll = useCallback(() => {
     const container = freeChatFeedRef.current;
@@ -155,6 +181,12 @@ export function AdvisorPage({
     const nextHeight = Math.min(Math.max(input.scrollHeight, 44), 120);
     input.style.height = `${nextHeight}px`;
   }, []);
+
+  useEffect(() => {
+    if (advisorEnvironment !== 'actions') return;
+    if (!actionsNearBottom) return;
+    requestAnimationFrame(scrollActionsToBottom);
+  }, [advisorEnvironment, chatFeed.length, actionsNearBottom, scrollActionsToBottom]);
 
   useEffect(() => {
     if (advisorEnvironment !== 'free_chat') return;
@@ -312,90 +344,141 @@ export function AdvisorPage({
               </div>
             )}
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                <span>Feed IA</span>
-                <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Reganon'}</span>
+            <div className="relative flex h-[55vh] max-h-[60vh] flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5">
+              <div className="shrink-0 border-b border-white/10 px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-slate-300">
+                  <span>Feed IA</span>
+                  <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Reganon'}</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-3">
-                {chatFeed.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
-                    Aun no hay mensajes. Lanza una accion arriba para ver el estilo chat.
-                  </div>
-                )}
-                {chatFeed.map((item) => (
-                  <div key={item.id} className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}>
-                    <div
-                      className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                        item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
-                        <span>{item.from === 'ia' ? 'IA' : 'Tu'}</span>
-                        <span>
-                          {new Date(item.ts).toLocaleTimeString('es-CO', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+              <div className="relative flex-1 min-h-0">
+                <div
+                  ref={actionsFeedRef}
+                  onScroll={handleActionsScroll}
+                  className={`h-full overflow-y-auto px-3 py-3 ${actionsNearBottom ? 'pb-4' : 'pb-16'}`}
+                >
+                  <div className="flex min-h-full flex-col">
+                    {!actionsExpanded && actionsHiddenCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setActionsExpanded(true)}
+                        className="mb-3 self-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                      >
+                        Ver mensajes anteriores ({actionsHiddenCount})
+                      </button>
+                    )}
+                    {actionsVisible.length === 0 && !advisorLoading ? (
+                      <div className="my-auto rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
+                        Aun no hay mensajes. Lanza una accion arriba para ver el estilo chat.
                       </div>
-                      <p className="whitespace-pre-line">{item.text}</p>
-                      {item.chartTop && item.chartTop.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {item.chartTop.map((ct) => {
-                            const max = item.chartTop?.[0]?.amount || 1;
-                            const pct = Math.round((ct.amount / max) * 100);
-                            return (
-                              <div key={ct.category} className="space-y-1">
-                                <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
-                                  <span className="truncate">{ct.category}</span>
-                                  <span className="whitespace-nowrap font-semibold">{formatPesos(ct.amount)}</span>
+                    ) : (
+                      <>
+                        <div className="flex-1" />
+                        <div className="flex flex-col gap-3">
+                          {actionsVisible.map((item) => (
+                            <div key={item.id} className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}>
+                              <div
+                                className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                                  item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
+                                  <span>{item.from === 'ia' ? 'IA' : 'Tu'}</span>
+                                  <span>
+                                    {new Date(item.ts).toLocaleTimeString('es-CO', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
                                 </div>
-                                <div className="h-2 rounded-full bg-white/10">
-                                  <div
-                                    className="h-full rounded-full bg-primary"
-                                    style={{ width: `${pct}%`, minWidth: '4%' }}
-                                  />
-                                </div>
+                                <p className="whitespace-pre-line">{item.text}</p>
+                                {item.chartTop && item.chartTop.length > 0 && (
+                                  <div className="mt-3 space-y-2">
+                                    {item.chartTop.map((ct) => {
+                                      const max = item.chartTop?.[0]?.amount || 1;
+                                      const pct = Math.round((ct.amount / max) * 100);
+                                      return (
+                                        <div key={ct.category} className="space-y-1">
+                                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                                            <span className="truncate">{ct.category}</span>
+                                            <span className="whitespace-nowrap font-semibold">{formatPesos(ct.amount)}</span>
+                                          </div>
+                                          <div className="h-2 rounded-full bg-white/10">
+                                            <div
+                                              className="h-full rounded-full bg-primary"
+                                              style={{ width: `${pct}%`, minWidth: '4%' }}
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {item.actionData && item.from === 'ia' && (
+                                  <div className="mt-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => onActionClick(item.actionData!)}
+                                      className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-primary"
+                                    >
+                                      {item.actionData.label}
+                                    </button>
+                                  </div>
+                                )}
+                                {item.tone && item.from === 'ia' && (
+                                  <p className="mt-1 text-[10px] opacity-80">
+                                    Tono: {item.tone === 'amable' ? 'Amable' : 'Reganon'}
+                                  </p>
+                                )}
                               </div>
-                            );
-                          })}
+                            </div>
+                          ))}
+                          {advisorLoading && (
+                            <div className="flex justify-start">
+                              <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-sm text-white shadow-sm">
+                                <span className="sr-only">IA escribiendo</span>
+                                <span className="flex items-center gap-1">
+                                  <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
+                                  <span
+                                    className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                    style={{ animationDelay: '0.15s' }}
+                                  />
+                                  <span
+                                    className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                    style={{ animationDelay: '0.3s' }}
+                                  />
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {item.actionData && item.from === 'ia' && (
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => onActionClick(item.actionData!)}
-                            className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-primary"
-                          >
-                            {item.actionData.label}
-                          </button>
-                        </div>
-                      )}
-                      {item.tone && item.from === 'ia' && (
-                        <p className="mt-1 text-[10px] opacity-80">
-                          Tono: {item.tone === 'amable' ? 'Amable' : 'Reganon'}
-                        </p>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
-                ))}
-                {advisorLoading && (
-                  <div className="flex items-center gap-2 text-xs text-slate-200">
-                    <span className="font-semibold text-white">IA escribiendo</span>
-                    <span className="flex items-center gap-1">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
-                      <span
-                        className="h-2 w-2 animate-bounce rounded-full bg-white"
-                        style={{ animationDelay: '0.15s' }}
-                      />
-                      <span
-                        className="h-2 w-2 animate-bounce rounded-full bg-white"
-                        style={{ animationDelay: '0.3s' }}
-                      />
-                    </span>
-                  </div>
+                </div>
+                {!actionsNearBottom && (
+                  <button
+                    type="button"
+                    aria-label={actionsHasNew ? 'Bajar a nuevos mensajes' : 'Bajar al final'}
+                    onClick={() => {
+                      scrollActionsToBottom();
+                      setActionsLastSeenCount(chatFeed.length);
+                      setActionsNearBottom(true);
+                    }}
+                    className={`absolute bottom-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all duration-200 active:scale-90 ${
+                      actionsHasNew
+                        ? 'bg-primary text-white shadow-primary/40'
+                        : 'bg-slate-700/80 text-white/80 backdrop-blur-sm hover:bg-slate-600'
+                    }`}
+                  >
+                    <ArrowDown className="h-5 w-5" />
+                    {actionsHasNew && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75 motion-reduce:animate-none" />
+                        <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-slate-950/80 bg-red-500" />
+                      </span>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
