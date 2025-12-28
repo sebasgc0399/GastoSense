@@ -1512,12 +1512,9 @@ export const importTransactions = onCall(async (request) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
     if (note) payload.note = note;
-    if (row.type === "expense") {
-      payload.categoryId = categoryId;
-      payload.category = categoryId;
-    } else {
-      payload.category = categoryId || "ingreso";
-    }
+    const resolvedCategoryId = row.type === "income" ? categoryId || "ingreso" : categoryId;
+    payload.categoryId = resolvedCategoryId;
+    payload.category = resolvedCategoryId;
     batch.set(collectionRef.doc(), payload);
     batchCount += 1;
     inserted += 1;

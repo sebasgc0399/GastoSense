@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Loader2, Pencil, Plus,
 import { isCategoryDuplicateError, useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
 import { updateCategory as updateCategoryDoc } from '../services/categories';
-import type { Category } from '../types';
+import type { Category, CategoryKind } from '../types';
 import { isValidAiIconName } from '../utils/iconLibrary';
 import { CategoryIcon } from './ui/CategoryIcon';
 import { IconPicker } from './ui/IconPicker';
@@ -19,12 +19,15 @@ interface Props {
 type ViewMode = 'list' | 'form' | 'icons';
 
 const DEFAULT_ICON = 'Tag';
-const FALLBACK_CATEGORY_ID = 'otros';
-const FALLBACK_CATEGORY_LABEL = 'Otros';
-const ensureFallbackLast = (list: Category[]) => {
-  const fallback = list.find((cat) => cat.id === FALLBACK_CATEGORY_ID);
+const FALLBACK_BY_KIND: Record<CategoryKind, { id: string; label: string }> = {
+  expense: { id: 'otros', label: 'Otros' },
+  income: { id: 'ingreso', label: 'Ingreso' },
+};
+const resolveCategoryKind = (value: CategoryKind | undefined) => (value === 'income' ? 'income' : 'expense');
+const ensureFallbackLast = (list: Category[], fallbackId: string) => {
+  const fallback = list.find((cat) => cat.id === fallbackId);
   if (!fallback) return list;
-  const rest = list.filter((cat) => cat.id !== FALLBACK_CATEGORY_ID);
+  const rest = list.filter((cat) => cat.id !== fallbackId);
   return [...rest, fallback];
 };
 
@@ -37,6 +40,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
     updateCategory: updateCategoryAction,
     deleteCategory,
     refreshCategories,
+    ensureIncomeCategories,
   } = useCategoriesController({
     userId,
     includeArchived: true,
@@ -45,6 +49,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState({ label: '', icon: DEFAULT_ICON });
   const [view, setView] = useState<ViewMode>('list');
+  const [selectedKind, setSelectedKind] = useState<CategoryKind>('expense');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [iconSuggesting, setIconSuggesting] = useState(false);
@@ -59,8 +64,11 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
     () => categories.find((cat) => cat.id === editingId) ?? null,
     [categories, editingId],
   );
-  const isEditingFallback = editingCategory?.id === FALLBACK_CATEGORY_ID;
   const showSuggestButton = Boolean(onSuggestIcon);
+  const fallbackConfig = FALLBACK_BY_KIND[selectedKind];
+  const fallbackId = fallbackConfig.id;
+  const fallbackLabel = fallbackConfig.label;
+  const isEditingFallback = editingCategory?.id === fallbackId;
 
   const headerTitle = useMemo(() => {
     if (view === 'icons') return 'Selecciona un ícono';
@@ -75,8 +83,12 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
   }, [editingId, view]);
 
   const inactiveCategories = useMemo(
-    () => categories.filter((cat) => cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID),
-    [categories],
+    () =>
+      categories.filter(
+        (cat) =>
+          cat.isArchived && resolveCategoryKind(cat.kind) === selectedKind && cat.id !== fallbackId,
+      ),
+    [categories, fallbackId, selectedKind],
   );
 
   const resetForm = useCallback(() => {
@@ -130,18 +142,31 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
   }, [onClose, open]);
 
   useEffect(() => {
-    const active = categories.filter((cat) => !cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID);
-    setOrderedCategories(active);
-  }, [categories]);
+    if (!open || selectedKind !== 'income') return;
+    void ensureIncomeCategories();
+  }, [ensureIncomeCategories, open, selectedKind]);
 
-  const handleEdit = useCallback((cat: Category) => {
-    setEditingId(cat.id);
-    const label = cat.id === FALLBACK_CATEGORY_ID ? FALLBACK_CATEGORY_LABEL : cat.label;
-    setFormState({ label, icon: cat.icon });
-    setFormError(null);
-    setDuplicateArchivedId(null);
-    setView('form');
-  }, []);
+  useEffect(() => {
+    const active = categories.filter(
+      (cat) =>
+        !cat.isArchived && resolveCategoryKind(cat.kind) === selectedKind && cat.id !== fallbackId,
+    );
+    setOrderedCategories(active);
+    setDraggingId(null);
+    setDragOverId(null);
+  }, [categories, fallbackId, selectedKind]);
+
+  const handleEdit = useCallback(
+    (cat: Category) => {
+      setEditingId(cat.id);
+      const label = cat.id === fallbackId ? fallbackLabel : cat.label;
+      setFormState({ label, icon: cat.icon });
+      setFormError(null);
+      setDuplicateArchivedId(null);
+      setView('form');
+    },
+    [fallbackId, fallbackLabel],
+  );
 
   const handleNew = useCallback(() => {
     setEditingId(null);
@@ -151,29 +176,32 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
     setView('form');
   }, []);
 
-  const reorderCategories = useCallback((list: Category[], fromId: string, toId: string) => {
-    const fromIndex = list.findIndex((cat) => cat.id === fromId);
-    const rawToIndex = list.findIndex((cat) => cat.id === toId);
-    const fallbackIndex = list.findIndex((cat) => cat.id === FALLBACK_CATEGORY_ID);
-    if (fromIndex < 0 || rawToIndex < 0 || fromIndex === rawToIndex) return list;
-    if (fromId === FALLBACK_CATEGORY_ID) return list;
+  const reorderCategories = useCallback(
+    (list: Category[], fromId: string, toId: string) => {
+      const fromIndex = list.findIndex((cat) => cat.id === fromId);
+      const rawToIndex = list.findIndex((cat) => cat.id === toId);
+      const fallbackIndex = list.findIndex((cat) => cat.id === fallbackId);
+      if (fromIndex < 0 || rawToIndex < 0 || fromIndex === rawToIndex) return list;
+      if (fromId === fallbackId) return list;
 
-    let toIndex = rawToIndex;
-    if (fallbackIndex >= 0 && toIndex >= fallbackIndex) {
-      if (fallbackIndex <= 0) return list;
-      toIndex = fallbackIndex - 1;
-    }
+      let toIndex = rawToIndex;
+      if (fallbackIndex >= 0 && toIndex >= fallbackIndex) {
+        if (fallbackIndex <= 0) return list;
+        toIndex = fallbackIndex - 1;
+      }
 
-    const next = [...list];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
-    return ensureFallbackLast(next);
-  }, []);
+      const next = [...list];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return ensureFallbackLast(next, fallbackId);
+    },
+    [fallbackId],
+  );
 
   const persistOrder = useCallback(
     async (list: Category[]) => {
       if (!userId) return;
-      const orderedList = ensureFallbackLast(list);
+      const orderedList = ensureFallbackLast(list, fallbackId);
       setSaving(true);
       setFormError(null);
       try {
@@ -191,14 +219,14 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
         setSaving(false);
       }
     },
-    [refreshCategories, userId],
+    [fallbackId, refreshCategories, userId],
   );
 
   const moveCategory = useCallback(
     async (fromIndex: number, toIndex: number) => {
       if (saving) return;
       if (toIndex < 0 || toIndex >= orderedCategories.length) return;
-      const fallbackIndex = orderedCategories.findIndex((cat) => cat.id === FALLBACK_CATEGORY_ID);
+      const fallbackIndex = orderedCategories.findIndex((cat) => cat.id === fallbackId);
       if (fallbackIndex >= 0) {
         if (fromIndex === fallbackIndex) return;
         if (toIndex >= fallbackIndex) {
@@ -209,11 +237,11 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
       const next = [...orderedCategories];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
-      const orderedNext = ensureFallbackLast(next);
+      const orderedNext = ensureFallbackLast(next, fallbackId);
       setOrderedCategories(orderedNext);
       await persistOrder(orderedNext);
     },
-    [orderedCategories, persistOrder, saving],
+    [fallbackId, orderedCategories, persistOrder, saving],
   );
 
   const handleDragStart = (id: string) => (event: DragEvent<HTMLButtonElement>) => {
@@ -302,7 +330,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
 
   const handleSave = async () => {
     if (saving) return;
-    const label = isEditingFallback ? FALLBACK_CATEGORY_LABEL : formState.label.trim();
+    const label = isEditingFallback ? fallbackLabel : formState.label.trim();
     if (!label) {
       setFormError('Ingresa un nombre de categoría.');
       return;
@@ -314,15 +342,15 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
     try {
       if (editingId) {
         const updates = isEditingFallback
-          ? { label: FALLBACK_CATEGORY_LABEL, icon: formState.icon }
-          : { label, icon: formState.icon };
+          ? { label: fallbackLabel, icon: formState.icon, kind: selectedKind }
+          : { label, icon: formState.icon, kind: selectedKind };
         await updateCategoryAction(editingId, updates);
       } else {
         const nextOrder =
           categories
-            .filter((cat) => cat.id !== FALLBACK_CATEGORY_ID)
+            .filter((cat) => resolveCategoryKind(cat.kind) === selectedKind && cat.id !== fallbackId)
             .reduce((max, cat) => Math.max(max, cat.order ?? 0), -1) + 1;
-        await addCategory({ label, icon: formState.icon, order: nextOrder });
+        await addCategory({ label, icon: formState.icon, order: nextOrder, kind: selectedKind });
       }
       resetForm();
     } catch (err) {
@@ -348,7 +376,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
     setFormError(null);
     try {
       const nextOrder = orderedCategories.length;
-      await updateCategoryAction(duplicateArchivedId, { isArchived: false, order: nextOrder });
+      await updateCategoryAction(duplicateArchivedId, { isArchived: false, order: nextOrder, kind: selectedKind });
       resetForm();
     } catch (err) {
       console.error(err);
@@ -360,8 +388,8 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
 
   const handleToggleActive = async (cat: Category) => {
     if (saving) return;
-    if (cat.id === FALLBACK_CATEGORY_ID) {
-      setFormError('La categoria "Otros" no se puede desactivar.');
+    if (cat.id === fallbackId) {
+      setFormError(`La categoria "${fallbackLabel}" no se puede desactivar.`);
       return;
     }
     const nextArchived = !cat.isArchived;
@@ -394,8 +422,8 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
 
   const handleArchive = async (cat: Category) => {
     if (saving) return;
-    if (cat.id === FALLBACK_CATEGORY_ID) {
-      setFormError('La categoria "Otros" no se puede borrar.');
+    if (cat.id === fallbackId) {
+      setFormError(`La categoria "${fallbackLabel}" no se puede borrar.`);
       return;
     }
     if (cat.isSystem) {
@@ -473,6 +501,26 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
             <div className="space-y-4">
               {error && <p className="text-xs text-[var(--error-text)]">{error}</p>}
               {formError && <p className="text-xs text-[var(--error-text)]">{formError}</p>}
+              <div className="flex items-center justify-between">
+                <div className="inline-flex rounded-full bg-white/10 p-1 text-xs font-semibold text-[var(--text)]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedKind('expense')}
+                    disabled={saving}
+                    className={`rounded-full px-3 py-1 ${selectedKind === 'expense' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
+                  >
+                    Gastos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedKind('income')}
+                    disabled={saving}
+                    className={`rounded-full px-3 py-1 ${selectedKind === 'income' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
+                  >
+                    Ingresos
+                  </button>
+                </div>
+              </div>
               {loading && categories.length === 0 ? (
                 <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)]/40 p-3 text-sm text-[var(--text-muted)]">
                   Cargando categorías...
@@ -500,7 +548,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
                           const isDragOver = dragOverId === cat.id;
                           const isFirst = index === 0;
                           const isLast = index === orderedCategories.length - 1;
-                          const isFallback = cat.id === FALLBACK_CATEGORY_ID;
+                          const isFallback = cat.id === fallbackId;
                           return (
                             <div
                               key={cat.id}
@@ -635,7 +683,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
                                 className="flex items-center gap-1 rounded-full border border-white/10 px-1.5 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition"
                                 aria-pressed={!cat.isArchived}
                                 aria-label="Activar categoría"
-                                disabled={saving || cat.id === FALLBACK_CATEGORY_ID}
+                                disabled={saving || cat.id === fallbackId}
                               >
                                 <span className="sr-only sm:not-sr-only">Inactiva</span>
                                 <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-white/10">

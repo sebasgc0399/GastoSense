@@ -16,11 +16,20 @@ import {
 import { getFirestoreDb } from '../config/firebase';
 import { frequentCategories } from '../data/frequentCategories';
 import { CATEGORY_ICONS } from '../utils/categoryIcons';
-import type { Category } from '../types';
+import type { Category, CategoryKind } from '../types';
 
 const COLLECTION = 'categories';
-const FALLBACK_CATEGORY_ID = 'otros';
-const FALLBACK_CATEGORY_LABEL = 'Otros';
+const EXPENSE_FALLBACK_ID = 'otros';
+const EXPENSE_FALLBACK_LABEL = 'Otros';
+const INCOME_FALLBACK_ID = 'ingreso';
+const INCOME_FALLBACK_LABEL = 'Ingreso';
+const INCOME_DEFAULTS = [
+  { id: 'salario', label: 'Salario' },
+  { id: 'inversion', label: 'Inversion' },
+  { id: 'recompensa', label: 'Recompensa' },
+  { id: 'regalos', label: 'Regalos' },
+  { id: 'negocio', label: 'Negocio' },
+];
 
 type CategoryDraft = Omit<Category, 'id'> & { id?: string };
 
@@ -48,6 +57,8 @@ const getUniqueCategoryId = async (userId: string, label: string): Promise<strin
   return candidate;
 };
 
+const resolveCategoryKind = (value: unknown): CategoryKind => (value === 'income' ? 'income' : 'expense');
+
 const mapCategoryDoc = (docId: string, data: Record<string, unknown>): Category => ({
   id: docId,
   label: (data.label as string) ?? docId,
@@ -56,6 +67,7 @@ const mapCategoryDoc = (docId: string, data: Record<string, unknown>): Category 
   order: Number(data.order) || 0,
   isArchived: (data.isArchived as boolean) ?? false,
   isSystem: (data.isSystem as boolean) ?? false,
+  kind: resolveCategoryKind(data.kind),
 });
 
 const buildCategoryData = (payload: CategoryDraft): Record<string, unknown> => {
@@ -65,6 +77,7 @@ const buildCategoryData = (payload: CategoryDraft): Record<string, unknown> => {
     order: typeof payload.order === 'number' ? payload.order : 0,
     isArchived: payload.isArchived ?? false,
     isSystem: payload.isSystem ?? false,
+    kind: payload.kind ?? 'expense',
   };
   if (payload.color) data.color = payload.color;
   return data;
@@ -94,17 +107,85 @@ export async function seedDefaultCategories(userId: string): Promise<void> {
       order: index,
       isArchived: false,
       isSystem: true,
+      kind: 'expense',
     });
   });
-  const fallbackRef = doc(db, 'users', userId, COLLECTION, FALLBACK_CATEGORY_ID);
+  const fallbackRef = doc(db, 'users', userId, COLLECTION, EXPENSE_FALLBACK_ID);
   batch.set(fallbackRef, {
-    label: FALLBACK_CATEGORY_LABEL,
+    label: EXPENSE_FALLBACK_LABEL,
     icon: CATEGORY_ICONS.default ?? 'Tag',
     order: frequentCategories.length,
     isArchived: false,
     isSystem: true,
+    kind: 'expense',
   });
   await batch.commit();
+}
+
+export async function seedIncomeCategories(userId: string): Promise<boolean> {
+  const db = getFirestoreDb();
+  const existing = await getUserCategories(userId);
+  const existingById = new Map(existing.map((cat) => [cat.id, cat]));
+  const incomeCategories = existing.filter(
+    (cat) => resolveCategoryKind(cat.kind) === 'income' && cat.id !== INCOME_FALLBACK_ID,
+  );
+  const maxOrder = incomeCategories.reduce((max, cat) => Math.max(max, cat.order ?? 0), -1);
+  let nextOrder = maxOrder + 1;
+
+  const batch = writeBatch(db);
+  let didWrite = false;
+  // Nota: no hacemos backfill de iconos; solo sembramos lo que falte.
+
+  for (const cat of INCOME_DEFAULTS) {
+    const existingCategory = existingById.get(cat.id);
+    const icon = CATEGORY_ICONS[cat.id] ?? CATEGORY_ICONS.default ?? 'Tag';
+    if (existingCategory) {
+      continue;
+    }
+    const docRef = doc(db, 'users', userId, COLLECTION, cat.id);
+    batch.set(docRef, {
+      label: cat.label,
+      icon,
+      order: nextOrder,
+      isArchived: false,
+      isSystem: true,
+      kind: 'income',
+    });
+    nextOrder += 1;
+    didWrite = true;
+  }
+
+  const fallbackExisting = existingById.get(INCOME_FALLBACK_ID);
+  const fallbackOrder = nextOrder;
+  const fallbackIcon = CATEGORY_ICONS[INCOME_FALLBACK_ID] ?? CATEGORY_ICONS.default ?? 'Tag';
+  if (!fallbackExisting) {
+    const fallbackRef = doc(db, 'users', userId, COLLECTION, INCOME_FALLBACK_ID);
+    batch.set(fallbackRef, {
+      label: INCOME_FALLBACK_LABEL,
+      icon: fallbackIcon,
+      order: fallbackOrder,
+      isArchived: false,
+      isSystem: true,
+      kind: 'income',
+    });
+    didWrite = true;
+  } else {
+    const updates: Record<string, unknown> = {};
+    if (fallbackExisting.label !== INCOME_FALLBACK_LABEL) updates.label = INCOME_FALLBACK_LABEL;
+    if (fallbackExisting.isSystem !== true) updates.isSystem = true;
+    if (fallbackExisting.isArchived) updates.isArchived = false;
+    if (resolveCategoryKind(fallbackExisting.kind) !== 'income') updates.kind = 'income';
+    if ((fallbackExisting.order ?? 0) !== fallbackOrder) updates.order = fallbackOrder;
+    if (Object.keys(updates).length > 0) {
+      const fallbackRef = doc(db, 'users', userId, COLLECTION, INCOME_FALLBACK_ID);
+      batch.update(fallbackRef, updates);
+      didWrite = true;
+    }
+  }
+
+  if (!didWrite) return false;
+  await batch.commit();
+  return true;
 }
 
 export async function createCategory(userId: string, payload: CategoryDraft): Promise<string> {
@@ -123,9 +204,13 @@ export async function updateCategory(
   const db = getFirestoreDb();
   const ref = doc(db, 'users', userId, COLLECTION, id);
   const data: Record<string, unknown> = {};
-  const isFallback = id === FALLBACK_CATEGORY_ID;
-  if (updates.label !== undefined && (!isFallback || updates.label.trim().toLowerCase() === FALLBACK_CATEGORY_ID)) {
-    data.label = isFallback ? FALLBACK_CATEGORY_LABEL : updates.label;
+  const isExpenseFallback = id === EXPENSE_FALLBACK_ID;
+  const isIncomeFallback = id === INCOME_FALLBACK_ID;
+  const isFallback = isExpenseFallback || isIncomeFallback;
+  const fallbackLabel = isIncomeFallback ? INCOME_FALLBACK_LABEL : EXPENSE_FALLBACK_LABEL;
+  const fallbackKind: CategoryKind = isIncomeFallback ? 'income' : 'expense';
+  if (updates.label !== undefined) {
+    data.label = isFallback ? fallbackLabel : updates.label;
   }
   if (updates.icon !== undefined) data.icon = updates.icon;
   if (updates.color !== undefined) data.color = updates.color;
@@ -135,6 +220,9 @@ export async function updateCategory(
   }
   if (updates.isSystem !== undefined) {
     if (!isFallback || updates.isSystem === true) data.isSystem = updates.isSystem;
+  }
+  if (updates.kind !== undefined) {
+    data.kind = isFallback ? fallbackKind : updates.kind;
   }
   if (Object.keys(data).length === 0) return;
   await updateDoc(ref, data);
@@ -168,8 +256,22 @@ export async function deleteCategoryConditional(
   id: string,
   isSystem?: boolean,
 ): Promise<void> {
-  if (id === FALLBACK_CATEGORY_ID) {
-    await updateCategory(userId, id, { label: FALLBACK_CATEGORY_LABEL, isArchived: false, isSystem: true });
+  if (id === EXPENSE_FALLBACK_ID) {
+    await updateCategory(userId, id, {
+      label: EXPENSE_FALLBACK_LABEL,
+      isArchived: false,
+      isSystem: true,
+      kind: 'expense',
+    });
+    return;
+  }
+  if (id === INCOME_FALLBACK_ID) {
+    await updateCategory(userId, id, {
+      label: INCOME_FALLBACK_LABEL,
+      isArchived: false,
+      isSystem: true,
+      kind: 'income',
+    });
     return;
   }
   const db = getFirestoreDb();

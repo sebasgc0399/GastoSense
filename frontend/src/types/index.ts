@@ -1,4 +1,5 @@
 export type TransactionType = 'expense' | 'income';
+export type CategoryKind = 'expense' | 'income';
 
 export type AdvisorMode = 'amable' | 'reganon';
 
@@ -49,6 +50,7 @@ export interface Category {
   order: number;
   isArchived?: boolean;
   isSystem?: boolean;
+  kind?: CategoryKind;
 }
 
 export interface Template {

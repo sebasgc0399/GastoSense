@@ -2,7 +2,6 @@ import {
   addDoc,
   collection,
   deleteDoc,
-  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -17,6 +16,8 @@ import { getFirestoreDb } from '../config/firebase';
 import type { Transaction, TransactionInput } from '../types';
 
 const COLLECTION = 'transactions';
+const EXPENSE_FALLBACK_ID = 'otros';
+const INCOME_FALLBACK_ID = 'ingreso';
 
 interface ListenParams {
   userId: string;
@@ -52,7 +53,7 @@ export function listenTransactions({ userId, startDate, endDate, category, onCha
         const type = data.type === 'income' ? 'income' : 'expense';
         const categoryId =
           type === 'income'
-            ? (data.category ?? data.categoryId ?? 'ingreso')
+            ? (data.categoryId ?? data.category ?? INCOME_FALLBACK_ID)
             : (data.categoryId ?? data.category ?? 'sin-categoria');
         return {
           id: docSnap.id,
@@ -101,7 +102,7 @@ export async function fetchTransactionsRange(params: {
     const type = data.type === 'income' ? 'income' : 'expense';
     const categoryId =
       type === 'income'
-        ? (data.category ?? data.categoryId ?? 'ingreso')
+        ? (data.categoryId ?? data.category ?? INCOME_FALLBACK_ID)
         : (data.categoryId ?? data.category ?? 'sin-categoria');
     return {
       id: docSnap.id,
@@ -118,6 +119,8 @@ export async function fetchTransactionsRange(params: {
 
 export async function createTransaction(payload: TransactionInput, userId: string) {
   const db = getFirestoreDb();
+  const resolvedCategoryId =
+    payload.categoryId || (payload.type === 'income' ? INCOME_FALLBACK_ID : EXPENSE_FALLBACK_ID);
   const data: Record<string, unknown> = {
     amount: payload.amount,
     type: payload.type,
@@ -127,17 +130,15 @@ export async function createTransaction(payload: TransactionInput, userId: strin
     createdAt: serverTimestamp(),
   };
   if (payload.note !== undefined) data.note = payload.note;
-  if (payload.type === 'expense') {
-    data.categoryId = payload.categoryId;
-    data.category = payload.categoryId;
-  } else {
-    data.category = payload.categoryId || 'ingreso';
-  }
+  data.categoryId = resolvedCategoryId;
+  data.category = resolvedCategoryId;
   await addDoc(collection(db, COLLECTION), data);
 }
 
 export async function updateTransaction(id: string, payload: TransactionInput, userId: string) {
   const db = getFirestoreDb();
+  const resolvedCategoryId =
+    payload.categoryId || (payload.type === 'income' ? INCOME_FALLBACK_ID : EXPENSE_FALLBACK_ID);
   const ref = doc(db, COLLECTION, id);
   const data: Record<string, unknown> = {
     amount: payload.amount,
@@ -147,13 +148,8 @@ export async function updateTransaction(id: string, payload: TransactionInput, u
     userId,
   };
   if (payload.note !== undefined) data.note = payload.note;
-  if (payload.type === 'expense') {
-    data.categoryId = payload.categoryId;
-    data.category = payload.categoryId;
-  } else {
-    data.category = payload.categoryId || 'ingreso';
-    data.categoryId = deleteField();
-  }
+  data.categoryId = resolvedCategoryId;
+  data.category = resolvedCategoryId;
   await updateDoc(ref, data);
 }
 

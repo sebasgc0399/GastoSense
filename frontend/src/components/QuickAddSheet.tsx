@@ -8,7 +8,7 @@ import { formatAmountHero } from '../utils/amount';
 import { buildCategoryResolver, resolveCategoryLabel, truncateCategoryId } from '../utils/categoryResolver';
 import { ResponsiveSelect } from './ResponsiveSelect';
 import { CategoryIcon } from './ui/CategoryIcon';
-import type { ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
+import type { CategoryKind, ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
 
 type Mode = 'quick' | 'details' | 'ai';
 type KeypadKey = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' | '.' | 'backspace';
@@ -60,7 +60,9 @@ interface QuickAddSheetProps {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const MAX_RECORDING_SECONDS = 10;
-const FALLBACK_CATEGORY_ID = 'otros';
+const EXPENSE_FALLBACK_ID = 'otros';
+const INCOME_FALLBACK_ID = 'ingreso';
+const resolveCategoryKind = (value: CategoryKind | undefined) => (value === 'income' ? 'income' : 'expense');
 const createInitialState = (): QuickAddFormState => ({
   mode: 'quick',
   amount: '',
@@ -162,7 +164,7 @@ export function QuickAddSheet({
   const updateFormState = useCallback((updates: Partial<QuickAddFormState>) => {
     setFormState((prev) => ({ ...prev, ...updates }));
   }, []);
-  const { categories, loading: categoriesLoading } = useCategoriesController({ userId });
+  const { categories, loading: categoriesLoading, ensureIncomeCategories } = useCategoriesController({ userId });
   const confirm = useConfirm();
   const {
     mode,
@@ -229,10 +231,19 @@ export function QuickAddSheet({
 
   const isOpen = open;
 
+  useEffect(() => {
+    if (!isOpen || type !== 'income') return;
+    void ensureIncomeCategories();
+  }, [ensureIncomeCategories, isOpen, type]);
+
   const formReady = useMemo(() => !!amount && Number(amount) > 0, [amount]);
+  const fallbackId = type === 'income' ? INCOME_FALLBACK_ID : EXPENSE_FALLBACK_ID;
   const visibleCategories = useMemo(
-    () => categories.filter((cat) => cat.id !== FALLBACK_CATEGORY_ID).slice(0, 19),
-    [categories],
+    () =>
+      categories
+        .filter((cat) => resolveCategoryKind(cat.kind) === type && cat.id !== fallbackId)
+        .slice(0, 19),
+    [categories, fallbackId, type],
   );
   const showCategorySkeleton = categoriesLoading && visibleCategories.length === 0;
   const categoryResolver = useMemo(() => buildCategoryResolver(categories), [categories]);
@@ -242,7 +253,7 @@ export function QuickAddSheet({
   const fallbackCategory =
     !!parsedSuggestion &&
     isExpenseSuggestion &&
-    (parsedSuggestion.categoryFallback || parsedSuggestion.categoryId === FALLBACK_CATEGORY_ID);
+    (parsedSuggestion.categoryFallback || parsedSuggestion.categoryId === EXPENSE_FALLBACK_ID);
   const fallbackReason = parsedSuggestion?.categoryFallbackReason;
   const fallbackMessage =
     fallbackReason === 'explicit_other'
@@ -262,6 +273,21 @@ export function QuickAddSheet({
     (lowConfidence || fallbackCategory) &&
     category === parsedSuggestion.categoryId;
   const showFallbackNotice = fallbackCategory && category === parsedSuggestion?.categoryId;
+  const isCategoryForKind = useCallback(
+    (categoryId: string, kind: CategoryKind) => {
+      const match = categories.find((cat) => cat.id === categoryId);
+      if (!match) return false;
+      return resolveCategoryKind(match.kind) === kind;
+    },
+    [categories],
+  );
+
+  useEffect(() => {
+    if (!category || categoriesLoading) return;
+    if (!isCategoryForKind(category, type)) {
+      setCategory('');
+    }
+  }, [category, categoriesLoading, isCategoryForKind, setCategory, type]);
 
   const resetForm = useCallback(() => {
     setFormState(createInitialState());
@@ -276,9 +302,8 @@ export function QuickAddSheet({
     setSaving(true);
     setFeedback(null);
 
-    const shouldFallbackCategory = type === 'expense' && (!category || category === 'ingreso');
-    const resolvedCategoryId =
-      type === 'expense' ? (shouldFallbackCategory ? FALLBACK_CATEGORY_ID : category) : '';
+    const resolvedCategoryId = isCategoryForKind(category, type) ? category : fallbackId;
+    const usedFallback = resolvedCategoryId === fallbackId;
     const payload: TransactionInput = {
       amount: Number(amount),
       categoryId: resolvedCategoryId,
@@ -290,9 +315,9 @@ export function QuickAddSheet({
 
     try {
       await onSave(payload);
-      setFeedback(shouldFallbackCategory ? 'Guardado en Otros.' : 'Guardado.');
+      setFeedback(usedFallback ? `Guardado en ${type === 'income' ? 'Ingreso' : 'Otros'}.` : 'Guardado.');
       if (closeAfter) {
-        if (shouldFallbackCategory) {
+        if (usedFallback) {
           window.setTimeout(() => {
             onClose();
             resetForm();
@@ -351,10 +376,11 @@ export function QuickAddSheet({
     if (/renta|arriendo|alquiler/i.test(text)) categoryGuess = 'renta';
     if (/netflix|spotify|suscrip/i.test(text)) categoryGuess = 'suscripciones';
     if (/mercado|super/i.test(text)) categoryGuess = 'mercado';
+    const resolvedCategory = isIncome ? INCOME_FALLBACK_ID : categoryGuess;
 
     return {
       amount: amountValue,
-      categoryId: categoryGuess,
+      categoryId: resolvedCategory,
       note: text,
       paymentMethod: 'debito',
       type: isIncome ? 'income' : 'expense',
@@ -574,7 +600,11 @@ export function QuickAddSheet({
     if (!parsedSuggestion) return;
     setSaving(true);
     try {
-      await onSave(parsedSuggestion);
+      const parsedFallbackId = parsedSuggestion.type === 'income' ? INCOME_FALLBACK_ID : EXPENSE_FALLBACK_ID;
+      const parsedCategoryId = isCategoryForKind(parsedSuggestion.categoryId, parsedSuggestion.type)
+        ? parsedSuggestion.categoryId
+        : parsedFallbackId;
+      await onSave({ ...parsedSuggestion, categoryId: parsedCategoryId });
       setFeedback('Guardado desde modo frase.');
       onClose();
       resetForm();
@@ -974,9 +1004,6 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => {
                         setType('expense');
-                        if (category === 'ingreso') {
-                          setCategory('');
-                        }
                       }}
                       className={`rounded-full px-3 py-1 ${type === 'expense' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
                     >
@@ -986,7 +1013,6 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => {
                         setType('income');
-                        setCategory('');
                       }}
                       className={`rounded-full px-3 py-1 ${type === 'income' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
                     >
