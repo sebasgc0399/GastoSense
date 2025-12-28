@@ -32,6 +32,7 @@ import {
   updateTransaction,
 } from './services/transactions';
 import type {
+  CategoryKind,
   ParsedTransactionSuggestion,
   Transaction,
   TransactionInput,
@@ -50,9 +51,14 @@ function App() {
   const suppressTxClickUntilRef = useRef(0);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [categoryManagerInitialKind, setCategoryManagerInitialKind] = useState<CategoryKind>('expense');
   type TransactionsSortBy = 'date_desc' | 'amount_desc';
   const [txSortBy, setTxSortBy] = useState<TransactionsSortBy>('date_desc');
   const openQuickAddSheet = useCallback(() => setShowQuickAdd(true), []);
+  const openCategoryManager = useCallback((kind: CategoryKind) => {
+    setCategoryManagerInitialKind(kind);
+    setShowCategoryManager(true);
+  }, []);
   const {
     filters,
     handleFiltersChange: txHandleFiltersChange,
@@ -890,19 +896,23 @@ function App() {
         onDeleteTemplate={handleDeleteTemplate}
         onUpdateTemplate={handleUpdateTemplate}
         userId={user?.uid}
-        onOpenSettings={() => setShowCategoryManager(true)}
+        onOpenSettings={openCategoryManager}
         selectedTemplate={selectedTemplate}
         selectedTemplateIntent={selectedTemplateIntent}
         onClearSelectedTemplate={clearSelectedTemplate}
         onClearTemplate={clearSelectedTemplate}
       />
 
-      <CategoryManagerModal
-        open={showCategoryManager}
-        onClose={() => setShowCategoryManager(false)}
-        userId={user?.uid}
-        onSuggestIcon={handleSuggestCategoryIcon}
-      />
+      {showCategoryManager && (
+        <CategoryManagerModal
+          key={categoryManagerInitialKind}
+          open={showCategoryManager}
+          onClose={() => setShowCategoryManager(false)}
+          userId={user?.uid}
+          onSuggestIcon={handleSuggestCategoryIcon}
+          initialKind={categoryManagerInitialKind}
+        />
+      )}
 
       <BudgetManagerSheet
         open={showCategoryBudgets}

@@ -14,6 +14,7 @@ interface Props {
   onClose: () => void;
   userId?: string | null;
   onSuggestIcon?: (label: string) => Promise<string>;
+  initialKind?: CategoryKind;
 }
 
 type ViewMode = 'list' | 'form' | 'icons';
@@ -31,7 +32,7 @@ const ensureFallbackLast = (list: Category[], fallbackId: string) => {
   return [...rest, fallback];
 };
 
-export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: Props) {
+export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, initialKind }: Props) {
   const {
     categories,
     loading,
@@ -49,7 +50,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState({ label: '', icon: DEFAULT_ICON });
   const [view, setView] = useState<ViewMode>('list');
-  const [selectedKind, setSelectedKind] = useState<CategoryKind>('expense');
+  const [selectedKind, setSelectedKind] = useState<CategoryKind>(() => initialKind ?? 'expense');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [iconSuggesting, setIconSuggesting] = useState(false);
@@ -69,6 +70,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon }: P
   const fallbackId = fallbackConfig.id;
   const fallbackLabel = fallbackConfig.label;
   const isEditingFallback = editingCategory?.id === fallbackId;
+
 
   const headerTitle = useMemo(() => {
     if (view === 'icons') return 'Selecciona un ícono';

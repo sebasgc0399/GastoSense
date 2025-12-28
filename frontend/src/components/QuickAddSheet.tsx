@@ -51,7 +51,7 @@ interface QuickAddSheetProps {
   onDeleteTemplate?: (id: string) => Promise<void>;
   onUpdateTemplate?: (id: string, payload: TransactionInput & { name?: string; recurring?: boolean; frequency?: Template['frequency'] }) => Promise<void>;
   userId?: string | null;
-  onOpenSettings?: () => void;
+  onOpenSettings?: (kind: CategoryKind) => void;
   selectedTemplate?: Template | null;
   selectedTemplateIntent?: SelectedTemplateIntent | null;
   onClearSelectedTemplate?: () => void;
@@ -161,6 +161,7 @@ export function QuickAddSheet({
   onClearTemplate,
 }: QuickAddSheetProps) {
   const [formState, setFormState] = useState<QuickAddFormState>(() => createInitialState());
+  const [seedingIncome, setSeedingIncome] = useState(false);
   const updateFormState = useCallback((updates: Partial<QuickAddFormState>) => {
     setFormState((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -230,11 +231,30 @@ export function QuickAddSheet({
   const focusTemplateNameRef = useRef(false);
 
   const isOpen = open;
+  const hasIncomeAny = useMemo(
+    () => categories.some((cat) => resolveCategoryKind(cat.kind) === 'income'),
+    [categories],
+  );
 
   useEffect(() => {
-    if (!isOpen || type !== 'income') return;
-    void ensureIncomeCategories();
-  }, [ensureIncomeCategories, isOpen, type]);
+    if (!isOpen || type !== 'income' || hasIncomeAny) return;
+    let cancelled = false;
+
+    const seed = async () => {
+      setSeedingIncome(true);
+      try {
+        await ensureIncomeCategories();
+      } finally {
+        if (!cancelled) setSeedingIncome(false);
+      }
+    };
+
+    void seed();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureIncomeCategories, hasIncomeAny, isOpen, type]);
 
   const formReady = useMemo(() => !!amount && Number(amount) > 0, [amount]);
   const fallbackId = type === 'income' ? INCOME_FALLBACK_ID : EXPENSE_FALLBACK_ID;
@@ -245,7 +265,8 @@ export function QuickAddSheet({
         .slice(0, 19),
     [categories, fallbackId, type],
   );
-  const showCategorySkeleton = categoriesLoading && visibleCategories.length === 0;
+  const showCategorySkeleton =
+    visibleCategories.length === 0 && (categoriesLoading || (type === 'income' && seedingIncome));
   const categoryResolver = useMemo(() => buildCategoryResolver(categories), [categories]);
   const parsedConfidence = parsedSuggestion?.confidence ?? 0.6;
   const isExpenseSuggestion = parsedSuggestion?.type === 'expense';
@@ -1225,7 +1246,7 @@ export function QuickAddSheet({
                         })}
                         <button
                           type="button"
-                          onClick={() => onOpenSettings?.()}
+                          onClick={() => onOpenSettings?.(type)}
                           className="flex h-16 flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-transparent px-1 text-center text-[10px] font-semibold text-white/50 transition hover:bg-white/5 hover:text-white"
                         >
                           <Settings size={18} />

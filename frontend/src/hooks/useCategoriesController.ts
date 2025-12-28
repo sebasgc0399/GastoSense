@@ -299,10 +299,34 @@ export function useCategoriesController({
   const updateCategory = useCallback(
     async (id: string, updates: Partial<Omit<Category, 'id'>>) => {
       if (!userId) return;
+      if (updates.label !== undefined) {
+        const target = categories.find((cat) => cat.id === id);
+        const nextKind = resolveCategoryKind(updates.kind ?? target?.kind);
+        const nextLabelKey = normalizeCategoryLabelKey(updates.label);
+        const currentLabelKey = normalizeCategoryLabelKey(target?.label ?? '');
+
+        if (nextLabelKey && nextLabelKey !== currentLabelKey) {
+          const dup = categories.find(
+            (cat) =>
+              cat.id !== id &&
+              !cat.isArchived &&
+              normalizeCategoryLabelKey(cat.label) === nextLabelKey &&
+              resolveCategoryKind(cat.kind) === nextKind,
+          );
+
+          if (dup) {
+            throw new CategoryDuplicateError(
+              dup.isArchived ? 'duplicate_archived' : 'duplicate_active',
+              dup.id,
+              dup.label,
+            );
+          }
+        }
+      }
       await updateCategoryService(userId, id, updates);
       await refreshCategories();
     },
-    [refreshCategories, userId],
+    [categories, refreshCategories, userId],
   );
 
   const deleteCategory = useCallback(
