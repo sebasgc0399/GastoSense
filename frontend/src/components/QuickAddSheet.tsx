@@ -324,9 +324,11 @@ export function QuickAddSheet({
         if (current.includes('.')) return prev;
         return { ...prev, amount: `${current}.` };
       }
+      const [intPart, decPart = ''] = current.split('.');
       if (current.includes('.')) {
-        const [, dec = ''] = current.split('.');
-        if (dec.length >= 2) return prev;
+        if (decPart.length >= 2) return prev;
+      } else if (intPart.length >= 12) {
+        return prev;
       }
       if (current === '0') {
         return { ...prev, amount: key };
@@ -762,6 +764,13 @@ export function QuickAddSheet({
   }, [showDetails]);
 
   const heroAmount = useMemo(() => formatAmountHero(amount, 'es-CO'), [amount]);
+  const heroSizeClass = useMemo(() => {
+    const length = heroAmount.length;
+    if (length <= 10) return 'text-6xl';
+    if (length <= 14) return 'text-5xl';
+    if (length <= 18) return 'text-4xl';
+    return 'text-3xl';
+  }, [heroAmount]);
   const heroColorClass = type === 'expense' ? 'text-rose-400' : 'text-emerald-400';
   const smartSaveDisabled = saving || (editingTemplate ? !templateName.trim() : !formReady);
 
@@ -988,7 +997,9 @@ export function QuickAddSheet({
                     <span className="text-xs text-[var(--muted)]">Editando plantilla</span>
                   )}
                 </div>
-                <div className={`mt-2 text-center ${showDetails ? 'text-5xl' : 'text-6xl'} font-semibold leading-none ${heroColorClass}`}>
+                <div
+                  className={`mt-2 text-center font-semibold leading-none ${heroColorClass} ${heroSizeClass} whitespace-nowrap overflow-hidden text-ellipsis tabular-nums`}
+                >
                   ${heroAmount}
                 </div>
                 <div className="shrink-0 flex justify-center pb-2 pt-2">
