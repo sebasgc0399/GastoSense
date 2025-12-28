@@ -4,6 +4,7 @@ import { paymentMethods } from '../data/frequentCategories';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
 import { callTranscribeAudio } from '../services/functions';
+import { formatAmountHero } from '../utils/amount';
 import { buildCategoryResolver, resolveCategoryLabel, truncateCategoryId } from '../utils/categoryResolver';
 import { ResponsiveSelect } from './ResponsiveSelect';
 import { CategoryIcon } from './ui/CategoryIcon';
@@ -94,26 +95,34 @@ function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: CustomKey
   return (
     <div className="flex gap-4">
       <div className="grid flex-1 grid-cols-3 gap-3">
-        {KEYPAD_KEYS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onInput(key)}
-            disabled={disabled}
-            className="flex h-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl font-semibold text-[var(--text)] shadow-sm transition hover:bg-white/10 disabled:opacity-50 sm:h-20"
-            aria-label={key === 'backspace' ? 'Borrar' : `Tecla ${key}`}
-          >
-            {key === 'backspace' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10 9l-3 3 3 3" />
-                <path d="M7 12h10" />
-                <path d="M11 6h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5-6 5-6z" />
-              </svg>
-            ) : (
-              key
-            )}
-          </button>
-        ))}
+        {KEYPAD_KEYS.map((key) => {
+          const isBackspace = key === 'backspace';
+          const isDecimal = key === '.';
+          const ariaLabel = isBackspace ? 'Borrar' : isDecimal ? 'coma decimal' : `Tecla ${key}`;
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onInput(key)}
+              disabled={disabled}
+              className="flex h-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl font-semibold text-[var(--text)] shadow-sm transition hover:bg-white/10 disabled:opacity-50 sm:h-20"
+              aria-label={ariaLabel}
+            >
+              {isBackspace ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 9l-3 3 3 3" />
+                  <path d="M7 12h10" />
+                  <path d="M11 6h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5-6 5-6z" />
+                </svg>
+              ) : isDecimal ? (
+                ','
+              ) : (
+                key
+              )}
+            </button>
+          );
+        })}
       </div>
       <button
         type="button"
@@ -314,6 +323,10 @@ export function QuickAddSheet({
         if (!current) return { ...prev, amount: '0.' };
         if (current.includes('.')) return prev;
         return { ...prev, amount: `${current}.` };
+      }
+      if (current.includes('.')) {
+        const [, dec = ''] = current.split('.');
+        if (dec.length >= 2) return prev;
       }
       if (current === '0') {
         return { ...prev, amount: key };
@@ -748,7 +761,7 @@ export function QuickAddSheet({
     });
   }, [showDetails]);
 
-  const amountDisplay = amount ? amount : '0';
+  const heroAmount = useMemo(() => formatAmountHero(amount, 'es-CO'), [amount]);
   const heroColorClass = type === 'expense' ? 'text-rose-400' : 'text-emerald-400';
   const smartSaveDisabled = saving || (editingTemplate ? !templateName.trim() : !formReady);
 
@@ -976,7 +989,7 @@ export function QuickAddSheet({
                   )}
                 </div>
                 <div className={`mt-2 text-center ${showDetails ? 'text-5xl' : 'text-6xl'} font-semibold leading-none ${heroColorClass}`}>
-                  ${amountDisplay}
+                  ${heroAmount}
                 </div>
                 <div className="shrink-0 flex justify-center pb-2 pt-2">
                   <button
