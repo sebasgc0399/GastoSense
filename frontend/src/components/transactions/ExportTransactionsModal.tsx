@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Upload } from 'lucide-react';
 import { useConfirm } from '../../hooks/useConfirm';
+import type { TransactionsFilters } from '../../hooks/useTransactionsController';
 import { callImportTransactions } from '../../services/functions';
 import type { Budget, Transaction } from '../../types';
 import { normalizeCategoryLabel, type CategoryResolver } from '../../utils/categoryResolver';
@@ -14,8 +15,6 @@ import {
   type ExportFormat,
 } from '../../utils/exporters/csv';
 import { parseTransactionsFile, type ImportReport } from '../../utils/importers/transactionsImport';
-
-type TransactionsFilters = { startDate: string; endDate: string; category: string; search: string };
 
 type PeriodPreset = 'month' | 'last30' | 'last90' | 'last365' | 'custom';
 type ImportMode = 'append' | 'replace_range';

@@ -19,11 +19,13 @@ import { trackEvent } from './services/analytics';
 import {
   useAdvisorController,
   useBudgetController,
+  useCategoriesController,
   useHomeMonthController,
   useSettingsController,
   useTemplatesController,
   useTransactionsController,
 } from './hooks';
+import type { TransactionsFilters, TransactionTypeFilter } from './hooks/useTransactionsController';
 import { topCategories } from './utils/txAgg';
 import { resolveCanonicalCategoryId, resolveCategoryLabel, truncateCategoryId } from './utils/categoryResolver';
 import {
@@ -71,6 +73,7 @@ function App() {
     paginatedTransactions,
     totalTxPages,
   } = useTransactionsController({ userId: user?.uid, sortBy: txSortBy });
+  const { categories: allCategories } = useCategoriesController({ userId: user?.uid, includeArchived: true });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const defaultMonth = todayIso().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
@@ -264,6 +267,18 @@ function App() {
     setTimeout(() => scrollToMonthlyBudget(), 120);
   }, [closeCategoryBudgets, scrollToMonthlyBudget]);
 
+  const resolveFilterTypeFromCategory = useCallback(
+    (categoryId?: string | null): TransactionTypeFilter => {
+      if (!categoryId || categoryId === 'all') return 'all';
+      if (categoryId === 'ingreso') return 'income';
+      if (categoryId === 'otros') return 'expense';
+      const match = allCategories.find((cat) => cat.id === categoryId);
+      if (!match) return 'all';
+      return match.kind === 'income' ? 'income' : 'expense';
+    },
+    [allCategories],
+  );
+
   const openMovements = useCallback(
     (category?: string, opts?: { sortBy?: TransactionsSortBy; suppressTxClick?: boolean }) => {
       const { startDate, endDate } = monthRangeIso(selectedMonth);
@@ -271,11 +286,18 @@ function App() {
         suppressTxClickUntilRef.current = Date.now() + 500;
       }
       setTxSortBy(opts?.sortBy ?? 'date_desc');
-      txHandleFiltersChange({ startDate, endDate, category: category || 'all', search: '' });
+      const resolvedType = resolveFilterTypeFromCategory(category ?? null);
+      txHandleFiltersChange({
+        startDate,
+        endDate,
+        category: category || 'all',
+        search: '',
+        type: resolvedType,
+      });
       setActiveTab('transactions');
       trackEvent('smart_card_click', { action: 'movements', category });
     },
-    [selectedMonth, txHandleFiltersChange],
+    [resolveFilterTypeFromCategory, selectedMonth, txHandleFiltersChange],
   );
   const shouldIgnoreTransactionClick = useCallback(
     () => Date.now() < suppressTxClickUntilRef.current,
@@ -312,16 +334,18 @@ function App() {
                 })()
               : monthStart;
 
-          const categoryNormalized = categoryRaw ? normalizeTextForMatch(categoryRaw) : 'all';
-          const search = noteRaw ? noteRaw.trim() : '';
+            const categoryNormalized = categoryRaw ? normalizeTextForMatch(categoryRaw) : 'all';
+            const search = noteRaw ? noteRaw.trim() : '';
+            const resolvedType = resolveFilterTypeFromCategory(categoryNormalized || null);
 
-          setTxSortBy('date_desc');
-          txHandleFiltersChange({
-            startDate,
-            endDate: monthEnd,
-            category: categoryNormalized || 'all',
-            search,
-          });
+            setTxSortBy('date_desc');
+            txHandleFiltersChange({
+              startDate,
+              endDate: monthEnd,
+              category: categoryNormalized || 'all',
+              search,
+              type: resolvedType,
+            });
           setActiveTab('transactions');
           trackEvent('advisor_action_click', {
             type: actionData.type,
@@ -354,7 +378,14 @@ function App() {
         fail();
       }
     },
-    [normalizeTextForMatch, openBudgets, selectedMonth, subtractDaysIso, txHandleFiltersChange],
+    [
+      normalizeTextForMatch,
+      openBudgets,
+      resolveFilterTypeFromCategory,
+      selectedMonth,
+      subtractDaysIso,
+      txHandleFiltersChange,
+    ],
   );
 
   const openQuickAdd = useCallback((mode?: 'income' | 'expense') => {
@@ -517,11 +548,11 @@ function App() {
   );
 
   const handleFiltersChange = useCallback(
-    (next: { startDate: string; endDate: string; category: string; search: string }) => {
-      const { startDate, endDate, category, search } = next;
+    (next: TransactionsFilters) => {
+      const { startDate, endDate, category, search, type } = next;
       // Aseguramos orden para evitar consultas vacías si el usuario invierte las fechas
       if (startDate && endDate && startDate > endDate) {
-        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category, search });
+        txHandleFiltersChange({ startDate: endDate, endDate: startDate, category, search, type });
       } else {
         txHandleFiltersChange(next);
       }

@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import type { TransactionsFilters } from '../../hooks/useTransactionsController';
 import { TransactionFilters } from '../TransactionFilters';
 
 interface TransactionsFiltersPanelProps {
-  filters: { startDate: string; endDate: string; category: string; search: string };
-  onChange: (filters: { startDate: string; endDate: string; category: string; search: string }) => void;
+  filters: TransactionsFilters;
+  onChange: (filters: TransactionsFilters) => void;
   userId?: string | null;
   categoryLabel?: string;
 }
@@ -25,7 +26,8 @@ export function TransactionsFiltersPanel({
   const searchValue = (filters.search ?? '').trim();
   const showSearch = searchValue.length > 0;
   const hasCategoryFilter = filters.category !== 'all';
-  const canClear = showSearch || hasCategoryFilter;
+  const hasTypeFilter = filters.type !== 'all';
+  const canClear = showSearch || hasCategoryFilter || hasTypeFilter;
   const rangeLabel =
     filters.startDate && filters.endDate
       ? `${formatShortDate(filters.startDate)}–${formatShortDate(filters.endDate)}`
@@ -33,7 +35,7 @@ export function TransactionsFiltersPanel({
   const categoryChip = filters.category === 'all' ? 'Todas' : categoryLabel || filters.category;
 
   const handleClear = () => {
-    onChange({ ...filters, category: 'all', search: '' });
+    onChange({ ...filters, category: 'all', search: '', type: 'all' });
   };
 
   const toggleOpen = () => setOpen((prev) => !prev);
@@ -101,6 +103,7 @@ export function TransactionsFiltersPanel({
               endDate={filters.endDate}
               category={filters.category}
               search={filters.search}
+              type={filters.type}
               userId={userId}
               onChange={onChange}
               variant="bare"
@@ -114,6 +117,7 @@ export function TransactionsFiltersPanel({
           endDate={filters.endDate}
           category={filters.category}
           search={filters.search}
+          type={filters.type}
           userId={userId}
           onChange={onChange}
         />

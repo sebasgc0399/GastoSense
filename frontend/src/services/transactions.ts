@@ -24,17 +24,25 @@ interface ListenParams {
   startDate?: string;
   endDate?: string;
   category?: string;
+  type?: 'all' | 'expense' | 'income';
   onChange: (transactions: Transaction[]) => void;
   onError?: (error: Error) => void;
 }
 
-export function listenTransactions({ userId, startDate, endDate, category, onChange, onError }: ListenParams) {
+export function listenTransactions({ userId, startDate, endDate, category, type, onChange, onError }: ListenParams) {
   const db = getFirestoreDb();
   const constraints: QueryConstraint[] = [where('userId', '==', userId), orderBy('date', 'desc')];
+  const normalizedType = type ?? 'all';
+  const fallbackType =
+    category === EXPENSE_FALLBACK_ID ? 'expense' : category === INCOME_FALLBACK_ID ? 'income' : null;
+  const effectiveType = normalizedType !== 'all' ? normalizedType : fallbackType ?? 'all';
 
   if (startDate) constraints.push(where('date', '>=', startDate));
   if (endDate) constraints.push(where('date', '<=', endDate));
-  if (category && category !== 'all') constraints.push(where('categoryId', '==', category));
+  if (effectiveType !== 'all') constraints.push(where('type', '==', effectiveType));
+  if (category && category !== 'all' && category !== EXPENSE_FALLBACK_ID && category !== INCOME_FALLBACK_ID) {
+    constraints.push(where('categoryId', '==', category));
+  }
 
   const q = query(collection(db, COLLECTION), ...constraints);
 
@@ -51,10 +59,14 @@ export function listenTransactions({ userId, startDate, endDate, category, onCha
               ? rawDate.toDate().toISOString().slice(0, 10)
               : '';
         const type = data.type === 'income' ? 'income' : 'expense';
+        const rawCategoryId =
+          typeof data.categoryId === 'string' ? data.categoryId : (data.category as string | undefined);
+        const normalizedCategoryId =
+          rawCategoryId && rawCategoryId !== 'sin-categoria' ? rawCategoryId : undefined;
         const categoryId =
           type === 'income'
-            ? (data.categoryId ?? data.category ?? INCOME_FALLBACK_ID)
-            : (data.categoryId ?? data.category ?? 'sin-categoria');
+            ? (normalizedCategoryId ?? INCOME_FALLBACK_ID)
+            : (normalizedCategoryId ?? EXPENSE_FALLBACK_ID);
         return {
           id: docSnap.id,
           amount: Number(data.amount) || 0,
@@ -80,12 +92,25 @@ export async function fetchTransactionsRange(params: {
   startDate?: string;
   endDate?: string;
   category?: string;
+  type?: 'all' | 'expense' | 'income';
 }): Promise<Transaction[]> {
   const db = getFirestoreDb();
   const constraints: QueryConstraint[] = [where('userId', '==', params.userId), orderBy('date', 'desc')];
+  const normalizedType = params.type ?? 'all';
+  const fallbackType =
+    params.category === EXPENSE_FALLBACK_ID ? 'expense' : params.category === INCOME_FALLBACK_ID ? 'income' : null;
+  const effectiveType = normalizedType !== 'all' ? normalizedType : fallbackType ?? 'all';
   if (params.startDate) constraints.push(where('date', '>=', params.startDate));
   if (params.endDate) constraints.push(where('date', '<=', params.endDate));
-  if (params.category && params.category !== 'all') constraints.push(where('categoryId', '==', params.category));
+  if (effectiveType !== 'all') constraints.push(where('type', '==', effectiveType));
+  if (
+    params.category &&
+    params.category !== 'all' &&
+    params.category !== EXPENSE_FALLBACK_ID &&
+    params.category !== INCOME_FALLBACK_ID
+  ) {
+    constraints.push(where('categoryId', '==', params.category));
+  }
 
   const q = query(collection(db, COLLECTION), ...constraints);
   const snapshot = await getDocs(q);
@@ -100,10 +125,13 @@ export async function fetchTransactionsRange(params: {
           ? rawDate.toDate().toISOString().slice(0, 10)
           : '';
     const type = data.type === 'income' ? 'income' : 'expense';
+    const rawCategoryId =
+      typeof data.categoryId === 'string' ? data.categoryId : (data.category as string | undefined);
+    const normalizedCategoryId = rawCategoryId && rawCategoryId !== 'sin-categoria' ? rawCategoryId : undefined;
     const categoryId =
       type === 'income'
-        ? (data.categoryId ?? data.category ?? INCOME_FALLBACK_ID)
-        : (data.categoryId ?? data.category ?? 'sin-categoria');
+        ? (normalizedCategoryId ?? INCOME_FALLBACK_ID)
+        : (normalizedCategoryId ?? EXPENSE_FALLBACK_ID);
     return {
       id: docSnap.id,
       amount: Number(data.amount) || 0,

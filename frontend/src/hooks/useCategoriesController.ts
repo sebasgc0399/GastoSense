@@ -139,7 +139,6 @@ export function useCategoriesController({
         (cat) => resolveCategoryKind(cat.kind) === 'income' && cat.id !== INCOME_FALLBACK_ID,
       );
       const fallback = data.find((cat) => cat.id === INCOME_FALLBACK_ID);
-      if (incomeCategories.length === 0 && !fallback) return data;
 
       const maxOrder = incomeCategories.reduce((max, cat) => Math.max(max, cat.order ?? 0), -1);
       const desiredOrder = maxOrder + 1;

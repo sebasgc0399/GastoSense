@@ -7,14 +7,15 @@ import { DayHeader } from '../components/transactions/DayHeader';
 import { ExportTransactionsModal } from '../components/transactions/ExportTransactionsModal';
 import { TransactionItemCard, type BudgetState } from '../components/transactions/TransactionItemCard';
 import { TransactionsFiltersPanel } from '../components/transactions/TransactionsFiltersPanel';
+import type { TransactionsFilters } from '../hooks/useTransactionsController';
 import type { Budget, Transaction } from '../types';
 import type { CategoryResolver } from '../utils/categoryResolver';
 import { resolveCanonicalCategoryId, resolveCategoryLabel } from '../utils/categoryResolver';
 
 export interface TransactionsPageProps {
   transactions: Transaction[];
-  filters: { startDate: string; endDate: string; category: string; search: string };
-  handleFiltersChange: (next: { startDate: string; endDate: string; category: string; search: string }) => void;
+  filters: TransactionsFilters;
+  handleFiltersChange: (next: TransactionsFilters) => void;
   error: string | null;
   paginatedTransactions: Transaction[];
   txPageSize: number;
