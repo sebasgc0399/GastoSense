@@ -4,6 +4,8 @@ import type { Template, TransactionInput } from '../types';
 
 const COLLECTION = 'templates';
 const DEFAULT_USER_ID = 'personal';
+const EXPENSE_FALLBACK = 'otros';
+const INCOME_FALLBACK = 'ingreso';
 
 export async function fetchTemplates(userId: string): Promise<Template[]> {
   const db = getFirestoreDb();
@@ -37,10 +39,10 @@ export async function saveTemplate(name: string, payload: Partial<TransactionInp
     recurring: (payload as { recurring?: boolean })?.recurring ?? false,
     createdAt: new Date().toISOString(),
   };
-  if (payload.categoryId && payload.type !== 'income') {
-    data.categoryId = payload.categoryId;
-    data.category = payload.categoryId;
-  }
+  const resolvedCategory =
+    payload.categoryId?.trim() || (payload.type === 'income' ? INCOME_FALLBACK : EXPENSE_FALLBACK);
+  data.categoryId = resolvedCategory;
+  data.category = resolvedCategory;
   if (typeof payload.amount === 'number') data.amount = payload.amount;
   if (payload.note) data.note = payload.note;
   if (payload.paymentMethod) data.paymentMethod = payload.paymentMethod;
@@ -59,10 +61,10 @@ export async function updateTemplate(
   const ref = doc(db, COLLECTION, id);
   const data: Record<string, unknown> = { updatedAt: new Date().toISOString(), userId };
   if (payload.name) data.name = payload.name.trim();
-  if (payload.categoryId && payload.type !== 'income') {
-    data.categoryId = payload.categoryId;
-    data.category = payload.categoryId;
-  }
+  const resolvedCategory =
+    payload.categoryId?.trim() || (payload.type === 'income' ? INCOME_FALLBACK : EXPENSE_FALLBACK);
+  data.categoryId = resolvedCategory;
+  data.category = resolvedCategory;
   if (typeof payload.amount === 'number') data.amount = payload.amount;
   if (payload.note !== undefined) data.note = payload.note;
   if (payload.paymentMethod) data.paymentMethod = payload.paymentMethod;

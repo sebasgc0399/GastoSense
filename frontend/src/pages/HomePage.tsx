@@ -7,6 +7,7 @@ import { CardStat } from '../components/stats/CardStat';
 import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
 import type { CategorySpendItem } from '../components/charts/CategorySpendChart';
 import type { Budget, Template } from '../types';
+import type { CategoryResolver } from '../utils/categoryResolver';
 
 type SmartCard = {
   id: string;
@@ -36,7 +37,7 @@ export interface HomePageProps {
   handleNextInsight: () => void;
   handleTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
   handleTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
-  resolveCategoryLabel: (categoryId?: string) => string;
+  categoryResolver: CategoryResolver;
   recurringTemplates: Template[];
   handleUseTemplate: (tpl: Template) => void;
   handleEditTemplate: (tpl: Template) => void;
@@ -62,7 +63,7 @@ export function HomePage({
   handleNextInsight,
   handleTouchStart,
   handleTouchEnd,
-  resolveCategoryLabel,
+  categoryResolver,
   recurringTemplates,
   handleUseTemplate,
   handleEditTemplate,
@@ -211,7 +212,7 @@ export function HomePage({
         title="Recordatorios recurrentes"
         subtitle="Plantillas marcadas como recurrentes"
         emptyState="Aun no tienes plantillas recurrentes."
-        resolveCategoryLabel={resolveCategoryLabel}
+        categoryResolver={categoryResolver}
         onUseTemplate={handleUseTemplate}
         onEditTemplate={handleEditTemplate}
         onDeleteTemplate={handleDeleteTemplate}

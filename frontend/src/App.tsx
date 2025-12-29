@@ -454,17 +454,6 @@ function App() {
       }),
     [categoryResolver, topExpenses],
   );
-  const resolveTemplateCategoryLabel = useCallback(
-    (categoryId?: string) => {
-      if (!categoryId) return '';
-      const canonicalId = resolveCanonicalCategoryId(categoryId, categoryResolver);
-      const label = resolveCategoryLabel(canonicalId, categoryResolver);
-      if (label) return label;
-      const hasCategories = Object.keys(categoryResolver.categoriesById).length > 0;
-      return hasCategories ? 'Categoria eliminada' : categoryId;
-    },
-    [categoryResolver],
-  );
   const advisorTopCategories = useMemo(
     () =>
       topExpenseItems.map((item) => ({
@@ -785,7 +774,7 @@ function App() {
             handleNextInsight={handleNextInsight}
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
-            resolveCategoryLabel={resolveTemplateCategoryLabel}
+            categoryResolver={categoryResolver}
             recurringTemplates={recurringTemplates}
             handleUseTemplate={handleUseTemplate}
             handleEditTemplate={handleEditTemplate}

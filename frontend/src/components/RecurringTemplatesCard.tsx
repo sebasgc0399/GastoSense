@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { useConfirm } from '../hooks/useConfirm';
+import { CATEGORY_ICONS } from '../utils/categoryIcons';
+import { resolveCanonicalCategoryId, resolveCategoryLabel, type CategoryResolver } from '../utils/categoryResolver';
 import { formatPesos } from '../utils/format';
 import type { Template } from '../types';
+import { CategoryIcon } from './ui/CategoryIcon';
 
 interface Props {
   templates: Template[];
   title: string;
   subtitle: string;
   emptyState: string;
-  resolveCategoryLabel: (categoryId?: string) => string;
+  categoryResolver: CategoryResolver;
   onUseTemplate: (tpl: Template) => void;
   onEditTemplate: (tpl: Template) => void;
   onDeleteTemplate: (id: string) => Promise<void>;
@@ -40,7 +43,7 @@ export function RecurringTemplatesCard({
   title,
   subtitle,
   emptyState,
-  resolveCategoryLabel,
+  categoryResolver,
   onUseTemplate,
   onEditTemplate,
   onDeleteTemplate,
@@ -73,7 +76,7 @@ export function RecurringTemplatesCard({
             <RecurringTemplateItem
               key={tpl.id}
               template={tpl}
-              resolveCategoryLabel={resolveCategoryLabel}
+              categoryResolver={categoryResolver}
               onUseTemplate={onUseTemplate}
               onEditTemplate={onEditTemplate}
               onDeleteTemplate={handleDelete}
@@ -87,7 +90,7 @@ export function RecurringTemplatesCard({
 
 interface RecurringTemplateItemProps {
   template: Template;
-  resolveCategoryLabel: (categoryId?: string) => string;
+  categoryResolver: CategoryResolver;
   onUseTemplate: (tpl: Template) => void;
   onEditTemplate: (tpl: Template) => void;
   onDeleteTemplate: (id: string) => void;
@@ -95,28 +98,34 @@ interface RecurringTemplateItemProps {
 
 function RecurringTemplateItem({
   template,
-  resolveCategoryLabel,
+  categoryResolver,
   onUseTemplate,
   onEditTemplate,
   onDeleteTemplate,
 }: RecurringTemplateItemProps) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
   const frequencyLabel = getFrequencyLabel(template.frequency);
-  const rawCategoryLabel = template.categoryId ? resolveCategoryLabel(template.categoryId) : '';
+  const resolvedType = template.type === 'income' ? 'income' : 'expense';
+  const fallbackId = resolvedType === 'income' ? 'ingreso' : 'otros';
+  const effectiveCategoryId = template.categoryId?.trim() || fallbackId;
+  const canonicalCategoryId = resolveCanonicalCategoryId(effectiveCategoryId, categoryResolver);
+  const resolvedLabel = resolveCategoryLabel(canonicalCategoryId, categoryResolver);
   const categoryLabel =
-    rawCategoryLabel === 'Categoria eliminada' || rawCategoryLabel === 'Categor�a eliminada'
-      ? 'Categoría eliminada'
-      : rawCategoryLabel;
-  const showCategory = Boolean(template.categoryId) && template.type !== 'income';
-  const showCategoryTooltip =
-    Boolean(template.categoryId) && (categoryLabel === 'Categoría eliminada' || rawCategoryLabel === 'Categor�a eliminada');
+    resolvedLabel ?? (template.categoryId ? 'Categoria eliminada' : resolvedType === 'income' ? 'Ingreso' : 'Otros');
+  const categoryIcon =
+    categoryResolver.categoriesById[canonicalCategoryId]?.icon ??
+    CATEGORY_ICONS[canonicalCategoryId] ??
+    CATEGORY_ICONS.default ??
+    'Tag';
+  const showCategory = Boolean(categoryLabel);
+  const showCategoryTooltip = Boolean(template.categoryId) && !resolvedLabel;
   const showPaymentMethod = Boolean(template.paymentMethod);
   const showType =
     template.type === 'income' || (!showCategory && template.type === 'expense' && !template.paymentMethod);
   const amountValue = typeof template.amount === 'number' ? template.amount : null;
   const amountTone =
-    template.type === 'income' ? 'text-emerald-300' : template.type === 'expense' ? 'text-red-300' : 'text-white';
-  const amountPrefix = template.type === 'income' ? '+' : template.type === 'expense' ? '-' : '';
+    resolvedType === 'income' ? 'text-emerald-200' : resolvedType === 'expense' ? 'text-red-200' : 'text-white';
+  const amountPrefix = resolvedType === 'income' ? '+' : resolvedType === 'expense' ? '-' : '';
   const amountLabel = amountValue !== null ? `${amountPrefix}${formatPesos(amountValue)}` : '';
   const paymentMethodLabel = template.paymentMethod ? paymentMethodLabels[template.paymentMethod] : '';
 
@@ -162,10 +171,11 @@ function RecurringTemplateItem({
           </span>
           {showCategory && (
             <span
-              className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 font-semibold text-slate-200"
+              className="flex max-w-[180px] items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 font-semibold text-slate-200"
               title={showCategoryTooltip && template.categoryId ? `ID: ${template.categoryId}` : undefined}
             >
-              {categoryLabel}
+              <CategoryIcon name={categoryIcon} size={12} className="shrink-0" />
+              <span className="truncate">{categoryLabel}</span>
             </span>
           )}
           {showPaymentMethod && (
@@ -224,3 +234,4 @@ function RecurringTemplateItem({
     </div>
   );
 }
+
