@@ -50,6 +50,7 @@ export function EvolutionChart({
   const dailyBarColor = isIncome ? 'rgba(34,197,94,0.8)' : 'rgba(248,113,113,0.8)';
   const cumulativeLineColor = isIncome ? 'rgba(16,185,129,0.85)' : 'rgba(249,115,22,0.85)';
   const cumulativeAreaColor = isIncome ? 'rgba(16,185,129,0.12)' : 'rgba(249,115,22,0.12)';
+  const todayLabelColor = isIncome ? '#34d399' : '#F87171';
 
   const tickSet = new Set<string>(['01', '15', lastDayLabel]);
   if (todayLabel) tickSet.add(todayLabel);
@@ -195,7 +196,7 @@ export function EvolutionChart({
           return value;
         },
         rich: {
-          today: { color: '#34d399', fontWeight: 700 },
+          today: { color: todayLabelColor, fontWeight: 700 },
         },
       },
     },
