@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+﻿import { useEffect, useMemo, useRef } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { useConfirm } from '../hooks/useConfirm';
 import { CATEGORY_ICONS } from '../utils/categoryIcons';
@@ -131,7 +131,7 @@ export function RecurringTemplatesCard({
       {templates.length === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">{emptyState}</p>
       ) : (
-        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-visible pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {sortedTemplates.map((tpl) => (
             <RecurringTemplateItem
               key={tpl.id}
@@ -181,8 +181,6 @@ function RecurringTemplateItem({
   const showCategoryTooltip = Boolean(template.categoryId) && !resolvedLabel;
   const showPaymentMethod = Boolean(template.paymentMethod);
   const amountValue = typeof template.amount === 'number' ? template.amount : null;
-  const amountTone =
-    resolvedType === 'income' ? 'text-emerald-200' : resolvedType === 'expense' ? 'text-red-200' : 'text-white';
   const amountPrefix = resolvedType === 'income' ? '+' : resolvedType === 'expense' ? '-' : '';
   const amountLabel = amountValue !== null ? `${amountPrefix}${formatPesos(amountValue)}` : '';
   const paymentMethodLabel = template.paymentMethod ? paymentMethodLabels[template.paymentMethod] : '';
@@ -218,66 +216,85 @@ function RecurringTemplateItem({
   };
 
   return (
-  <div className="snap-start shrink-0 min-w-[85%] sm:min-w-[280px] sm:w-[280px]">
-    <div className="flex h-[160px] flex-col rounded-2xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-2">
-        {showCategory && (
-          <div
-            className="flex min-w-0 items-center gap-2"
-            title={showCategoryTooltip && template.categoryId ? `ID: ${template.categoryId}` : undefined}
-          >
-            <CategoryIcon name={categoryIcon} size={14} className="shrink-0" />
-            <span className="truncate text-xs font-semibold text-slate-200">{categoryLabel}</span>
-          </div>
-        )}
-        <details className="relative shrink-0" ref={detailsRef}>
-          <summary
-            className="flex h-8 w-8 list-none items-center justify-center rounded-lg text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 [&::-webkit-details-marker]:hidden"
-            aria-label="Acciones de plantilla"
-            aria-haspopup="menu"
-          >
-            <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
-          </summary>
-          <div className="absolute right-0 top-9 z-10 w-32 rounded-lg border border-white/10 bg-slate-950/95 p-1 text-[11px] text-slate-200 shadow-lg backdrop-blur">
-            <button
-              type="button"
-              className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-white/10"
-              onClick={() => {
-                closeDetails();
-                onEditTemplate(template);
-              }}
+    <div className="snap-start shrink-0 min-w-[85%] sm:min-w-[280px] sm:w-[280px]">
+      <div className="flex h-[160px] flex-col rounded-2xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-3 shadow-sm">
+        <div className="flex items-center justify-between gap-2">
+          {showCategory && (
+            <div
+              className="flex min-w-0 items-center gap-2"
+              title={showCategoryTooltip && template.categoryId ? `ID: ${template.categoryId}` : undefined}
             >
-              Editar
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-red-200 hover:bg-white/10"
-              onClick={() => {
-                closeDetails();
-                onDeleteTemplate(template.id);
-              }}
+              <CategoryIcon name={categoryIcon} size={14} className="shrink-0 text-[var(--text-muted)]" />
+              <span className="truncate text-xs font-semibold text-[var(--text)]">{categoryLabel}</span>
+            </div>
+          )}
+
+          <details className="relative shrink-0" ref={detailsRef}>
+            <summary
+              className="flex h-8 w-8 list-none items-center justify-center rounded-lg text-[var(--text)] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/40 [&::-webkit-details-marker]:hidden"
+              aria-label="Acciones de plantilla"
+              aria-haspopup="menu"
             >
-              Borrar
-            </button>
-          </div>
-        </details>
+              <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+            </summary>
+
+            <div className="absolute right-0 top-9 z-[999] w-32 rounded-lg border border-[var(--modal-border)] bg-[var(--modal-surface)] p-1 text-[11px] text-[var(--text)] shadow-lg backdrop-blur-xl">
+              <button
+                type="button"
+                className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-white/10"
+                onClick={() => {
+                  closeDetails();
+                  onEditTemplate(template);
+                }}
+              >
+                Editar
+              </button>
+
+              <button
+                type="button"
+                className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-[var(--danger-text)] hover:bg-[var(--danger-bg)]"
+                onClick={() => {
+                  closeDetails();
+                  onDeleteTemplate(template.id);
+                }}
+              >
+                Borrar
+              </button>
+            </div>
+          </details>
+        </div>
+
+        <div className="mt-2 flex-1">
+          <p className="truncate text-sm font-semibold text-[var(--text)]">{template.name}</p>
+
+          {amountValue !== null && (
+            <p
+              className={`mt-1 text-lg font-semibold ${
+                resolvedType === 'income'
+                  ? 'text-[var(--accent)]'
+                  : resolvedType === 'expense'
+                    ? 'text-[var(--danger-text)]'
+                    : 'text-[var(--text)]'
+              }`}
+            >
+              {amountLabel}
+            </p>
+          )}
+
+          {metaLine && <p className="mt-1 truncate text-[10px] text-[var(--text-muted)]">{metaLine}</p>}
+        </div>
+
+        <button
+          type="button"
+          className="mt-2 h-9 w-full rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--text-on-primary)] hover:opacity-90"
+          onClick={() => onUseTemplate(template)}
+          aria-label={`Registrar plantilla ${template.name}`}
+        >
+          Registrar
+        </button>
       </div>
-      <div className="mt-2 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{template.name}</p>
-        {amountValue !== null && <p className={`mt-1 text-lg font-semibold ${amountTone}`}>{amountLabel}</p>}
-        {metaLine && <p className="mt-1 truncate text-[10px] text-[var(--text-muted)]">{metaLine}</p>}
-      </div>
-      <button
-        type="button"
-        className="mt-2 h-9 w-full rounded-lg bg-primary px-4 text-xs font-semibold text-white hover:opacity-90"
-        onClick={() => onUseTemplate(template)}
-        aria-label={`Registrar plantilla ${template.name}`}
-      >
-        Registrar
-      </button>
     </div>
-  </div>
-);
+  );
 }
 
 
