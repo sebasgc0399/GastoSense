@@ -209,8 +209,8 @@ export function HomePage({
 
       <RecurringTemplatesCard
         templates={recurringTemplates}
-        title="Recordatorios recurrentes"
-        subtitle="Plantillas marcadas como recurrentes"
+        title="Recordatorios"
+        subtitle="Plantillas recurrentes"
         emptyState="Aun no tienes plantillas recurrentes."
         categoryResolver={categoryResolver}
         onUseTemplate={handleUseTemplate}

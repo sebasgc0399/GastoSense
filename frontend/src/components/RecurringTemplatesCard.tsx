@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { useConfirm } from '../hooks/useConfirm';
 import { CATEGORY_ICONS } from '../utils/categoryIcons';
@@ -38,6 +38,41 @@ const getFrequencyLabel = (value?: Template['frequency']) => {
   return frequencyLabels[value] ?? frequencyLabels.monthly;
 };
 
+const parseTemplateDate = (value?: string) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+};
+
+const addTemplatePeriod = (date: Date, frequency?: Template['frequency']) => {
+  const next = new Date(date);
+  if (frequency === 'weekly') next.setDate(next.getDate() + 7);
+  else if (frequency === 'biweekly') next.setDate(next.getDate() + 14);
+  else if (frequency === 'yearly') next.setFullYear(next.getFullYear() + 1);
+  else {
+    const day = next.getDate();
+    next.setMonth(next.getMonth() + 1);
+    if (next.getDate() < day) next.setDate(0);
+  }
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const getNextTemplateDate = (tpl: Template, reference: Date) => {
+  const base = parseTemplateDate(tpl.lastUsedAt ?? tpl.createdAt);
+  if (!base) return new Date(8640000000000000);
+  let next = base;
+  const freq = tpl.frequency ?? 'monthly';
+  let guard = 0;
+  while (next < reference && guard < 520) {
+    next = addTemplatePeriod(next, freq);
+    guard += 1;
+  }
+  return next;
+};
+
 export function RecurringTemplatesCard({
   templates,
   title,
@@ -49,6 +84,26 @@ export function RecurringTemplatesCard({
   onDeleteTemplate,
 }: Props) {
   const confirm = useConfirm();
+  const totalFixedExpense = useMemo(() => {
+    const expenseTemplates = templates.filter((tpl) => tpl.type !== 'income');
+    if (expenseTemplates.length === 0) return null;
+    const total = expenseTemplates.reduce((sum, tpl) => {
+      const value = typeof tpl.amount === 'number' && Number.isFinite(tpl.amount) ? Math.abs(tpl.amount) : 0;
+      return sum + value;
+    }, 0);
+    return formatPesos(total);
+  }, [templates]);
+
+  const sortedTemplates = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return [...templates].sort((a, b) => {
+      const nextA = getNextTemplateDate(a, today).getTime();
+      const nextB = getNextTemplateDate(b, today).getTime();
+      if (nextA !== nextB) return nextA - nextB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [templates]);
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirm({
@@ -64,15 +119,20 @@ export function RecurringTemplatesCard({
 
   return (
     <div className="card">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
-        <span className="text-xs text-[var(--text-muted)]">{subtitle}</span>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
+          {totalFixedExpense && (
+            <span className="text-xs text-[var(--text-muted)]">{`Gastos fijos: ${totalFixedExpense}`}</span>
+          )}
+        </div>
+        <span className="hidden text-xs text-[var(--text-muted)] sm:inline">{subtitle}</span>
       </div>
       {templates.length === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">{emptyState}</p>
       ) : (
-        <div className="space-y-3">
-          {templates.map((tpl) => (
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {sortedTemplates.map((tpl) => (
             <RecurringTemplateItem
               key={tpl.id}
               template={tpl}
@@ -120,14 +180,13 @@ function RecurringTemplateItem({
   const showCategory = Boolean(categoryLabel);
   const showCategoryTooltip = Boolean(template.categoryId) && !resolvedLabel;
   const showPaymentMethod = Boolean(template.paymentMethod);
-  const showType =
-    template.type === 'income' || (!showCategory && template.type === 'expense' && !template.paymentMethod);
   const amountValue = typeof template.amount === 'number' ? template.amount : null;
   const amountTone =
     resolvedType === 'income' ? 'text-emerald-200' : resolvedType === 'expense' ? 'text-red-200' : 'text-white';
   const amountPrefix = resolvedType === 'income' ? '+' : resolvedType === 'expense' ? '-' : '';
   const amountLabel = amountValue !== null ? `${amountPrefix}${formatPesos(amountValue)}` : '';
   const paymentMethodLabel = template.paymentMethod ? paymentMethodLabels[template.paymentMethod] : '';
+  const metaLine = [frequencyLabel, showPaymentMethod ? paymentMethodLabel : null].filter(Boolean).join(' / ');
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -159,55 +218,27 @@ function RecurringTemplateItem({
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 flex-1 text-sm font-semibold text-white line-clamp-2">{template.name}</p>
-          {amountValue !== null && <p className={`shrink-0 text-base font-semibold ${amountTone}`}>{amountLabel}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-[10px]">
-          <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 font-semibold text-slate-200">
-            {frequencyLabel}
-          </span>
-          {showCategory && (
-            <span
-              className="flex max-w-[180px] items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 font-semibold text-slate-200"
-              title={showCategoryTooltip && template.categoryId ? `ID: ${template.categoryId}` : undefined}
-            >
-              <CategoryIcon name={categoryIcon} size={12} className="shrink-0" />
-              <span className="truncate">{categoryLabel}</span>
-            </span>
-          )}
-          {showPaymentMethod && (
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 font-semibold text-slate-200">
-              {paymentMethodLabel}
-            </span>
-          )}
-          {showType && (
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 font-semibold text-slate-200">
-              {template.type === 'income' ? 'Ingreso' : 'Gasto'}
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2 sm:justify-end">
-        <button
-          type="button"
-          className="h-10 rounded-lg bg-primary px-4 text-xs font-semibold text-white hover:opacity-90"
-          onClick={() => onUseTemplate(template)}
-          aria-label={`Registrar plantilla ${template.name}`}
-        >
-          Registrar
-        </button>
+  <div className="snap-start shrink-0 min-w-[85%] sm:min-w-[280px] sm:w-[280px]">
+    <div className="flex h-[160px] flex-col rounded-2xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-2">
+        {showCategory && (
+          <div
+            className="flex min-w-0 items-center gap-2"
+            title={showCategoryTooltip && template.categoryId ? `ID: ${template.categoryId}` : undefined}
+          >
+            <CategoryIcon name={categoryIcon} size={14} className="shrink-0" />
+            <span className="truncate text-xs font-semibold text-slate-200">{categoryLabel}</span>
+          </div>
+        )}
         <details className="relative shrink-0" ref={detailsRef}>
           <summary
-            className="flex h-10 w-10 list-none items-center justify-center rounded-lg text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 [&::-webkit-details-marker]:hidden"
+            className="flex h-8 w-8 list-none items-center justify-center rounded-lg text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 [&::-webkit-details-marker]:hidden"
             aria-label="Acciones de plantilla"
             aria-haspopup="menu"
           >
             <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
           </summary>
-          <div className="absolute right-0 top-11 z-10 w-32 rounded-lg border border-white/10 bg-slate-950/95 p-1 text-[11px] text-slate-200 shadow-lg backdrop-blur">
+          <div className="absolute right-0 top-9 z-10 w-32 rounded-lg border border-white/10 bg-slate-950/95 p-1 text-[11px] text-slate-200 shadow-lg backdrop-blur">
             <button
               type="button"
               className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-white/10"
@@ -231,7 +262,30 @@ function RecurringTemplateItem({
           </div>
         </details>
       </div>
+      <div className="mt-2 flex-1">
+        <p className="truncate text-sm font-semibold text-white">{template.name}</p>
+        {amountValue !== null && <p className={`mt-1 text-lg font-semibold ${amountTone}`}>{amountLabel}</p>}
+        {metaLine && <p className="mt-1 truncate text-[10px] text-[var(--text-muted)]">{metaLine}</p>}
+      </div>
+      <button
+        type="button"
+        className="mt-2 h-9 w-full rounded-lg bg-primary px-4 text-xs font-semibold text-white hover:opacity-90"
+        onClick={() => onUseTemplate(template)}
+        aria-label={`Registrar plantilla ${template.name}`}
+      >
+        Registrar
+      </button>
     </div>
-  );
+  </div>
+);
 }
+
+
+
+
+
+
+
+
+
 
