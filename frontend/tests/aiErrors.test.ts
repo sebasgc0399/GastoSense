@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 
 import { isResourceExhausted, mapAiError } from '../src/utils/aiErrors';
 import type { IaQuota } from '../src/types';
@@ -22,7 +22,7 @@ describe('utils/aiErrors', () => {
       analyzeLimit: 10,
     };
     const msg = mapAiError({ code: 'resource-exhausted' }, 'parse', quota);
-    expect(msg).toContain('límite');
+    expect(msg).toContain('l\u00edmite');
     expect(msg).toContain('(3/10)');
   });
 
@@ -35,7 +35,7 @@ describe('utils/aiErrors', () => {
       analyzeLimit: 20,
     };
     const msg = mapAiError({ code: 'resource-exhausted' }, 'analyze', quota);
-    expect(msg).toContain('límite');
+    expect(msg).toContain('l\u00edmite');
     expect(msg).toContain('(7/20)');
   });
 
@@ -44,4 +44,3 @@ describe('utils/aiErrors', () => {
     expect(msg).toContain('Configura tu API key');
   });
 });
-

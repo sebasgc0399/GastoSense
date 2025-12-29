@@ -61,10 +61,14 @@ export async function updateTemplate(
   const ref = doc(db, COLLECTION, id);
   const data: Record<string, unknown> = { updatedAt: new Date().toISOString(), userId };
   if (payload.name) data.name = payload.name.trim();
-  const resolvedCategory =
-    payload.categoryId?.trim() || (payload.type === 'income' ? INCOME_FALLBACK : EXPENSE_FALLBACK);
-  data.categoryId = resolvedCategory;
-  data.category = resolvedCategory;
+  const shouldTouchCategory = payload.categoryId !== undefined || payload.type !== undefined;
+  if (shouldTouchCategory) {
+    const nextType = payload.type ?? 'expense';
+    const resolvedCategory =
+      payload.categoryId?.trim() || (nextType === 'income' ? INCOME_FALLBACK : EXPENSE_FALLBACK);
+    data.categoryId = resolvedCategory;
+    data.category = resolvedCategory;
+  }
   if (typeof payload.amount === 'number') data.amount = payload.amount;
   if (payload.note !== undefined) data.note = payload.note;
   if (payload.paymentMethod) data.paymentMethod = payload.paymentMethod;

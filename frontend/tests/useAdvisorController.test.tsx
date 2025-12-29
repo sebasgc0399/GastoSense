@@ -195,6 +195,10 @@ describe('useAdvisorController', () => {
     );
 
     await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await act(async () => {
       await result.current.handleFreeChatSend({
         message: 'Hola',
         from: '2025-12-01',

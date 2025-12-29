@@ -233,7 +233,7 @@ export function AdvisorPage({
                     advisorMode === mode ? 'bg-primary text-white' : 'border border-white/10 bg-white/5 text-white'
                   }`}
                 >
-                  {mode === 'amable' ? 'Amable' : 'Reganon'}
+                  {mode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}
                 </button>
               ))}
             </div>
@@ -348,7 +348,7 @@ export function AdvisorPage({
               <div className="shrink-0 border-b border-white/10 px-3 py-2">
                 <div className="flex items-center justify-between text-xs text-slate-300">
                   <span>Feed IA</span>
-                  <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Reganon'}</span>
+                  <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}</span>
                 </div>
               </div>
               <div className="relative flex-1 min-h-0">
@@ -427,7 +427,7 @@ export function AdvisorPage({
                                 )}
                                 {item.tone && item.from === 'ia' && (
                                   <p className="mt-1 text-[10px] opacity-80">
-                                    Tono: {item.tone === 'amable' ? 'Amable' : 'Reganon'}
+                                    Tono: {item.tone === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}
                                   </p>
                                 )}
                               </div>
@@ -512,7 +512,7 @@ export function AdvisorPage({
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                 <span>Max 1 mes (31 dias).</span>
-                <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Reganon'}</span>
+                <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}</span>
               </div>
               {freeChatRangeError && (
                 <p className="text-[11px] font-medium text-primary">{freeChatRangeError}</p>

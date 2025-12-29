@@ -33,9 +33,9 @@ export function mapAiError(err: unknown, kind: AiErrorKind = 'parse', quota?: Ia
   }
   if (code.includes('resource-exhausted')) {
     if (kind === 'free_chat') {
-      return 'Alcanzaste el limite horario de Chat libre. Intenta de nuevo en un rato.';
+      return 'Alcanzaste el l\u00edmite horario de Chat libre. Intenta de nuevo en un rato.';
     }
-    return `Alcanzaste el limite semanal de IA para tu plan${quotaText}.`;
+    return `Alcanzaste el l\u00edmite semanal de IA para tu plan${quotaText}.`;
   }
   return 'No pudimos consultar la IA. Intentalo de nuevo en unos minutos.';
 }

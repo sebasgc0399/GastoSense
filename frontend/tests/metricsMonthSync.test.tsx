@@ -8,6 +8,7 @@ import { TransactionsPage } from '../src/pages/TransactionsPage';
 import { monthRangeIso } from '../src/utils/dates';
 import { buildCategoryResolver } from '../src/utils/categoryResolver';
 import type { TransactionsFilters } from '../src/hooks/useTransactionsController';
+import { ConfirmProvider } from '../src/context/ConfirmContext';
 
 function MonthSyncHarness() {
   const categoryResolver = buildCategoryResolver([]);
@@ -70,7 +71,11 @@ function MonthSyncHarness() {
 describe('selectedMonth sync (Metrics -> Movimientos)', () => {
   it('changes month in Metrics and opens Movimientos for that month', async () => {
     const user = userEvent.setup();
-    render(<MonthSyncHarness />);
+    render(
+      <ConfirmProvider>
+        <MonthSyncHarness />
+      </ConfirmProvider>,
+    );
 
     const monthInput = screen.getByDisplayValue('2025-12') as HTMLInputElement;
     fireEvent.change(monthInput, { target: { value: '2025-11' } });
