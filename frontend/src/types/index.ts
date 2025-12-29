@@ -69,6 +69,61 @@ export interface Template {
   updatedAt?: string;
 }
 
+export type ObjectiveType = 'goal' | 'debt';
+export type ObjectiveStatus = 'active' | 'completed' | 'archived';
+export type ObjectiveEntryKind = 'deposit' | 'withdraw' | 'payment';
+
+export interface Objective {
+  id: string;
+  userId: string;
+  type: ObjectiveType;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  icon?: string;
+  color?: string;
+  dueDate?: string;
+  status: ObjectiveStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ObjectiveEntry {
+  id: string;
+  userId: string;
+  amount: number;
+  kind: ObjectiveEntryKind;
+  note?: string;
+  effectiveDate?: string;
+  createdAt?: string;
+  linkedTransactionId?: string | null;
+}
+
+export interface ObjectiveInput {
+  type: ObjectiveType;
+  name: string;
+  targetAmount: number;
+  currentAmount?: number;
+  icon?: string;
+  color?: string;
+  dueDate?: string;
+}
+
+export interface ObjectiveUpdate {
+  name?: string;
+  targetAmount?: number;
+  icon?: string | null;
+  color?: string | null;
+  dueDate?: string | null;
+}
+
+export interface ObjectiveEntryInput {
+  kind: ObjectiveEntryKind;
+  amount: number;
+  note?: string;
+  effectiveDate?: string;
+}
+
 export interface IaQuota {
   role: UserRole;
   parseUsed: number;

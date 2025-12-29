@@ -12,6 +12,7 @@ import { useThemeMode } from './context/ThemeContext';
 import { AdvisorPage, type AdvisorPageProps } from './pages/AdvisorPage';
 import { HomePage } from './pages/HomePage';
 import { MetricsPage } from './pages/MetricsPage';
+import { ObjectivesPage } from './pages/ObjectivesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { callParseTransactionPhrase, callSuggestCategoryIcon } from './services/functions';
@@ -21,6 +22,7 @@ import {
   useBudgetController,
   useCategoriesController,
   useHomeMonthController,
+  useObjectivesController,
   useSettingsController,
   useTemplatesController,
   useTransactionsController,
@@ -74,6 +76,17 @@ function App() {
     totalTxPages,
   } = useTransactionsController({ userId: user?.uid, sortBy: txSortBy });
   const { categories: allCategories } = useCategoriesController({ userId: user?.uid, includeArchived: true });
+  const {
+    objectives,
+    objectivesReady,
+    error: objectivesError,
+    createObjective: handleCreateObjective,
+    updateObjective: handleUpdateObjective,
+    archiveObjective: handleArchiveObjective,
+    deleteObjective: handleDeleteObjective,
+    addEntry: handleObjectiveEntry,
+    deleteEntry: handleDeleteObjectiveEntry,
+  } = useObjectivesController({ userId: user?.uid });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const defaultMonth = todayIso().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
@@ -803,6 +816,19 @@ function App() {
             onExportLocked={() => openUpgrade('feature_locked')}
           />
         )}
+        {activeTab === 'objectives' && (
+          <ObjectivesPage
+            objectives={objectives}
+            objectivesReady={objectivesReady}
+            error={objectivesError}
+            onCreateObjective={handleCreateObjective}
+            onUpdateObjective={handleUpdateObjective}
+            onArchiveObjective={handleArchiveObjective}
+            onDeleteObjective={handleDeleteObjective}
+            onAddEntry={handleObjectiveEntry}
+            onDeleteEntry={handleDeleteObjectiveEntry}
+          />
+        )}
         {activeTab === 'metrics' && (
           <MetricsPage
             currentMonth={selectedMonth}
@@ -969,4 +995,3 @@ function App() {
 }
 
 export default App;
-

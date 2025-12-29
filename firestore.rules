@@ -53,6 +53,47 @@ service cloud.firestore {
         && (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid);
     }
 
+    function validObjective() {
+      return requestUserMatches()
+        && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 120))
+        && (!('type' in request.resource.data) || request.resource.data.type in ['goal','debt'])
+        && (!('targetAmount' in request.resource.data) || request.resource.data.targetAmount is number)
+        && (!('currentAmount' in request.resource.data) || request.resource.data.currentAmount is number)
+        && (!('icon' in request.resource.data) || (request.resource.data.icon is string && request.resource.data.icon.size() <= 60))
+        && (!('color' in request.resource.data) || (request.resource.data.color is string && request.resource.data.color.size() <= 20))
+        && (!('dueDate' in request.resource.data) || request.resource.data.dueDate is timestamp)
+        && (!('status' in request.resource.data) || request.resource.data.status in ['active','completed','archived'])
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp)
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
+    }
+
+    function objectiveHasRequiredFields() {
+      return request.resource.data.keys().hasAll(['userId','type','name','targetAmount','currentAmount','status','createdAt','updatedAt']);
+    }
+
+    function validObjectiveEntry() {
+      return requestUserMatches()
+        && (!('amount' in request.resource.data) || request.resource.data.amount is number)
+        && (!('kind' in request.resource.data) || request.resource.data.kind in ['deposit','withdraw','payment'])
+        && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 500))
+        && (!('effectiveDate' in request.resource.data) || request.resource.data.effectiveDate is timestamp)
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp)
+        && (
+          !('linkedTransactionId' in request.resource.data)
+          || request.resource.data.linkedTransactionId is string
+          || request.resource.data.linkedTransactionId == null
+        );
+    }
+
+    function objectiveEntryHasRequiredFields() {
+      return request.resource.data.keys().hasAll(['userId','amount','kind','createdAt','linkedTransactionId']);
+    }
+
+    function objectiveOwned(objectiveId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/objectives/$(objectiveId)).data.userId == request.auth.uid;
+    }
+
     function validCategory() {
       return request.resource.data.keys().hasAll(['label','icon','order'])
         && request.resource.data.label is string
@@ -89,6 +130,22 @@ service cloud.firestore {
       allow create: if budgetDocOwned(docId) && validBudget();
       allow update: if budgetDocOwned(docId) && validBudget();
       allow delete: if budgetDocOwned(docId);
+    }
+
+    match /objectives/{objectiveId} {
+      allow read, list: if resourceUserMatches();
+      allow create: if requestUserMatches() && objectiveHasRequiredFields() && validObjective();
+      allow update: if requestUserMatches() && resourceUserMatches() && validObjective();
+      allow delete: if resourceUserMatches();
+
+      match /entries/{entryId} {
+        allow read, list: if objectiveOwned(objectiveId);
+        allow create: if objectiveOwned(objectiveId)
+          && requestUserMatches()
+          && objectiveEntryHasRequiredFields()
+          && validObjectiveEntry();
+        allow delete: if objectiveOwned(objectiveId);
+      }
     }
 
     match /users/{uid} {
