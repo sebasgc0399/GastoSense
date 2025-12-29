@@ -69,12 +69,26 @@ export function ObjectivesPage({
   }, [detailsObjectiveId]);
 
   const visibleObjectives = useMemo(
-    () => objectives.filter((item) => item.type === activeType && item.status !== 'archived'),
+    () => objectives.filter((item) => item.type === activeType && item.status === 'active'),
     [activeType, objectives],
   );
   const summary = useMemo(() => computeObjectivesSummary(objectives), [objectives]);
   const summaryValue = activeType === 'goal' ? summary.totalSaved : summary.totalRemaining;
   const summaryCount = activeType === 'goal' ? summary.activeGoals.length : summary.activeDebts.length;
+  const summaryLabel =
+    activeType === 'goal'
+      ? summaryCount === 1
+        ? 'meta activa'
+        : 'metas activas'
+      : summaryCount === 1
+        ? 'deuda activa'
+        : 'deudas activas';
+  const emptyTitle = activeType === 'goal' ? 'Aún no tienes metas' : 'Aún no tienes deudas';
+  const emptyDescription =
+    activeType === 'goal'
+      ? 'Crea una meta para empezar a ahorrar.'
+      : 'Registra una deuda para llevar control de pagos.';
+  const emptyCta = activeType === 'goal' ? 'Crear meta' : 'Registrar deuda';
 
   const openCreate = () => {
     setFormMode('create');
@@ -139,9 +153,7 @@ export function ObjectivesPage({
             <h3 className="text-base font-semibold text-white">
               {activeType === 'goal' ? 'Total ahorrado' : 'Deuda restante'}
             </h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              {summaryCount} {activeType === 'goal' ? 'metas activas' : 'deudas activas'}
-            </p>
+            <p className="text-xs text-[var(--text-muted)]">{summaryCount} {summaryLabel}</p>
           </div>
           <p className="text-2xl font-semibold text-white">{formatPesos(summaryValue)}</p>
         </div>
@@ -155,15 +167,13 @@ export function ObjectivesPage({
         </div>
       ) : visibleObjectives.length === 0 ? (
         <div className="card space-y-2">
-          <h3 className="text-base font-semibold text-white">Aun no tienes objetivos</h3>
-          <p className="text-sm text-[var(--text-muted)]">
-            Crea una meta de ahorro o registra una deuda para empezar a hacer seguimiento.
-          </p>
+          <h3 className="text-base font-semibold text-white">{emptyTitle}</h3>
+          <p className="text-sm text-[var(--text-muted)]">{emptyDescription}</p>
           <button
             className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
             onClick={openCreate}
           >
-            Crear objetivo
+            {emptyCta}
           </button>
         </div>
       ) : (

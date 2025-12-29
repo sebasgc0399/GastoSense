@@ -37,10 +37,30 @@ export function ObjectiveDetailsModal({
 
   const progress = useMemo(() => {
     if (!objective || objective.targetAmount <= 0) return 0;
-    return Math.min(objective.currentAmount / objective.targetAmount, 1.2);
+    return Math.min(objective.currentAmount / objective.targetAmount, 1);
   }, [objective]);
-  const remaining = objective ? Math.max(objective.targetAmount - objective.currentAmount, 0) : 0;
+  const rawRemaining = objective ? objective.targetAmount - objective.currentAmount : 0;
+  const remaining = Math.max(rawRemaining, 0);
+  const overAmount = rawRemaining < 0 ? Math.abs(rawRemaining) : 0;
+  const hasOverTarget = rawRemaining < 0;
+  const isComplete =
+    (objective?.targetAmount ?? 0) > 0 && (objective?.currentAmount ?? 0) >= (objective?.targetAmount ?? 0);
   const isGoal = objective?.type === 'goal';
+  const statusLabel =
+    objective?.status === 'archived'
+      ? 'Archivado'
+      : hasOverTarget
+        ? 'Excedido'
+        : isComplete
+          ? 'Completado'
+          : null;
+  const remainingLabel = hasOverTarget
+    ? isGoal
+      ? `Excedido por ${formatPesos(overAmount)}`
+      : `Saldo a favor: ${formatPesos(overAmount)}`
+    : isGoal
+      ? `Faltan ${formatPesos(remaining)}`
+      : `Restante ${formatPesos(remaining)}`;
 
   if (!open || !objective) return null;
 
@@ -120,7 +140,14 @@ export function ObjectiveDetailsModal({
       >
         <div className="shrink-0 border-b border-[var(--modal-border)] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-[var(--text)]">{objective.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-[var(--text)]">{objective.name}</h3>
+              {statusLabel && (
+                <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white">
+                  {statusLabel}
+                </span>
+              )}
+            </div>
             <button
               className="text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
               onClick={onClose}
@@ -129,7 +156,7 @@ export function ObjectiveDetailsModal({
             </button>
           </div>
           <p className="text-xs text-[var(--text-muted)]">
-            {isGoal ? 'Meta de ahorro' : 'Deuda'} {objective.dueDate ? `• Vence ${objective.dueDate}` : ''}
+            {isGoal ? 'Meta de ahorro' : 'Deuda'} {objective.dueDate ? `- Vence ${objective.dueDate}` : ''}
           </p>
         </div>
 
@@ -143,12 +170,12 @@ export function ObjectiveDetailsModal({
                 </span>
               </div>
               <p className="mt-1 text-xs text-[var(--text-muted)]">
-                {isGoal ? 'Faltan' : 'Restante'} {formatPesos(remaining)}
+                {remainingLabel}
               </p>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
                 <div
                   className={`h-full rounded-full ${isGoal ? 'bg-emerald-500' : 'bg-sky-500'}`}
-                  style={{ width: `${Math.min(progress * 100, 120)}%` }}
+                  style={{ width: `${Math.min(progress * 100, 100)}%` }}
                 />
               </div>
             </div>
@@ -246,3 +273,4 @@ export function ObjectiveDetailsModal({
     </div>
   );
 }
+

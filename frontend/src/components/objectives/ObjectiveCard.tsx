@@ -16,14 +16,31 @@ const defaultColorForType = (type: Objective['type']) =>
 export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: ObjectiveCardProps) {
   const target = objective.targetAmount;
   const current = objective.currentAmount;
-  const progress = target > 0 ? Math.min(current / target, 1.2) : 0;
-  const percent = target > 0 ? Math.round((current / target) * 100) : 0;
-  const remaining = Math.max(target - current, 0);
+  const rawRemaining = target - current;
+  const remaining = Math.max(rawRemaining, 0);
+  const overAmount = rawRemaining < 0 ? Math.abs(rawRemaining) : 0;
+  const hasOverTarget = rawRemaining < 0;
+  const isComplete = target > 0 && current >= target;
+  const progress = target > 0 ? Math.min(current / target, 1) : 0;
+  const percent = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   const isGoal = objective.type === 'goal';
   const statusLabel =
-    objective.status === 'archived' ? 'Archivado' : objective.status === 'completed' ? 'Completado' : null;
+    objective.status === 'archived'
+      ? 'Archivado'
+      : hasOverTarget
+        ? 'Excedido'
+        : isComplete
+          ? 'Completado'
+          : null;
   const iconName = objective.icon || defaultIconForType(objective.type);
   const iconBg = objective.color || defaultColorForType(objective.type);
+  const remainingLabel = hasOverTarget
+    ? isGoal
+      ? `Excedido por ${formatPesos(overAmount)}`
+      : `Saldo a favor: ${formatPesos(overAmount)}`
+    : isGoal
+      ? `Faltan ${formatPesos(remaining)}`
+      : `Restante ${formatPesos(remaining)}`;
 
   const handleCardClick = () => onOpenDetails(objective);
   const handleQuickAction =
@@ -57,7 +74,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
           <div>
             <h3 className="text-base font-semibold text-white">{objective.name}</h3>
             <p className="text-xs text-[var(--text-muted)]">
-              {isGoal ? 'Meta de ahorro' : 'Deuda'} {objective.dueDate ? `• Vence ${objective.dueDate}` : ''}
+              {isGoal ? 'Meta de ahorro' : 'Deuda'} {objective.dueDate ? `- Vence ${objective.dueDate}` : ''}
             </p>
           </div>
         </div>
@@ -77,12 +94,12 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
         </div>
         <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
           <span>{target > 0 ? `${percent}%` : 'Sin meta'}</span>
-          <span>{isGoal ? `Faltan ${formatPesos(remaining)}` : `Restante ${formatPesos(remaining)}`}</span>
+          <span>{remainingLabel}</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
           <div
             className={`h-full rounded-full ${isGoal ? 'bg-emerald-500' : 'bg-sky-500'}`}
-            style={{ width: `${Math.min(progress * 100, 120)}%` }}
+            style={{ width: `${Math.min(progress * 100, 100)}%` }}
           />
         </div>
       </div>
