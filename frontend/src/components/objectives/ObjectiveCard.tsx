@@ -20,7 +20,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
   const remaining = Math.max(rawRemaining, 0);
   const overAmount = rawRemaining < 0 ? Math.abs(rawRemaining) : 0;
   const hasOverTarget = rawRemaining < 0;
-  const isComplete = target > 0 && current >= target;
+  const isComplete = objective.status === 'completed' || (target > 0 && current >= target);
   const progress = target > 0 ? Math.min(current / target, 1) : 0;
   const percent = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   const isGoal = objective.type === 'goal';

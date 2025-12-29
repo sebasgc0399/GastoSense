@@ -19,3 +19,18 @@ export function formatAmountHero(raw: string, locale = 'es-CO') {
   }
   return intFmt;
 }
+
+export function digitsOnly(value: string) {
+  return (value || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+}
+
+export function formatCOP(digits: string) {
+  const clean = digitsOnly(digits);
+  if (!clean) return '';
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+export function parseCOP(digitsOrFormatted: string) {
+  const clean = digitsOnly(digitsOrFormatted);
+  return clean ? Number(clean) : 0;
+}

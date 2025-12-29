@@ -44,7 +44,8 @@ export function ObjectiveDetailsModal({
   const overAmount = rawRemaining < 0 ? Math.abs(rawRemaining) : 0;
   const hasOverTarget = rawRemaining < 0;
   const isComplete =
-    (objective?.targetAmount ?? 0) > 0 && (objective?.currentAmount ?? 0) >= (objective?.targetAmount ?? 0);
+    objective?.status === 'completed' ||
+    ((objective?.targetAmount ?? 0) > 0 && (objective?.currentAmount ?? 0) >= (objective?.targetAmount ?? 0));
   const isGoal = objective?.type === 'goal';
   const statusLabel =
     objective?.status === 'archived'

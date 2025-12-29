@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { digitsOnly, formatCOP, parseCOP } from '../../utils/amount';
 import { IconPicker } from '../ui/IconPicker';
 import type { Objective, ObjectiveInput, ObjectiveType, ObjectiveUpdate } from '../../types';
 
@@ -25,7 +26,7 @@ export function ObjectiveFormModal({
 }: ObjectiveFormModalProps) {
   const [type, setType] = useState<ObjectiveType>(initialType);
   const [name, setName] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
+  const [targetDigits, setTargetDigits] = useState('');
   const [icon, setIcon] = useState(defaultIconForType(initialType));
   const [color, setColor] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -37,14 +38,14 @@ export function ObjectiveFormModal({
     if (mode === 'edit' && objective) {
       setType(objective.type);
       setName(objective.name);
-      setTargetAmount(String(objective.targetAmount));
+      setTargetDigits(digitsOnly(String(objective.targetAmount)));
       setIcon(objective.icon || defaultIconForType(objective.type));
       setColor(objective.color || '');
       setDueDate(objective.dueDate || '');
     } else {
       setType(initialType);
       setName('');
-      setTargetAmount('');
+      setTargetDigits('');
       setIcon(defaultIconForType(initialType));
       setColor('');
       setDueDate('');
@@ -52,7 +53,7 @@ export function ObjectiveFormModal({
     setError(null);
   }, [initialType, mode, objective, open]);
 
-  const targetValue = useMemo(() => Number(targetAmount), [targetAmount]);
+  const targetValue = useMemo(() => parseCOP(targetDigits), [targetDigits]);
   const canSave = name.trim().length > 0 && Number.isFinite(targetValue) && targetValue > 0;
   const isEdit = mode === 'edit';
 
@@ -160,10 +161,11 @@ export function ObjectiveFormModal({
               <div className="flex items-center rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--text)] focus-within:border-primary">
                 <span className="text-base text-[var(--text-muted)]">$</span>
                 <input
-                  type="number"
-                  inputMode="decimal"
-                  value={targetAmount}
-                  onChange={(event) => setTargetAmount(event.target.value)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={formatCOP(targetDigits)}
+                  onChange={(event) => setTargetDigits(digitsOnly(event.target.value))}
                   className="ml-2 w-full bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
                   placeholder="0"
                 />

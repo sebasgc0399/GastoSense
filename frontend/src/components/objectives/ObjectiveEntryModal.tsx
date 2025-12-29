@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { todayIso } from '../../utils/dates';
+import { digitsOnly, formatCOP, parseCOP } from '../../utils/amount';
 import { formatPesos } from '../../utils/format';
 import type { Objective, ObjectiveEntryInput, ObjectiveEntryKind } from '../../types';
 
@@ -18,7 +19,7 @@ const kindLabelMap: Record<ObjectiveEntryKind, string> = {
 };
 
 export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: ObjectiveEntryModalProps) {
-  const [amount, setAmount] = useState('');
+  const [amountDigits, setAmountDigits] = useState('');
   const [note, setNote] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -26,13 +27,13 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
 
   useEffect(() => {
     if (!open) return;
-    setAmount('');
+    setAmountDigits('');
     setNote('');
     setEffectiveDate(todayIso());
     setError(null);
   }, [open, objective?.id, kind]);
 
-  const amountValue = useMemo(() => Number(amount), [amount]);
+  const amountValue = useMemo(() => parseCOP(amountDigits), [amountDigits]);
   const isAmountValid = Number.isFinite(amountValue) && amountValue > 0;
   const isWithdraw = kind === 'withdraw';
   const exceedsAvailable = Boolean(objective && isWithdraw && isAmountValid && amountValue > objective.currentAmount);
@@ -101,10 +102,11 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
               <div className="flex items-center rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--text)] focus-within:border-primary">
                 <span className="text-base text-[var(--text-muted)]">$</span>
                 <input
-                  type="number"
-                  inputMode="decimal"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={formatCOP(amountDigits)}
+                  onChange={(event) => setAmountDigits(digitsOnly(event.target.value))}
                   className="ml-2 w-full bg-transparent text-base text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
                   placeholder="0"
                 />
