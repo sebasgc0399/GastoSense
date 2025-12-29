@@ -1,4 +1,4 @@
-﻿import { fireEvent, render, screen, within } from '@testing-library/react';
+﻿import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -241,7 +241,7 @@ describe('MetricsPage', () => {
     expect(screen.queryByText('Presupuesto total')).not.toBeInTheDocument();
   });
 
-  it('does not render top categories when there are only incomes', () => {
+  it('auto-selects income tab when there are only incomes', async () => {
     const incomeTx: Transaction = {
       id: 't1',
       amount: 100000,
@@ -270,8 +270,127 @@ describe('MetricsPage', () => {
       />,
     );
 
-    expect(screen.queryByText('\u00bfEn qu\u00e9 gastaste?')).not.toBeInTheDocument();
-    expect(screen.queryByText('Evoluci\u00F3n del mes')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ingresos' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    expect(screen.getByRole('button', { name: 'Gastos' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('Promedio diario')).toBeInTheDocument();
+  });
+
+  it('defaults to expense tab when there are only expenses', () => {
+    const expenseTx: Transaction = {
+      id: 't1',
+      amount: 5000,
+      categoryId: 'transporte',
+      type: 'expense',
+      date: '2025-11-03',
+      paymentMethod: 'debito',
+    };
+
+    render(
+      <MetricsPage
+        currentMonth="2025-11"
+        defaultMonth="2025-11"
+        setCurrentMonth={vi.fn()}
+        monthTransactions={[expenseTx]}
+        monthlyExpense={5000}
+        monthlyIncome={0}
+        availableBalance={-5000}
+        budget={{ month: '2025-11', total: 100000 }}
+        expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
+        previousMonth={{ expense: 10000, income: 0 }}
+        onOpenQuickAdd={vi.fn()}
+        onViewMovements={vi.fn()}
+        onAdjustBudget={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Gastos' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Ingresos' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('shows empty income state when switching to incomes without data', async () => {
+    const user = userEvent.setup();
+    const expenseTx: Transaction = {
+      id: 't1',
+      amount: 5000,
+      categoryId: 'transporte',
+      type: 'expense',
+      date: '2025-11-03',
+      paymentMethod: 'debito',
+    };
+
+    render(
+      <MetricsPage
+        currentMonth="2025-11"
+        defaultMonth="2025-11"
+        setCurrentMonth={vi.fn()}
+        monthTransactions={[expenseTx]}
+        monthlyExpense={5000}
+        monthlyIncome={0}
+        availableBalance={-5000}
+        budget={{ month: '2025-11', total: 100000 }}
+        expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
+        previousMonth={{ expense: 10000, income: 0 }}
+        onOpenQuickAdd={vi.fn()}
+        onViewMovements={vi.fn()}
+        onAdjustBudget={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Ingresos' }));
+
+    expect(screen.getByText('Este mes no registraste ingresos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver Gastos' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver movimientos' })).toBeInTheDocument();
+    expect(screen.queryByText('Promedio diario')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('evolution-chart')).not.toBeInTheDocument();
+  });
+
+  it('shows empty expense state when switching to expenses without data', async () => {
+    const user = userEvent.setup();
+    const incomeTx: Transaction = {
+      id: 't1',
+      amount: 100000,
+      categoryId: 'salario',
+      type: 'income',
+      date: '2025-11-03',
+      paymentMethod: 'debito',
+    };
+
+    render(
+      <MetricsPage
+        currentMonth="2025-11"
+        defaultMonth="2025-11"
+        setCurrentMonth={vi.fn()}
+        monthTransactions={[incomeTx]}
+        monthlyExpense={0}
+        monthlyIncome={100000}
+        availableBalance={100000}
+        budget={{ month: '2025-11', total: 200000 }}
+        expenseCategories={[]}
+        categoryResolver={baseResolver}
+        previousMonth={{ expense: 0, income: 100000 }}
+        onOpenQuickAdd={vi.fn()}
+        onViewMovements={vi.fn()}
+        onAdjustBudget={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ingresos' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Gastos' }));
+
+    expect(screen.getByText('Este mes no registraste gastos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver Ingresos' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver movimientos' })).toBeInTheDocument();
+    expect(screen.queryByText('Presupuesto total')).not.toBeInTheDocument();
+    expect(screen.queryByText('Define tu presupuesto')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('evolution-chart')).not.toBeInTheDocument();
   });
 
   it('shows "Sin referencia" when previousMonth expense is 0', () => {
@@ -512,4 +631,5 @@ describe('MetricsPage', () => {
     expect(screen.queryByText('Categor\u00EDas del mes')).not.toBeInTheDocument();
   });
 });
+
 

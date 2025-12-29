@@ -7,7 +7,6 @@ import type { CategorySpendItem, CategorySpendMode } from '../components/charts/
 import { TopCategoriesChart } from '../components/TopCategoriesChart';
 import { CardStat } from '../components/stats/CardStat';
 import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
-import { shouldShowIncomeAndBalance } from './metricsRules';
 import { trackEvent } from '../services/analytics';
 import type { Budget, Transaction } from '../types';
 import type { CategoryResolver } from '../utils/categoryResolver';
@@ -19,7 +18,6 @@ import {
   buildDailyExpenseSeries,
   buildDailyIncomeSeries,
   buildIdealBudgetPaceSeries,
-  hasType,
   topCategories,
 } from '../utils/txAgg';
 
@@ -57,12 +55,33 @@ export function MetricsPage({
   onAdjustBudget,
 }: MetricsPageProps) {
   const txCount = monthTransactions.length;
-  const hasIncome = shouldShowIncomeAndBalance(monthTransactions, monthlyIncome);
-  const hasExpenses = monthlyExpense > 0 || hasType(monthTransactions, 'expense');
+  const { expenseTxCount, incomeTxCount } = useMemo(() => {
+    let expenseCount = 0;
+    let incomeCount = 0;
+    for (const tx of monthTransactions) {
+      if (tx.type === 'expense') expenseCount += 1;
+      else if (tx.type === 'income') incomeCount += 1;
+    }
+    return { expenseTxCount: expenseCount, incomeTxCount: incomeCount };
+  }, [monthTransactions]);
+  const hasExpenses = expenseTxCount > 0;
+  const hasIncome = incomeTxCount > 0;
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [metricsType, setMetricsType] = useState<'expense' | 'income'>('expense');
+  const [userSelected, setUserSelected] = useState(false);
+  const [emptyTabOverrideMonth, setEmptyTabOverrideMonth] = useState<string | null>(null);
   const isCurrentMonth = currentMonth === todayIso().slice(0, 7);
-  const isExpenseView = metricsType === 'expense';
+  const autoPreferredType = hasExpenses ? 'expense' : hasIncome ? 'income' : metricsType;
+  const baseMetricsType = userSelected ? metricsType : autoPreferredType;
+  const suppressAutoSwitch = emptyTabOverrideMonth === currentMonth;
+  const activeMetricsType = suppressAutoSwitch
+    ? baseMetricsType
+    : baseMetricsType === 'expense' && !hasExpenses && hasIncome
+      ? 'income'
+      : baseMetricsType === 'income' && !hasIncome && hasExpenses
+        ? 'expense'
+        : baseMetricsType;
+  const isExpenseView = activeMetricsType === 'expense';
   const expenseTitle = isCurrentMonth ? 'Gasto del mes (hasta hoy)' : 'Gasto del mes';
   const incomeTitle = isCurrentMonth ? 'Ingresos del mes (hasta hoy)' : 'Ingresos del mes';
   const summaryItems = hasIncome
@@ -245,17 +264,33 @@ export function MetricsPage({
   const evolutionMetricLabel = isExpenseView ? 'Gasto' : 'Ingreso';
 
   const hasMetricsData = isExpenseView ? hasExpenses : hasIncome;
+  const showTabEmptyState = txCount > 0 && !hasMetricsData;
+  const emptyTabTitle = isExpenseView ? 'Este mes no registraste gastos' : 'Este mes no registraste ingresos';
+  const emptyTabSwitchLabel = isExpenseView ? 'Ver Ingresos' : 'Ver Gastos';
+  const canSwitchToOtherTab = isExpenseView ? hasIncome : hasExpenses;
+
+  const handleMetricsTypeChange = (next: 'expense' | 'income') => {
+    setUserSelected(true);
+    setMetricsType(next);
+    const nextHasData = next === 'expense' ? hasExpenses : hasIncome;
+    const otherHasData = next === 'expense' ? hasIncome : hasExpenses;
+    if (!nextHasData && otherHasData) {
+      setEmptyTabOverrideMonth(currentMonth);
+    } else {
+      setEmptyTabOverrideMonth(null);
+    }
+  };
 
   useEffect(() => {
     if (!hasMetricsData) return;
-    trackEvent('metrics_evolution_viewed', { selectedMonth: currentMonth, hasBudget, metricsType });
-  }, [currentMonth, hasBudget, hasMetricsData, metricsType]);
+    trackEvent('metrics_evolution_viewed', { selectedMonth: currentMonth, hasBudget, metricsType: activeMetricsType });
+  }, [currentMonth, hasBudget, hasMetricsData, activeMetricsType]);
 
   const handleEvolutionToggle = (next: EvolutionView) => {
     if (next === evolutionView) return;
     if (next === 'cumulative' && !canUseCumulative) return;
     setEvolutionView(next);
-    trackEvent('metrics_evolution_toggled', { selectedMonth: currentMonth, view: next, metricsType });
+    trackEvent('metrics_evolution_toggled', { selectedMonth: currentMonth, view: next, metricsType: activeMetricsType });
   };
 
   const handleCategoriesModeChange = (next: CategorySpendMode) => {
@@ -320,7 +355,7 @@ export function MetricsPage({
               <button
                 type="button"
                 aria-pressed={isExpenseView}
-                onClick={() => setMetricsType('expense')}
+                onClick={() => handleMetricsTypeChange('expense')}
                 className={`flex-1 rounded-xl px-3 py-2 transition ${
                   isExpenseView ? 'bg-rose-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
                 }`}
@@ -330,7 +365,7 @@ export function MetricsPage({
               <button
                 type="button"
                 aria-pressed={!isExpenseView}
-                onClick={() => setMetricsType('income')}
+                onClick={() => handleMetricsTypeChange('income')}
                 className={`flex-1 rounded-xl px-3 py-2 transition ${
                   isExpenseView ? 'text-[var(--text-muted)] hover:text-white' : 'bg-emerald-500 text-white shadow-sm'
                 }`}
@@ -340,105 +375,127 @@ export function MetricsPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3">
-            {isExpenseView ? (
-              <div className="card">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">
-                    {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
-                  </h3>
-                  <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
-                </div>
-
-                {hasBudget ? (
-                  <>
-                    <div className="flex items-center justify-between text-sm text-[var(--muted)]">
-                      <span>Gastado</span>
-                      <span className="text-white">
-                        ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-[var(--muted)]">
-                      {budgetTotal - monthlyExpense >= 0
-                        ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
-                        : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
-                    </p>
-                    <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className={`h-full rounded-full ${
-                          budgetAlert === 'ok'
-                            ? 'bg-emerald-500'
-                            : budgetAlert === 'warn'
-                              ? 'bg-amber-500'
-                              : 'bg-red-500'
-                        }`}
-                        style={{ width: `${Math.min(budgetProgress * 100, 120)}%` }}
-                      />
-                    </div>
-                    {budgetAlert !== 'ok' && (
-                      <p className="mt-2 text-xs font-semibold text-red-200">
-                        {budgetAlert === 'warn'
-                          ? 'Alerta: superaste el 80% de tu presupuesto.'
-                          : 'Alerta: alcanzaste o superaste el 100% del presupuesto.'}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Define un presupuesto total para ver tu progreso y alertas.
-                  </p>
-                )}
-
-                <div className="mt-3 flex flex-wrap gap-2">
+          {showTabEmptyState ? (
+            <div className="card space-y-3">
+              <h3 className="text-base font-semibold text-white">{emptyTabTitle}</h3>
+              <div className="flex flex-wrap gap-2">
+                {canSwitchToOtherTab && (
                   <button
                     className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
-                    onClick={onAdjustBudget}
+                    onClick={() => handleMetricsTypeChange(isExpenseView ? 'income' : 'expense')}
                   >
-                    {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
+                    {emptyTabSwitchLabel}
                   </button>
-                  {hasBudget && (
+                )}
+                <button
+                  className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                  onClick={() => onViewMovements()}
+                >
+                  Ver movimientos
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {isExpenseView ? (
+                <div className="card">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">
+                      {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
+                    </h3>
+                    <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
+                  </div>
+
+                  {hasBudget ? (
+                    <>
+                      <div className="flex items-center justify-between text-sm text-[var(--muted)]">
+                        <span>Gastado</span>
+                        <span className="text-white">
+                          ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--muted)]">
+                        {budgetTotal - monthlyExpense >= 0
+                          ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
+                          : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
+                      </p>
+                      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full ${
+                            budgetAlert === 'ok'
+                              ? 'bg-emerald-500'
+                              : budgetAlert === 'warn'
+                                ? 'bg-amber-500'
+                                : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.min(budgetProgress * 100, 120)}%` }}
+                        />
+                      </div>
+                      {budgetAlert !== 'ok' && (
+                        <p className="mt-2 text-xs font-semibold text-red-200">
+                          {budgetAlert === 'warn'
+                            ? 'Alerta: superaste el 80% de tu presupuesto.'
+                            : 'Alerta: alcanzaste o superaste el 100% del presupuesto.'}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-[var(--text-muted)]">
+                      Define un presupuesto total para ver tu progreso y alertas.
+                    </p>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                      onClick={onAdjustBudget}
+                    >
+                      {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
+                    </button>
+                    {hasBudget && (
+                      <button
+                        className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                        onClick={() => onViewMovements()}
+                      >
+                        Ver movimientos
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="card">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">Ingresos del mes</h3>
+                    <span className="text-xs text-[var(--muted)]">Resumen</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-white/5 p-3">
+                      <p className="text-xs text-[var(--muted)]">Total</p>
+                      <p className="mt-1 text-base font-extrabold text-emerald-200">
+                        ${monthlyIncome.toLocaleString('es-CO')}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white/5 p-3">
+                      <p className="text-xs text-[var(--muted)]">Promedio diario</p>
+                      <p className="mt-1 text-base font-extrabold text-white">
+                        ${avgDailyAmount.toLocaleString('es-CO')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
                       onClick={() => onViewMovements()}
                     >
                       Ver movimientos
                     </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="card">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Ingresos del mes</h3>
-                  <span className="text-xs text-[var(--muted)]">Resumen</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-white/5 p-3">
-                    <p className="text-xs text-[var(--muted)]">Total</p>
-                    <p className="mt-1 text-base font-extrabold text-emerald-200">
-                      ${monthlyIncome.toLocaleString('es-CO')}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-white/5 p-3">
-                    <p className="text-xs text-[var(--muted)]">Promedio diario</p>
-                    <p className="mt-1 text-base font-extrabold text-white">
-                      ${avgDailyAmount.toLocaleString('es-CO')}
-                    </p>
                   </div>
                 </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
-                    onClick={() => onViewMovements()}
-                  >
-                    Ver movimientos
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {hasMetricsData && (
             <div className="card">
@@ -541,6 +598,12 @@ export function MetricsPage({
     </section>
   );
 }
+
+
+
+
+
+
 
 
 
