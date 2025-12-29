@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { AllCategoriesModal } from '../components/AllCategoriesModal';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
@@ -282,13 +282,13 @@ export function MetricsPage({
       {txCount === 0 ? (
         <div className="card space-y-2">
           <h3 className="text-base font-semibold text-white">Aún no hay datos</h3>
-          <p className="text-sm text-[var(--text-muted)]">Registra tu primer gasto para empezar a ver métricas.</p>
+          <p className="text-sm text-[var(--text-muted)]">Registra tu primer movimiento (gasto o ingreso) para empezar a ver métricas.</p>
           <div className="flex flex-wrap gap-2">
             <button
               className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
               onClick={onOpenQuickAdd}
             >
-              Registrar mi primer gasto
+              Registrar
             </button>
             <button
               className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
@@ -341,65 +341,103 @@ export function MetricsPage({
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            <div className="card">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">
-                  {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
-                </h3>
-                <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
-              </div>
+            {isExpenseView ? (
+              <div className="card">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">
+                    {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
+                  </h3>
+                  <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
+                </div>
 
-              {hasBudget ? (
-                <>
-                  <div className="flex items-center justify-between text-sm text-[var(--muted)]">
-                    <span>Gastado</span>
-                    <span className="text-white">
-                      ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-[var(--muted)]">
-                    {budgetTotal - monthlyExpense >= 0
-                      ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
-                      : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
-                  </p>
-                  <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full ${
-                        budgetAlert === 'ok' ? 'bg-emerald-500' : budgetAlert === 'warn' ? 'bg-amber-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${Math.min(budgetProgress * 100, 120)}%` }}
-                    />
-                  </div>
-                  {budgetAlert !== 'ok' && (
-                    <p className="mt-2 text-xs font-semibold text-red-200">
-                      {budgetAlert === 'warn'
-                        ? 'Alerta: superaste el 80% de tu presupuesto.'
-                        : 'Alerta: alcanzaste o superaste el 100% del presupuesto.'}
+                {hasBudget ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm text-[var(--muted)]">
+                      <span>Gastado</span>
+                      <span className="text-white">
+                        ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      {budgetTotal - monthlyExpense >= 0
+                        ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
+                        : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
                     </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-[var(--text-muted)]">Define un presupuesto total para ver tu progreso y alertas.</p>
-              )}
+                    <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full ${
+                          budgetAlert === 'ok'
+                            ? 'bg-emerald-500'
+                            : budgetAlert === 'warn'
+                              ? 'bg-amber-500'
+                              : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(budgetProgress * 100, 120)}%` }}
+                      />
+                    </div>
+                    {budgetAlert !== 'ok' && (
+                      <p className="mt-2 text-xs font-semibold text-red-200">
+                        {budgetAlert === 'warn'
+                          ? 'Alerta: superaste el 80% de tu presupuesto.'
+                          : 'Alerta: alcanzaste o superaste el 100% del presupuesto.'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Define un presupuesto total para ver tu progreso y alertas.
+                  </p>
+                )}
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
-                  onClick={onAdjustBudget}
-                >
-                  {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
-                </button>
-                {hasBudget && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    onClick={onAdjustBudget}
+                  >
+                    {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
+                  </button>
+                  {hasBudget && (
+                    <button
+                      className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                      onClick={() => onViewMovements()}
+                    >
+                      Ver movimientos
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="card">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">Ingresos del mes</h3>
+                  <span className="text-xs text-[var(--muted)]">Resumen</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl bg-white/5 p-3">
+                    <p className="text-xs text-[var(--muted)]">Total</p>
+                    <p className="mt-1 text-base font-extrabold text-emerald-200">
+                      ${monthlyIncome.toLocaleString('es-CO')}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-white/5 p-3">
+                    <p className="text-xs text-[var(--muted)]">Promedio diario</p>
+                    <p className="mt-1 text-base font-extrabold text-white">
+                      ${avgDailyAmount.toLocaleString('es-CO')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
                     onClick={() => onViewMovements()}
                   >
                     Ver movimientos
                   </button>
-                )}
+                </div>
               </div>
-            </div>
-
+            )}
           </div>
 
           {hasMetricsData && (
@@ -503,4 +541,6 @@ export function MetricsPage({
     </section>
   );
 }
+
+
 

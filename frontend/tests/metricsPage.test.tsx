@@ -56,7 +56,10 @@ describe('MetricsPage', () => {
     );
 
     expect(screen.getByText('A\u00FAn no hay datos')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Registrar mi primer gasto' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Registra tu primer movimiento (gasto o ingreso) para empezar a ver m\u00E9tricas.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Registrar' })).toBeInTheDocument();
   });
 
   it('renders base metrics cards when there is data', () => {
@@ -232,7 +235,10 @@ describe('MetricsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Ingresos' }));
 
     expect(screen.getByText('\u00bfC\u00f3mo ganaste?')).toBeInTheDocument();
+    expect(screen.getByText('Ingresos del mes')).toBeInTheDocument();
+    expect(screen.getByText('Promedio diario')).toBeInTheDocument();
     expect(screen.getByText('INGRESO DIARIO DEL MES')).toBeInTheDocument();
+    expect(screen.queryByText('Presupuesto total')).not.toBeInTheDocument();
   });
 
   it('does not render top categories when there are only incomes', () => {
