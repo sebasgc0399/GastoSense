@@ -898,7 +898,7 @@ function App() {
           onClick={() => setShowQuickAdd(true)}
           className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
         >
-          <span className="text-lg">+</span> Registrar gasto
+          <span className="text-lg">+</span> Registrar
         </button>
       )}
 
