@@ -3,7 +3,11 @@ import { paymentMethods } from '../data/frequentCategories';
 import { useConfirm } from '../hooks/useConfirm';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import { ResponsiveSelect } from './ResponsiveSelect';
-import type { Transaction, TransactionInput } from '../types';
+import type { Category, Transaction, TransactionInput } from '../types';
+
+const EXPENSE_FALLBACK_ID = 'otros';
+const INCOME_FALLBACK_ID = 'ingreso';
+const resolveKind = (value?: Category['kind']) => (value === 'income' ? 'income' : 'expense');
 
 interface Props {
   open: boolean;
@@ -22,13 +26,15 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
   const confirm = useConfirm();
   const { categories } = useCategoriesController({ userId: resolvedUserId, includeArchived: true });
   const categoryOptions = useMemo(() => {
-    const options = categories.map((cat) => ({ value: cat.id, label: cat.label }));
+    const txType = form?.type ?? 'expense';
+    const sameKind = categories.filter((cat) => resolveKind(cat.kind) === txType);
+    const options = sameKind.map((cat) => ({ value: cat.id, label: cat.label }));
     const currentId = form?.categoryId;
     if (currentId && !options.some((opt) => opt.value === currentId)) {
       options.unshift({ value: currentId, label: 'Categoría eliminada' });
     }
     return options;
-  }, [categories, form?.categoryId]);
+  }, [categories, form?.categoryId, form?.type]);
 
   useEffect(() => {
     if (transaction) {
@@ -49,6 +55,22 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
 
   const handleChange = (field: keyof TransactionInput, value: string) => {
     setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const handleTypeChange = (nextType: 'expense' | 'income') => {
+    setForm((prev) => {
+      if (!prev) return prev;
+      const nextFallback = nextType === 'income' ? INCOME_FALLBACK_ID : EXPENSE_FALLBACK_ID;
+      const currentId = prev.categoryId;
+      const isValidForNextType = categories.some(
+        (cat) => cat.id === currentId && resolveKind(cat.kind) === nextType,
+      );
+      return {
+        ...prev,
+        type: nextType,
+        categoryId: isValidForNextType ? currentId : nextFallback,
+      };
+    });
   };
 
   const handleSave = async () => {
@@ -153,7 +175,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
                 <label className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">Tipo</label>
                 <ResponsiveSelect
                   value={form.type}
-                  onChange={(val) => handleChange('type', val)}
+                  onChange={(val) => handleTypeChange(val as 'expense' | 'income')}
                   options={[
                     { value: 'expense', label: 'Gasto' },
                     { value: 'income', label: 'Ingreso' },

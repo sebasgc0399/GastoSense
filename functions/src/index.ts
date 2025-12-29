@@ -165,9 +165,12 @@ type ImportRowInput = {
   paymentMethod?: unknown;
 };
 
+type CategoryKind = "expense" | "income";
+
 interface CategoryCatalogEntry {
   id: string;
   label: string;
+  kind?: CategoryKind;
 }
 
 type CategoryResolution = {
@@ -184,6 +187,7 @@ interface CategoryCatalogCacheEntry {
 
 const CATEGORY_CACHE_TTL_MS = 10 * 60 * 1000;
 const FALLBACK_CATEGORY_ID = "otros";
+const INCOME_FALLBACK_ID = "ingreso";
 const AI_ICON_SET = new Set<string>(AI_ICON_LIBRARY);
 const categoryCatalogCache = new Map<
   string,
@@ -985,9 +989,12 @@ const loadUserCategoryCatalog = async (
     .get();
   const data = snapshot.docs.map((docSnap) => {
     const rawLabel = docSnap.data()?.label;
+    const rawKind = docSnap.data()?.kind;
     const label =
       typeof rawLabel === "string" && rawLabel.trim() ? rawLabel : docSnap.id;
-    return {id: docSnap.id, label};
+    const kind: CategoryKind | undefined =
+      rawKind === "income" ? "income" : rawKind === "expense" ? "expense" : undefined;
+    return {id: docSnap.id, label, kind};
   });
   categoryCatalogCache.set(uid, {
     cachedAt: now,
@@ -999,48 +1006,63 @@ const loadUserCategoryCatalog = async (
 };
 
 const buildCategoryLookup = (categories: CategoryCatalogEntry[]) => {
-  const byId: Record<string, CategoryCatalogEntry> = {};
-  const idByNormalizedLabel: Record<string, string | null> = {};
-  const addKey = (key: string, id: string) => {
+  const makeLookup = () => ({
+    byId: {} as Record<string, CategoryCatalogEntry>,
+    idByNormalizedLabel: {} as Record<string, string | null>,
+  });
+  const lookup: Record<CategoryKind, ReturnType<typeof makeLookup>> = {
+    expense: makeLookup(),
+    income: makeLookup(),
+  };
+  const addKey = (map: Record<string, string | null>, key: string, id: string) => {
     if (!key) return;
-    if (!(key in idByNormalizedLabel)) {
-      idByNormalizedLabel[key] = id;
+    if (!(key in map)) {
+      map[key] = id;
       return;
     }
-    if (idByNormalizedLabel[key] !== id) idByNormalizedLabel[key] = null;
+    if (map[key] !== id) map[key] = null;
   };
 
   for (const category of categories) {
     if (!category?.id) continue;
-    byId[category.id] = category;
+    const kind: CategoryKind = category.kind === "income" ? "income" : "expense";
+    const target = lookup[kind];
+    target.byId[category.id] = category;
     const normalized = normalizeCategoryLabel(category.label || category.id);
-    addKey(normalized, category.id);
+    addKey(target.idByNormalizedLabel, normalized, category.id);
     const singular = singularizeLabel(normalized);
-    if (singular && singular !== normalized) addKey(singular, category.id);
+    if (singular && singular !== normalized) {
+      addKey(target.idByNormalizedLabel, singular, category.id);
+    }
   }
 
-  return {byId, idByNormalizedLabel};
+  return lookup;
 };
 
 const resolveCategoryIdFromCatalog = (
   rawCategory: string,
+  type: "expense" | "income",
   lookup: ReturnType<typeof buildCategoryLookup>,
 ): CategoryResolution => {
   const value = typeof rawCategory === "string" ? rawCategory.trim() : "";
+  const fallbackId = type === "income" ? INCOME_FALLBACK_ID : FALLBACK_CATEGORY_ID;
   if (!value) {
-    return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "empty"};
+    return {categoryId: fallbackId, fallbackReason: "empty"};
   }
   const normalized = normalizeCategoryLabel(value);
-  if (normalized === FALLBACK_CATEGORY_ID) {
-    return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "explicit_other"};
+  const isExplicitFallback =
+    normalized === fallbackId || (type === "income" && normalized === "income");
+  if (isExplicitFallback) {
+    return {categoryId: fallbackId, fallbackReason: "explicit_other"};
   }
-  if (lookup.byId[value]) return {categoryId: value};
-  const match = normalized ? lookup.idByNormalizedLabel[normalized] : undefined;
+  const kindLookup = lookup[type];
+  if (kindLookup.byId[value]) return {categoryId: value};
+  const match = normalized ? kindLookup.idByNormalizedLabel[normalized] : undefined;
   if (typeof match === "string") return {categoryId: match};
   if (match === null) {
-    return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "ambiguous"};
+    return {categoryId: fallbackId, fallbackReason: "ambiguous"};
   }
-  return {categoryId: FALLBACK_CATEGORY_ID, fallbackReason: "no_match"};
+  return {categoryId: fallbackId, fallbackReason: "no_match"};
 };
 
 /**
@@ -1146,7 +1168,11 @@ export const parseTransactionPhrase = onCall(
       const rawCategory = typeof parsed.category === "string" ? parsed.category : "";
       const parsedType = (parsed.type as ParsedTransaction["type"]) ?? "expense";
       const isExpense = parsedType === "expense";
-      const categoryResolution = resolveCategoryIdFromCatalog(rawCategory, categoryLookup);
+      const categoryResolution = resolveCategoryIdFromCatalog(
+        rawCategory,
+        parsedType,
+        categoryLookup,
+      );
       const categoryId = isExpense ? categoryResolution.categoryId : "";
       const categoryFallback = isExpense && categoryId === FALLBACK_CATEGORY_ID;
       const categoryFallbackReason = categoryFallback
@@ -1399,6 +1425,7 @@ export const importTransactions = onCall(async (request) => {
   };
   const prefixCategoryNote = (note: string, label: string) => {
     if (!label) return note;
+    if (note && note.includes("[Cat:")) return note;
     const prefix = `[Cat: ${label}]`;
     if (!note) return prefix;
     return `${prefix} ${note}`;
@@ -1485,20 +1512,21 @@ export const importTransactions = onCall(async (request) => {
   for (const row of normalizedRows) {
     const label = row.categoryLabel;
     const normalizedLabel = normalizeCategoryLabel(label);
-    const isIncomeLabel = normalizedLabel === "ingreso" || normalizedLabel === "income";
-    let categoryId = FALLBACK_CATEGORY_ID;
-    if (label) {
-      const resolution = resolveCategoryIdFromCatalog(label, categoryLookup);
-      categoryId = resolution.categoryId;
-    } else if (row.type === "income") {
-      categoryId = "ingreso";
-    }
-    if (row.type === "income" && isIncomeLabel) {
-      categoryId = "ingreso";
-    }
+    const fallbackId = row.type === "income" ? INCOME_FALLBACK_ID : FALLBACK_CATEGORY_ID;
+    let categoryId = fallbackId;
     let note = row.note;
-    if (categoryId === FALLBACK_CATEGORY_ID && label && normalizedLabel !== FALLBACK_CATEGORY_ID) {
-      note = prefixCategoryNote(note, label);
+    let fallbackReason: CategoryFallbackReason | undefined;
+    if (label) {
+      const resolution = resolveCategoryIdFromCatalog(label, row.type, categoryLookup);
+      categoryId = resolution.categoryId;
+      fallbackReason = resolution.fallbackReason;
+    }
+    const isExplicitFallbackLabel =
+      normalizedLabel === fallbackId || (row.type === "income" && normalizedLabel === "income");
+    if (label && categoryId === fallbackId && !isExplicitFallbackLabel) {
+      if (fallbackReason !== "explicit_other") {
+        note = prefixCategoryNote(note, label);
+      }
     }
     note = clampText(note, 300);
 
@@ -1512,7 +1540,8 @@ export const importTransactions = onCall(async (request) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
     if (note) payload.note = note;
-    const resolvedCategoryId = row.type === "income" ? categoryId || "ingreso" : categoryId;
+    const resolvedCategoryId =
+      row.type === "income" ? categoryId || INCOME_FALLBACK_ID : categoryId;
     payload.categoryId = resolvedCategoryId;
     payload.category = resolvedCategoryId;
     batch.set(collectionRef.doc(), payload);
