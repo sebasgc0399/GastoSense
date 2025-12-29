@@ -38,11 +38,11 @@ export function TransactionFilters({
   const categoryOptions = useMemo(() => {
     const visible = categories.filter((cat) => !cat.isArchived || cat.id === 'otros' || cat.id === 'ingreso');
     const sortAlpha = (a: Category, b: Category) => a.label.localeCompare(b.label, 'es-CO');
-    const sortWithFallback = (list: Category[], fallbackId: string) => {
-      const sorted = [...list].sort(sortAlpha);
-      const fallback = sorted.filter((cat) => cat.id === fallbackId);
-      const rest = sorted.filter((cat) => cat.id !== fallbackId);
-      return [...rest, ...fallback];
+    const sortWithFallbacks = (list: Category[], fallbackIds: string[]) => {
+      const fallbackSet = new Set(fallbackIds);
+      const rest = list.filter((cat) => !fallbackSet.has(cat.id)).sort(sortAlpha);
+      const fallbacks = list.filter((cat) => fallbackSet.has(cat.id)).sort(sortAlpha);
+      return [...rest, ...fallbacks];
     };
 
     const labelKinds = new Map<string, Set<'expense' | 'income'>>();
@@ -70,8 +70,8 @@ export function TransactionFilters({
 
     const expenses = visible.filter((cat) => resolveKind(cat.kind) === 'expense');
     const incomes = visible.filter((cat) => resolveKind(cat.kind) === 'income');
-    const sortedExpenses = sortWithFallback(expenses, 'otros');
-    const sortedIncomes = sortWithFallback(incomes, 'ingreso');
+    const sortedExpenses = sortWithFallbacks(expenses, ['otros']);
+    const sortedIncomes = sortWithFallbacks(incomes, ['ingreso']);
 
     const header = [{ value: 'all', label: 'Todas las categorias' }];
     if (type === 'expense') {
@@ -80,7 +80,8 @@ export function TransactionFilters({
     if (type === 'income') {
       return [...header, ...sortedIncomes.map(toOption)];
     }
-    return [...header, ...sortedExpenses.map(toOption), ...sortedIncomes.map(toOption)];
+    const combined = sortWithFallbacks([...expenses, ...incomes], ['otros', 'ingreso']);
+    return [...header, ...combined.map(toOption)];
   }, [categories, type]);
 
   const typeOptions: Array<{ id: TransactionTypeFilter; label: string }> = [
