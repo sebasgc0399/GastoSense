@@ -2,7 +2,7 @@ import type React from 'react';
 import { BudgetCard } from '../components/BudgetCard';
 import { RecurringTemplatesCard } from '../components/RecurringTemplatesCard';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
-import { TopExpensesChart } from '../components/TopExpensesChart';
+import { TopCategoriesChart } from '../components/TopCategoriesChart';
 import { CardStat } from '../components/stats/CardStat';
 import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
 import type { CategorySpendItem } from '../components/charts/CategorySpendChart';
@@ -112,7 +112,7 @@ export function HomePage({
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <TopExpensesChart
+        <TopCategoriesChart
           items={topExpenseItems}
           mode="spent"
           onModeChange={() => {}}
@@ -220,3 +220,4 @@ export function HomePage({
     </section>
   );
 }
+

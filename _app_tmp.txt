@@ -3,7 +3,7 @@ import { BottomNav, type TabKey } from './components/BottomNav';
 import { BudgetCard } from './components/BudgetCard';
 import { CategoryBudgets } from './components/CategoryBudgets';
 import { QuickAddSheet } from './components/QuickAddSheet';
-import { TopExpensesChart } from './components/TopExpensesChart';
+import { TopCategoriesChart } from './components/TopCategoriesChart';
 import { TransactionEditModal } from './components/TransactionEditModal';
 import { TransactionFilters } from './components/TransactionFilters';
 import { ResponsiveSelect } from './components/ResponsiveSelect';
@@ -762,7 +762,7 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <TopExpensesChart data={topExpenses} />
+              <TopCategoriesChart data={topExpenses} />
               <div className="card">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-white">Tarjetas inteligentes</h2>
@@ -1548,4 +1548,5 @@ const previousMonthRange = () => {
 };
 
 export default App;
+
 

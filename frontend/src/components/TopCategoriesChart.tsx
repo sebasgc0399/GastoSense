@@ -20,7 +20,7 @@ interface Props {
   valueLabel?: string;
 }
 
-export function TopExpensesChart({
+export function TopCategoriesChart({
   title = 'Top categor\u00edas de gasto',
   items,
   mode,
@@ -128,6 +128,7 @@ export function TopExpensesChart({
     </div>
   );
 }
+
 
 
 

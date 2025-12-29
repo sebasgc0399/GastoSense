@@ -4,7 +4,7 @@ import { AllCategoriesModal } from '../components/AllCategoriesModal';
 import { ReferenceMonthCard } from '../components/ReferenceMonthCard';
 import { EvolutionChart } from '../components/charts/EvolutionChart';
 import type { CategorySpendItem, CategorySpendMode } from '../components/charts/CategorySpendChart';
-import { TopExpensesChart } from '../components/TopExpensesChart';
+import { TopCategoriesChart } from '../components/TopCategoriesChart';
 import { CardStat } from '../components/stats/CardStat';
 import { StatsSummaryCard } from '../components/stats/StatsSummaryCard';
 import { shouldShowIncomeAndBalance } from './metricsRules';
@@ -463,7 +463,7 @@ export function MetricsPage({
           )}
 
           {hasMetricsData && (
-            <TopExpensesChart
+            <TopCategoriesChart
               title={topCategoriesTitle}
               items={categoryItems}
               mode={effectiveCategoriesMode}
@@ -503,3 +503,4 @@ export function MetricsPage({
     </section>
   );
 }
+
