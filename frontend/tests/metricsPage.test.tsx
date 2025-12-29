@@ -93,7 +93,7 @@ describe('MetricsPage', () => {
     expect(screen.getByText('Presupuesto total')).toBeInTheDocument();
     expect(screen.getByText('Evoluci\u00F3n del mes')).toBeInTheDocument();
     expect(screen.getByTestId('evolution-chart')).toBeInTheDocument();
-    expect(screen.getByText('Top categor\u00EDas de gasto')).toBeInTheDocument();
+    expect(screen.getByText('\u00bfEn qu\u00e9 gastaste?')).toBeInTheDocument();
     expect(screen.getByTestId('category-spend-chart')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Barras' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Presupuesto' })).toBeInTheDocument();
@@ -187,7 +187,55 @@ describe('MetricsPage', () => {
     expect(screen.getAllByText(/Saldo disponible/i)).toHaveLength(2);
   });
 
-  it('does not render Top categorÃ­as when there are only incomes', () => {
+  it('toggles to income metrics and updates charts', async () => {
+    const user = userEvent.setup();
+
+    const expenseTx: Transaction = {
+      id: 't1',
+      amount: 5000,
+      categoryId: 'transporte',
+      type: 'expense',
+      date: '2025-11-03',
+      paymentMethod: 'debito',
+    };
+
+    const incomeTx: Transaction = {
+      id: 't2',
+      amount: 100000,
+      categoryId: 'salario',
+      type: 'income',
+      date: '2025-11-04',
+      paymentMethod: 'debito',
+    };
+
+    render(
+      <MetricsPage
+        currentMonth="2025-11"
+        defaultMonth="2025-11"
+        setCurrentMonth={vi.fn()}
+        monthTransactions={[expenseTx, incomeTx]}
+        monthlyExpense={5000}
+        monthlyIncome={100000}
+        availableBalance={95000}
+        budget={{ month: '2025-11', total: 200000 }}
+        expenseCategories={[{ category: 'transporte', amount: 5000 }]}
+        categoryResolver={baseResolver}
+        previousMonth={{ expense: 10000, income: 80000 }}
+        onOpenQuickAdd={vi.fn()}
+        onViewMovements={vi.fn()}
+        onAdjustBudget={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('\u00bfEn qu\u00e9 gastaste?')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ingresos' }));
+
+    expect(screen.getByText('\u00bfC\u00f3mo ganaste?')).toBeInTheDocument();
+    expect(screen.getByText('INGRESO DIARIO DEL MES')).toBeInTheDocument();
+  });
+
+  it('does not render top categories when there are only incomes', () => {
     const incomeTx: Transaction = {
       id: 't1',
       amount: 100000,
@@ -216,7 +264,7 @@ describe('MetricsPage', () => {
       />,
     );
 
-    expect(screen.queryByText('Top categor\u00EDas de gasto')).not.toBeInTheDocument();
+    expect(screen.queryByText('\u00bfEn qu\u00e9 gastaste?')).not.toBeInTheDocument();
     expect(screen.queryByText('Evoluci\u00F3n del mes')).not.toBeInTheDocument();
   });
 

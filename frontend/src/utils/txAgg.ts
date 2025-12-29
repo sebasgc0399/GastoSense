@@ -14,9 +14,10 @@ export const hasType = (transactions: Transaction[], type: TransactionType) => t
 export const buildCategorySpendMap = (
   transactions: Transaction[],
   resolver?: CategoryResolver,
+  type: TransactionType = 'expense',
 ): CategorySpendMap =>
   transactions.reduce<CategorySpendMap>((acc, tx) => {
-    if (tx.type !== 'expense') return acc;
+    if (tx.type !== type) return acc;
     const categoryId = resolveCanonicalCategoryId(tx.categoryId, resolver);
     acc[categoryId] = (acc[categoryId] || 0) + tx.amount;
     return acc;
@@ -33,7 +34,12 @@ const parseIsoDateUtc = (iso: string) => {
   return new Date(Date.UTC(year, month - 1, day));
 };
 
-export const buildDailyExpenseSeries = (transactions: Transaction[], startDate: string, endDate: string): DailyAmount[] => {
+const buildDailyTypeSeries = (
+  transactions: Transaction[],
+  startDate: string,
+  endDate: string,
+  type: TransactionType,
+): DailyAmount[] => {
   const start = parseIsoDateUtc(startDate);
   const end = parseIsoDateUtc(endDate);
 
@@ -41,7 +47,7 @@ export const buildDailyExpenseSeries = (transactions: Transaction[], startDate: 
 
   const totalsByDate: Record<string, number> = {};
   for (const tx of transactions) {
-    if (tx.type !== 'expense') continue;
+    if (tx.type !== type) continue;
     if (tx.date < startDate || tx.date > endDate) continue;
     totalsByDate[tx.date] = (totalsByDate[tx.date] ?? 0) + tx.amount;
   }
@@ -53,6 +59,12 @@ export const buildDailyExpenseSeries = (transactions: Transaction[], startDate: 
   }
   return series;
 };
+
+export const buildDailyExpenseSeries = (transactions: Transaction[], startDate: string, endDate: string): DailyAmount[] =>
+  buildDailyTypeSeries(transactions, startDate, endDate, 'expense');
+
+export const buildDailyIncomeSeries = (transactions: Transaction[], startDate: string, endDate: string): DailyAmount[] =>
+  buildDailyTypeSeries(transactions, startDate, endDate, 'income');
 
 export const buildCumulativeSeries = (daily: DailyAmount[]): DailyAmount[] => {
   let running = 0;

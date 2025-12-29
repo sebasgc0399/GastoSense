@@ -12,10 +12,12 @@ export type EvolutionChartProps = {
   daily: EvolutionChartPoint[];
   cumulative: EvolutionChartPoint[];
 
-  avgDailyExpense: number;
+  avgDailyAmount: number;
 
   budgetTotal?: number;
   paceIdeal?: EvolutionChartPoint[];
+  metricLabel?: string;
+  tone?: 'expense' | 'income';
 };
 
 const fmtCOP = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}`;
@@ -32,9 +34,11 @@ export function EvolutionChart({
   isCurrentMonth,
   daily,
   cumulative,
-  avgDailyExpense,
+  avgDailyAmount,
   budgetTotal,
   paceIdeal,
+  metricLabel = 'Gasto',
+  tone = 'expense',
 }: EvolutionChartProps) {
   const seriesData = view === 'daily' ? daily : cumulative;
   const xLabels = seriesData.map((d) => String(d.day).padStart(2, '0'));
@@ -42,6 +46,10 @@ export function EvolutionChart({
   const today = todayIso();
   const todayPoint = isCurrentMonth ? daily.find((d) => d.date === today) : undefined;
   const todayLabel = todayPoint ? String(todayPoint.day).padStart(2, '0') : null;
+  const isIncome = tone === 'income';
+  const dailyBarColor = isIncome ? 'rgba(34,197,94,0.8)' : 'rgba(248,113,113,0.8)';
+  const cumulativeLineColor = isIncome ? 'rgba(16,185,129,0.85)' : 'rgba(249,115,22,0.85)';
+  const cumulativeAreaColor = isIncome ? 'rgba(16,185,129,0.12)' : 'rgba(249,115,22,0.12)';
 
   const tickSet = new Set<string>(['01', '15', lastDayLabel]);
   if (todayLabel) tickSet.add(todayLabel);
@@ -55,16 +63,17 @@ export function EvolutionChart({
 
     const amount = point.amount;
     const dateLabel = formatTooltipDate(point.date);
-    const hasAvg = avgDailyExpense > 0;
-    const delta = hasAvg ? amount - avgDailyExpense : null;
+    const hasAvg = avgDailyAmount > 0;
+    const delta = hasAvg ? amount - avgDailyAmount : null;
     const deltaLabel = delta !== null ? `${delta >= 0 ? '+' : '-'}${fmtCOP(Math.abs(delta))}` : null;
-    const deltaColor = delta === null ? '#94A3B8' : delta > 0 ? '#F87171' : delta < 0 ? '#22C55E' : '#94A3B8';
+    const deltaColor =
+      delta === null ? '#94A3B8' : delta > 0 ? (isIncome ? '#22C55E' : '#F87171') : delta < 0 ? (isIncome ? '#F87171' : '#22C55E') : '#94A3B8';
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px;">
         <div style="font-weight:600;color:#F8FAFC;">${dateLabel}</div>
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
-          <span style="color:#94A3B8;">Gasto del día</span>
+          <span style="color:#94A3B8;">${metricLabel} del dia</span>
           <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(amount)}</span>
         </div>
         ${
@@ -89,7 +98,8 @@ export function EvolutionChart({
     const hasPace = typeof paceIdeal?.[idx]?.amount === 'number' && Number.isFinite(paceIdeal[idx].amount);
     const delta = hasPace ? acc - paceIdeal[idx].amount : null;
     const deltaLabel = delta !== null ? `${delta >= 0 ? '+' : '-'}${fmtCOP(Math.abs(delta))}` : null;
-    const deltaColor = delta !== null && delta >= 0 ? '#F87171' : '#22C55E';
+    const deltaColor =
+      delta === null ? '#94A3B8' : delta > 0 ? (isIncome ? '#22C55E' : '#F87171') : delta < 0 ? (isIncome ? '#F87171' : '#22C55E') : '#94A3B8';
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px;">
@@ -97,7 +107,7 @@ export function EvolutionChart({
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
           <span style="color:#94A3B8;">Acumulado</span>
           <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(acc)}</span>
-          ${pct !== null ? `<span style="color:#94A3B8;">· ${pct}%</span>` : ``}
+          ${pct !== null ? `<span style="color:#94A3B8;">~ ${pct}%</span>` : ``}
         </div>
         ${
           deltaLabel !== null
@@ -112,13 +122,13 @@ export function EvolutionChart({
     type: 'bar',
     data: daily.map((d) => d.amount),
     barWidth: '70%',
-    itemStyle: { color: 'rgba(56,189,248,0.8)' },
+    itemStyle: { color: dailyBarColor },
     markLine: {
       symbol: 'none',
       lineStyle: { type: 'dashed', color: 'rgba(255,255,255,0.22)' },
       label: { color: 'rgba(255,255,255,0.7)', fontSize: 10 },
       data: [
-        ...(avgDailyExpense > 0 ? [{ yAxis: avgDailyExpense, name: 'Promedio', label: { formatter: 'Promedio' } }] : []),
+        ...(avgDailyAmount > 0 ? [{ yAxis: avgDailyAmount, name: 'Promedio', label: { formatter: 'Promedio' } }] : []),
         ...(todayLabel ? [{ xAxis: todayLabel, name: 'hoy', label: { formatter: 'hoy' } }] : []),
       ] as unknown as NonNullable<BarSeriesOption['markLine']>['data'],
     },
@@ -130,8 +140,8 @@ export function EvolutionChart({
     smooth: true,
     showSymbol: false,
     data: cumulative.map((d) => d.amount),
-    lineStyle: { width: 2, color: 'rgba(16,185,129,0.85)' },
-    areaStyle: { color: 'rgba(16,185,129,0.12)' },
+    lineStyle: { width: 2, color: cumulativeLineColor },
+    areaStyle: { color: cumulativeAreaColor },
     markLine: {
       symbol: 'none',
       lineStyle: { type: 'dashed', color: 'rgba(255,255,255,0.22)' },
@@ -215,4 +225,6 @@ export function EvolutionChart({
     </div>
   );
 }
+
+
 

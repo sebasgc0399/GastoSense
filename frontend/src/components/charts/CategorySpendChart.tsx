@@ -20,6 +20,7 @@ export type CategorySpendChartProps = {
   limit?: number;
   currency?: 'COP';
   showFallbackId?: boolean;
+  valueLabel?: string;
   onCategoryNavigate?: (categoryId: string) => void;
   enableCategoryNavigate?: boolean;
 };
@@ -97,6 +98,7 @@ export function CategorySpendChart({
   mode,
   limit,
   showFallbackId = false,
+  valueLabel = 'Gastado',
   onCategoryNavigate,
   enableCategoryNavigate = true,
 }: CategorySpendChartProps) {
@@ -120,7 +122,7 @@ export function CategorySpendChart({
   );
 
   const spentOnlySeries: BarSeriesOption = {
-    name: 'Gastado',
+    name: valueLabel,
     type: 'bar',
     data: visibleItems.map((item) => ({
       value: item.spent,
@@ -143,7 +145,7 @@ export function CategorySpendChart({
   };
 
   const budgetSpentSeries: BarSeriesOption = {
-    name: 'Gastado',
+    name: valueLabel,
     type: 'bar',
     stack: 'budget',
     data: visibleItems.map((item) => {
@@ -251,7 +253,7 @@ export function CategorySpendChart({
       return tooltipShell(`
         ${header}
         <div style="color:#94A3B8;">
-          Gastado: <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(item.spent)}</span>
+          ${valueLabel}: <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(item.spent)}</span>
         </div>
       `);
     }
@@ -263,7 +265,7 @@ export function CategorySpendChart({
     return tooltipShell(`
       ${header}
       <div style="color:#94A3B8;">
-        Gastado: <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(item.spent)}</span>
+        ${valueLabel}: <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(item.spent)}</span>
       </div>
       <div style="color:#94A3B8;">Presupuesto: ${meta.hasBudget ? fmtCOP(meta.budgetValue) : '\u2014'}</div>
       ${
@@ -360,7 +362,7 @@ export function CategorySpendChart({
         {visibleItems.map((item) => (
           <li key={item.categoryId}>
             <span>{formatCategoryLabel(item.label)}</span>
-            <span>{` Gastado: ${fmtCOP(item.spent)}.`}</span>
+            <span>{` ${valueLabel}: ${fmtCOP(item.spent)}.`}</span>
             <span>{` Presupuesto: ${item.budget && item.budget > 0 ? fmtCOP(item.budget) : '\u2014'}.`}</span>
           </li>
         ))}

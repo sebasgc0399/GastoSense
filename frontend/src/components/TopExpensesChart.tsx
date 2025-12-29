@@ -1,8 +1,9 @@
-Ôªøimport { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CategorySpendChart } from './charts/CategorySpendChart';
 import type { CategorySpendItem, CategorySpendMode } from './charts/CategorySpendChart';
 
 interface Props {
+  title?: string;
   items: CategorySpendItem[];
   mode: CategorySpendMode;
   onModeChange: (mode: CategorySpendMode) => void;
@@ -16,22 +17,25 @@ interface Props {
   editBudgetsLabel?: string;
   onCategoryNavigate?: (categoryId: string) => void;
   enableCategoryNavigate?: boolean;
+  valueLabel?: string;
 }
 
 export function TopExpensesChart({
+  title = 'Top categor\u00edas de gasto',
   items,
   mode,
   onModeChange,
   budgetModeAvailable,
-  budgetModeHelperText = 'Define presupuestos por categor√≠a para comparar.',
+  budgetModeHelperText = 'Define presupuestos por categorÌa para comparar.',
   limit,
   showViewAll,
   onViewAll,
   showModeToggle = true,
   onEditBudgets,
-  editBudgetsLabel = 'Editar presupuestos por categor√≠a',
+  editBudgetsLabel = 'Editar presupuestos por categorÌa',
   onCategoryNavigate,
   enableCategoryNavigate,
+  valueLabel,
 }: Props) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -49,7 +53,7 @@ export function TopExpensesChart({
   }, []);
 
   const resolvedLimit = typeof limit === 'number' ? limit : isMobile ? 5 : 3;
-  const guideText = !budgetModeAvailable ? 'Para ver Presupuesto, define topes por categor√≠a.' : null;
+  const guideText = showModeToggle && !budgetModeAvailable ? 'Para ver Presupuesto, define topes por categorÌa.' : null;
   const highlightEdit = !budgetModeAvailable && onEditBudgets;
   const editButtonClass = highlightEdit
     ? 'h-9 rounded-xl border border-primary/50 bg-primary/10 px-3 text-xs font-semibold text-[var(--text)] hover:border-primary hover:bg-primary/20'
@@ -61,7 +65,7 @@ export function TopExpensesChart({
       <div className="mb-3 space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-white">Top categor√≠as de gasto</h3>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -119,7 +123,14 @@ export function TopExpensesChart({
         limit={resolvedLimit}
         onCategoryNavigate={onCategoryNavigate}
         enableCategoryNavigate={enableCategoryNavigate}
+        valueLabel={valueLabel}
       />
     </div>
   );
 }
+
+
+
+
+
+

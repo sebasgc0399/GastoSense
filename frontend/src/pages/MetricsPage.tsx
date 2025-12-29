@@ -13,7 +13,15 @@ import type { Budget, Transaction } from '../types';
 import type { CategoryResolver } from '../utils/categoryResolver';
 import { resolveCanonicalCategoryId, resolveCategoryLabel, truncateCategoryId } from '../utils/categoryResolver';
 import { monthRangeIso, todayIso } from '../utils/dates';
-import { buildCumulativeSeries, buildDailyExpenseSeries, buildIdealBudgetPaceSeries, hasType } from '../utils/txAgg';
+import {
+  buildCategorySpendMap,
+  buildCumulativeSeries,
+  buildDailyExpenseSeries,
+  buildDailyIncomeSeries,
+  buildIdealBudgetPaceSeries,
+  hasType,
+  topCategories,
+} from '../utils/txAgg';
 
 interface MetricsPageProps {
   currentMonth: string;
@@ -52,7 +60,9 @@ export function MetricsPage({
   const hasIncome = shouldShowIncomeAndBalance(monthTransactions, monthlyIncome);
   const hasExpenses = monthlyExpense > 0 || hasType(monthTransactions, 'expense');
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [metricsType, setMetricsType] = useState<'expense' | 'income'>('expense');
   const isCurrentMonth = currentMonth === todayIso().slice(0, 7);
+  const isExpenseView = metricsType === 'expense';
   const expenseTitle = isCurrentMonth ? 'Gasto del mes (hasta hoy)' : 'Gasto del mes';
   const incomeTitle = isCurrentMonth ? 'Ingresos del mes (hasta hoy)' : 'Ingresos del mes';
   const summaryItems = hasIncome
@@ -72,17 +82,20 @@ export function MetricsPage({
   const budgetProgress = hasBudget ? Math.min(monthlyExpense / budgetTotal, 1.2) : 0;
   const budgetAlert = !hasBudget ? 'none' : budgetProgress >= 1 ? 'max' : budgetProgress >= 0.8 ? 'warn' : 'ok';
 
+  const currentAmount = isExpenseView ? monthlyExpense : monthlyIncome;
   const previousMonthExpense = previousMonth?.expense ?? 0;
-  const hasPreviousMonthRef = previousMonthExpense > 0;
-  const expenseDelta = hasPreviousMonthRef ? monthlyExpense - previousMonthExpense : 0;
-  const expenseDeltaPct = hasPreviousMonthRef ? Math.round((expenseDelta / previousMonthExpense) * 100) : 0;
+  const previousMonthIncome = previousMonth?.income ?? 0;
+  const previousMonthValue = isExpenseView ? previousMonthExpense : previousMonthIncome;
+  const hasPreviousMonthRef = previousMonthValue > 0;
+  const amountDelta = hasPreviousMonthRef ? currentAmount - previousMonthValue : 0;
+  const amountDeltaPct = hasPreviousMonthRef ? Math.round((amountDelta / previousMonthValue) * 100) : 0;
   const trendInsight = !hasPreviousMonthRef
     ? 'Sin referencia del mes anterior.'
-    : expenseDelta === 0
+    : amountDelta === 0
       ? '0% (sin cambios) vs mes anterior.'
-      : expenseDelta > 0
-        ? `\u2191 ${Math.abs(expenseDeltaPct)}% (+$${Math.abs(expenseDelta).toLocaleString('es-CO')}) vs mes anterior.`
-        : `\u2193 ${Math.abs(expenseDeltaPct)}% (-$${Math.abs(expenseDelta).toLocaleString('es-CO')}) vs mes anterior.`;
+      : amountDelta > 0
+        ? `\u2191 ${Math.abs(amountDeltaPct)}% (+$${Math.abs(amountDelta).toLocaleString('es-CO')}) vs mes anterior.`
+        : `\u2193 ${Math.abs(amountDeltaPct)}% (-$${Math.abs(amountDelta).toLocaleString('es-CO')}) vs mes anterior.`;
 
   const budgetModeAvailable = useMemo(() => {
     const perCategory = budget?.perCategory;
@@ -91,7 +104,7 @@ export function MetricsPage({
   }, [budget?.perCategory]);
 
   const [categoriesMode, setCategoriesMode] = useState<CategorySpendMode>('spent');
-  const effectiveCategoriesMode: CategorySpendMode = budgetModeAvailable ? categoriesMode : 'spent';
+  const effectiveCategoriesMode: CategorySpendMode = isExpenseView && budgetModeAvailable ? categoriesMode : 'spent';
 
   const getItemMeta = useCallback(
     (categoryId: string) => {
@@ -110,6 +123,19 @@ export function MetricsPage({
         .filter((c) => c.amount > 0)
         .map((c) => ({ categoryId: c.category, spent: c.amount, ...getItemMeta(c.category) })),
     [expenseCategories, getItemMeta],
+  );
+
+  const incomeCategories = useMemo(
+    () => topCategories(buildCategorySpendMap(monthTransactions, categoryResolver, 'income'), Number.POSITIVE_INFINITY),
+    [categoryResolver, monthTransactions],
+  );
+
+  const incomeCategoryItems = useMemo<CategorySpendItem[]>(
+    () =>
+      incomeCategories
+        .filter((c) => c.amount > 0)
+        .map((c) => ({ categoryId: c.category, spent: c.amount, ...getItemMeta(c.category) })),
+    [getItemMeta, incomeCategories],
   );
 
   const budgetCategoryItems = useMemo<CategorySpendItem[]>(() => {
@@ -151,64 +177,89 @@ export function MetricsPage({
     return union;
   }, [budget?.perCategory, categoryResolver, expenseCategories, getItemMeta]);
 
-  const categoryItems = effectiveCategoriesMode === 'spent' ? spentCategoryItems : budgetCategoryItems;
+  const categoryItems = isExpenseView
+    ? effectiveCategoriesMode === 'spent'
+      ? spentCategoryItems
+      : budgetCategoryItems
+    : incomeCategoryItems;
   const shouldShowViewAll = categoryItems.length > 3;
 
   type EvolutionView = 'daily' | 'cumulative';
   const [evolutionView, setEvolutionView] = useState<EvolutionView>('daily');
-  const effectiveEvolutionView: EvolutionView = hasBudget ? evolutionView : 'daily';
+  const canUseCumulative = !isExpenseView || hasBudget;
+  const effectiveEvolutionView: EvolutionView = canUseCumulative ? evolutionView : 'daily';
   const { startDate: monthStart, endDate: monthEnd } = useMemo(() => monthRangeIso(currentMonth), [currentMonth]);
   const dailyExpenses = useMemo(
     () => buildDailyExpenseSeries(monthTransactions, monthStart, monthEnd),
     [monthEnd, monthStart, monthTransactions],
   );
-  const cumulativeExpenses = useMemo(() => buildCumulativeSeries(dailyExpenses), [dailyExpenses]);
+  const dailyIncome = useMemo(
+    () => buildDailyIncomeSeries(monthTransactions, monthStart, monthEnd),
+    [monthEnd, monthStart, monthTransactions],
+  );
+  const dailySeries = isExpenseView ? dailyExpenses : dailyIncome;
+  const cumulativeSeries = useMemo(() => buildCumulativeSeries(dailySeries), [dailySeries]);
 
   const dailyChartData = useMemo(
-    () => dailyExpenses.map((day) => ({ ...day, day: Number(day.date.slice(8)) })),
-    [dailyExpenses],
+    () => dailySeries.map((day) => ({ ...day, day: Number(day.date.slice(8)) })),
+    [dailySeries],
   );
   const cumulativeChartData = useMemo(
-    () => cumulativeExpenses.map((day) => ({ ...day, day: Number(day.date.slice(8)) })),
-    [cumulativeExpenses],
+    () => cumulativeSeries.map((day) => ({ ...day, day: Number(day.date.slice(8)) })),
+    [cumulativeSeries],
   );
 
-  const totalDailyExpense = useMemo(() => dailyExpenses.reduce((acc, day) => acc + day.amount, 0), [dailyExpenses]);
-  const avgDailyExpense = dailyExpenses.length ? Math.round(totalDailyExpense / dailyExpenses.length) : 0;
+  const totalDailyAmount = useMemo(() => dailySeries.reduce((acc, day) => acc + day.amount, 0), [dailySeries]);
+  const avgDailyAmount = dailySeries.length ? Math.round(totalDailyAmount / dailySeries.length) : 0;
 
   const paceIdeal = useMemo(() => {
-    if (!hasBudget || !isCurrentMonth || !cumulativeExpenses.length) return undefined;
+    if (!isExpenseView || !hasBudget || !isCurrentMonth || !cumulativeSeries.length) return undefined;
     const raw = buildIdealBudgetPaceSeries(
-      cumulativeExpenses.map((day) => day.date),
+      cumulativeSeries.map((day) => day.date),
       currentMonth,
       budgetTotal,
     );
     return raw.map((day) => ({ ...day, day: Number(day.date.slice(8)) }));
-  }, [budgetTotal, cumulativeExpenses, currentMonth, hasBudget, isCurrentMonth]);
+  }, [budgetTotal, cumulativeSeries, currentMonth, hasBudget, isCurrentMonth, isExpenseView]);
 
   const paceDiffCopy = useMemo(() => {
-    if (!paceIdeal?.length || !cumulativeExpenses.length) return null;
+    if (!isExpenseView || !paceIdeal?.length || !cumulativeSeries.length) return null;
     const idealAtEnd = paceIdeal[paceIdeal.length - 1].amount;
-    const actualAtEnd = cumulativeExpenses[cumulativeExpenses.length - 1].amount;
+    const actualAtEnd = cumulativeSeries[cumulativeSeries.length - 1].amount;
     const diff = actualAtEnd - idealAtEnd;
     const abs = Math.abs(diff);
     const sign = diff >= 0 ? '+' : '-';
     return `Vas ${sign}$${abs.toLocaleString('es-CO')} vs ritmo ideal.`;
-  }, [cumulativeExpenses, paceIdeal]);
+  }, [cumulativeSeries, isExpenseView, paceIdeal]);
+
+  const evolutionLabel =
+    effectiveEvolutionView === 'daily'
+      ? isExpenseView
+        ? 'GASTO DIARIO DEL MES'
+        : 'INGRESO DIARIO DEL MES'
+      : isExpenseView
+        ? 'ACUMULADO VS PRESUPUESTO'
+        : 'ACUMULADO DE INGRESOS';
+  const topCategoriesTitle = isExpenseView ? '\u00bfEn qu\u00e9 gastaste?' : '\u00bfC\u00f3mo ganaste?';
+  const categoryValueLabel = isExpenseView ? 'Gastado' : 'Ingreso';
+  const evolutionMetricLabel = isExpenseView ? 'Gasto' : 'Ingreso';
+
+  const hasMetricsData = isExpenseView ? hasExpenses : hasIncome;
 
   useEffect(() => {
-    if (!hasExpenses) return;
-    trackEvent('metrics_evolution_viewed', { selectedMonth: currentMonth, hasBudget, hasExpenses });
-  }, [currentMonth, hasBudget, hasExpenses]);
+    if (!hasMetricsData) return;
+    trackEvent('metrics_evolution_viewed', { selectedMonth: currentMonth, hasBudget, metricsType });
+  }, [currentMonth, hasBudget, hasMetricsData, metricsType]);
 
   const handleEvolutionToggle = (next: EvolutionView) => {
     if (next === evolutionView) return;
-    if (next === 'cumulative' && !hasBudget) return;
+    if (next === 'cumulative' && !canUseCumulative) return;
     setEvolutionView(next);
-    trackEvent('metrics_evolution_toggled', { selectedMonth: currentMonth, view: next });
+    trackEvent('metrics_evolution_toggled', { selectedMonth: currentMonth, view: next, metricsType });
   };
 
   const handleCategoriesModeChange = (next: CategorySpendMode) => {
+    if (!isExpenseView) return;
     if (next === categoriesMode) return;
     if (next === 'budget' && !budgetModeAvailable) return;
     setCategoriesMode(next);
@@ -262,6 +313,31 @@ export function MetricsPage({
                 subtitle="Ingresos - Gastos del periodo."
               />
             )}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-1">
+            <div className="flex w-full gap-1 text-sm font-semibold">
+              <button
+                type="button"
+                aria-pressed={isExpenseView}
+                onClick={() => setMetricsType('expense')}
+                className={`flex-1 rounded-xl px-3 py-2 transition ${
+                  isExpenseView ? 'bg-rose-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Gastos
+              </button>
+              <button
+                type="button"
+                aria-pressed={!isExpenseView}
+                onClick={() => setMetricsType('income')}
+                className={`flex-1 rounded-xl px-3 py-2 transition ${
+                  isExpenseView ? 'text-[var(--text-muted)] hover:text-white' : 'bg-emerald-500 text-white shadow-sm'
+                }`}
+              >
+                Ingresos
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -326,7 +402,7 @@ export function MetricsPage({
 
           </div>
 
-          {hasExpenses && (
+          {hasMetricsData && (
             <div className="card">
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -348,12 +424,12 @@ export function MetricsPage({
                   <button
                     type="button"
                     aria-pressed={effectiveEvolutionView === 'cumulative'}
-                    disabled={!hasBudget}
-                    title={!hasBudget ? 'Define presupuesto para ver el acumulado.' : undefined}
+                    disabled={!canUseCumulative}
+                    title={!canUseCumulative ? 'Define presupuesto para ver el acumulado.' : undefined}
                     onClick={() => handleEvolutionToggle('cumulative')}
                     className={`flex-1 rounded-md px-3 py-2 font-semibold sm:flex-none ${
                       effectiveEvolutionView === 'cumulative' ? 'bg-primary text-white' : 'text-[var(--text)]'
-                    } ${!hasBudget ? 'cursor-not-allowed opacity-50' : ''}`}
+                    } ${!canUseCumulative ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     Acumulado
                   </button>
@@ -362,9 +438,9 @@ export function MetricsPage({
 
               <div>
                 <p className="text-xs uppercase text-[var(--muted)]">
-                  {effectiveEvolutionView === 'daily' ? 'GASTO DIARIO DEL MES' : 'ACUMULADO VS PRESUPUESTO'}
+                  {evolutionLabel}
                 </p>
-                {effectiveEvolutionView === 'cumulative' && paceDiffCopy && (
+                {effectiveEvolutionView === 'cumulative' && isExpenseView && paceDiffCopy && (
                   <p className="mt-1 text-xs text-[var(--muted)]">{paceDiffCopy}</p>
                 )}
                 <EvolutionChart
@@ -373,25 +449,30 @@ export function MetricsPage({
                   isCurrentMonth={isCurrentMonth}
                   daily={dailyChartData}
                   cumulative={cumulativeChartData}
-                  avgDailyExpense={avgDailyExpense}
-                  budgetTotal={hasBudget ? budgetTotal : undefined}
-                  paceIdeal={paceIdeal}
+                  avgDailyAmount={avgDailyAmount}
+                  budgetTotal={isExpenseView && hasBudget ? budgetTotal : undefined}
+                  paceIdeal={isExpenseView ? paceIdeal : undefined}
+                  metricLabel={evolutionMetricLabel}
+                  tone={isExpenseView ? 'expense' : 'income'}
                 />
-                {effectiveEvolutionView === 'cumulative' && hasBudget && (
+                {effectiveEvolutionView === 'cumulative' && isExpenseView && hasBudget && (
                   <p className="mt-2 text-xs text-[var(--muted)]">Presupuesto: ${budgetTotal.toLocaleString('es-CO')}</p>
                 )}
               </div>
             </div>
           )}
 
-          {hasExpenses && (
+          {hasMetricsData && (
             <TopExpensesChart
+              title={topCategoriesTitle}
               items={categoryItems}
               mode={effectiveCategoriesMode}
               onModeChange={handleCategoriesModeChange}
-              budgetModeAvailable={budgetModeAvailable}
+              budgetModeAvailable={isExpenseView && budgetModeAvailable}
               onCategoryNavigate={(categoryId) => onViewMovements(categoryId, { suppressTxClick: true })}
               showViewAll={shouldShowViewAll}
+              showModeToggle={isExpenseView}
+              valueLabel={categoryValueLabel}
               onViewAll={() => {
                 trackEvent('metrics_top_categories_modal_opened', {
                   selectedMonth: currentMonth,
@@ -408,7 +489,9 @@ export function MetricsPage({
             items={categoryItems}
             mode={effectiveCategoriesMode}
             onModeChange={handleCategoriesModeChange}
-            budgetModeAvailable={budgetModeAvailable}
+            budgetModeAvailable={isExpenseView && budgetModeAvailable}
+            showModeToggle={isExpenseView}
+            valueLabel={categoryValueLabel}
             onClose={() => {
               trackEvent('metrics_top_categories_modal_closed', { selectedMonth: currentMonth });
               setShowCategoriesModal(false);

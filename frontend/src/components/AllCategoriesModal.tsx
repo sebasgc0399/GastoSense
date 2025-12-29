@@ -16,6 +16,8 @@ interface AllCategoriesModalProps {
   onModeChange: (mode: CategorySpendMode) => void;
   budgetModeAvailable: boolean;
   budgetModeHelperText?: string;
+  showModeToggle?: boolean;
+  valueLabel?: string;
   onClose: () => void;
   onViewMovements?: (categoryId?: string, opts?: { suppressTxClick?: boolean }) => void;
 }
@@ -27,7 +29,9 @@ export function AllCategoriesModal({
   mode,
   onModeChange,
   budgetModeAvailable,
-  budgetModeHelperText = 'Define presupuestos por categoría para comparar.',
+  budgetModeHelperText = 'Define presupuestos por categoria para comparar.',
+  showModeToggle = true,
+  valueLabel,
   onClose,
   onViewMovements,
 }: AllCategoriesModalProps) {
@@ -64,30 +68,32 @@ export function AllCategoriesModal({
           </div>
 
           <div className="flex items-center justify-between gap-2 sm:justify-end">
-            <div className="flex rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-1 text-xs">
-              <button
-                type="button"
-                aria-pressed={mode === 'spent'}
-                onClick={() => onModeChange('spent')}
-                className={`rounded-md px-3 py-2 font-semibold ${
-                  mode === 'spent' ? 'bg-primary text-white' : 'text-[var(--text)]'
-                }`}
-              >
-                Barras
-              </button>
-              <button
-                type="button"
-                aria-pressed={mode === 'budget'}
-                disabled={!budgetModeAvailable}
-                title={!budgetModeAvailable ? budgetModeHelperText : undefined}
-                onClick={() => onModeChange('budget')}
-                className={`rounded-md px-3 py-2 font-semibold ${
-                  mode === 'budget' ? 'bg-primary text-white' : 'text-[var(--text)]'
-                } ${!budgetModeAvailable ? 'cursor-not-allowed opacity-50' : ''}`}
-              >
-                Presupuesto
-              </button>
-            </div>
+            {showModeToggle && (
+              <div className="flex rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-1 text-xs">
+                <button
+                  type="button"
+                  aria-pressed={mode === 'spent'}
+                  onClick={() => onModeChange('spent')}
+                  className={`rounded-md px-3 py-2 font-semibold ${
+                    mode === 'spent' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                  }`}
+                >
+                  Barras
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={mode === 'budget'}
+                  disabled={!budgetModeAvailable}
+                  title={!budgetModeAvailable ? budgetModeHelperText : undefined}
+                  onClick={() => onModeChange('budget')}
+                  className={`rounded-md px-3 py-2 font-semibold ${
+                    mode === 'budget' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                  } ${!budgetModeAvailable ? 'cursor-not-allowed opacity-50' : ''}`}
+                >
+                  Presupuesto
+                </button>
+              </div>
+            )}
 
             <button
               onClick={onClose}
@@ -106,6 +112,7 @@ export function AllCategoriesModal({
             items={visibleItems}
             mode={mode}
             showFallbackId={false}
+            valueLabel={valueLabel}
           />
         </div>
 
@@ -126,3 +133,14 @@ export function AllCategoriesModal({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
