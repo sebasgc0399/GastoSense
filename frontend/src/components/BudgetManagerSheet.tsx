@@ -43,6 +43,7 @@ const prunePerCategory = (valuesById: Record<string, number>, allowedIds?: Set<s
 
 const FALLBACK_CATEGORY_ID = 'otros';
 const allowBudgetForFallback = false;
+const resolveKind = (value?: Category['kind']) => (value === 'income' ? 'income' : 'expense');
 
 const sortCategories = (items: Category[]) =>
   [...items].sort((a, b) => {
@@ -70,19 +71,22 @@ export function BudgetManagerSheet({
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const initializedRef = useRef(false);
 
-  const sortedCategories = useMemo(() => sortCategories(categories), [categories]);
+  const expenseCategories = useMemo(
+    () => sortCategories(categories.filter((cat) => resolveKind(cat.kind) === 'expense')),
+    [categories],
+  );
   const fallbackSpent = useMemo(() => categorySpendMap?.[FALLBACK_CATEGORY_ID] ?? 0, [categorySpendMap]);
   const shouldShowFallback = useMemo(() => fallbackSpent > 0, [fallbackSpent]);
   const activeCategories = useMemo(
     () =>
-      sortedCategories.filter(
+      expenseCategories.filter(
         (cat) => !cat.isArchived && (cat.id !== FALLBACK_CATEGORY_ID || shouldShowFallback),
       ),
-    [shouldShowFallback, sortedCategories],
+    [expenseCategories, shouldShowFallback],
   );
   const archivedCategories = useMemo(
-    () => sortedCategories.filter((cat) => cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID),
-    [sortedCategories],
+    () => expenseCategories.filter((cat) => cat.isArchived && cat.id !== FALLBACK_CATEGORY_ID),
+    [expenseCategories],
   );
   const archivedRelevant = useMemo(() => {
     const budgetMap = perCategory ?? {};
@@ -182,7 +186,10 @@ export function BudgetManagerSheet({
         computed[cat.id] = normalizeAmount(values[cat.id]);
       });
       delete computed[FALLBACK_CATEGORY_ID];
-      const allowedIds = categories.length > 0 ? new Set(categories.map((cat) => cat.id)) : undefined;
+      const allowedIds =
+        categories.length > 0
+          ? new Set(categories.filter((cat) => resolveKind(cat.kind) === 'expense').map((cat) => cat.id))
+          : undefined;
       const nextPerCategory = prunePerCategory(computed, allowedIds);
       await onSave(nextPerCategory);
       setToastMessage('Presupuestos actualizados');
