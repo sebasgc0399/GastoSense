@@ -26,13 +26,13 @@ export function TopCategoriesChart({
   mode,
   onModeChange,
   budgetModeAvailable,
-  budgetModeHelperText = 'Define presupuestos por categoría para comparar.',
+  budgetModeHelperText = 'Define presupuestos por categorÃ­a para comparar.',
   limit,
   showViewAll,
   onViewAll,
   showModeToggle = true,
   onEditBudgets,
-  editBudgetsLabel = 'Editar presupuestos por categoría',
+  editBudgetsLabel = 'Editar presupuestos por categorÃ­a',
   onCategoryNavigate,
   enableCategoryNavigate,
   valueLabel,
@@ -53,7 +53,7 @@ export function TopCategoriesChart({
   }, []);
 
   const resolvedLimit = typeof limit === 'number' ? limit : isMobile ? 5 : 3;
-  const guideText = showModeToggle && !budgetModeAvailable ? 'Para ver Presupuesto, define topes por categoría.' : null;
+  const guideText = showModeToggle && !budgetModeAvailable ? 'Para ver Presupuesto, define topes por categorï¿½a.' : null;
   const highlightEdit = !budgetModeAvailable && onEditBudgets;
   const editButtonClass = highlightEdit
     ? 'h-9 rounded-xl border border-primary/50 bg-primary/10 px-3 text-xs font-semibold text-[var(--text)] hover:border-primary hover:bg-primary/20'
