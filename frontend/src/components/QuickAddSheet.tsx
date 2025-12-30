@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronRight, Pencil, Settings, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Mic, Pencil, Settings, Sparkles, Square, X } from 'lucide-react';
 import { paymentMethods } from '../data/frequentCategories';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
@@ -125,7 +125,6 @@ export function QuickAddSheet({
     interpretError,
     recording,
     transcribingAudio,
-    recordingDuration,
     templateName,
     editingTemplate,
     saving,
@@ -238,6 +237,12 @@ export function QuickAddSheet({
     : '—';
   const suggestedCategoryTooltip =
     suggestedCategoryId && !suggestedCategoryLabel ? `ID: ${truncateCategoryId(suggestedCategoryId)}` : undefined;
+  const suggestedCategory = suggestedCategoryId ? categoryResolver.categoriesById[suggestedCategoryId] : null;
+  const suggestedCategoryIcon = suggestedCategory?.icon ?? 'Tag';
+  const suggestionNote = parsedSuggestion?.note ?? parsedSuggestion?.rawText ?? '';
+  const suggestionAmountClass = parsedSuggestion?.type === 'income' ? 'text-emerald-400' : 'text-rose-400';
+  const suggestionBorderClass = parsedSuggestion?.type === 'income' ? 'border-emerald-500/30' : 'border-rose-500/30';
+  const showAiHints = !rawText.trim() && !parsedSuggestion;
   const shouldHighlightCategorySelector =
     !showDetails &&
     mode !== 'ai' &&
@@ -885,39 +890,32 @@ export function QuickAddSheet({
           {mode === 'ai' ? (
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-4 [-webkit-overflow-scrolling:touch]">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--muted)]">Describe el movimiento</label>
+                <div
+                  className={`relative rounded-2xl border transition-colors ${
+                    recording ? 'border-rose-500/50 bg-rose-500/5 animate-pulse' : 'border-white/10 bg-white/5'
+                  }`}
+                >
                   <textarea
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[var(--text)] focus:border-emerald-500/50 focus:outline-none"
+                    className="h-32 w-full resize-none bg-transparent p-4 pr-16 text-sm text-[var(--text)] focus:outline-none sm:h-40"
                     rows={4}
-                    placeholder="Ej. Ayer gaste 23.500 en Uber con tarjeta de credito."
+                    placeholder="Describe tu gasto o toca el microfono..."
+                    aria-label="Describe el movimiento"
                   />
+                  <button
+                    type="button"
+                    onClick={handleMicToggle}
+                    disabled={transcribingAudio || parseLocked}
+                    className={`btn-icon-glass absolute bottom-3 right-3 h-12 w-12 ${
+                      recording ? 'border-rose-400/40 bg-rose-500/20 text-rose-200' : ''
+                    }`}
+                    aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
+                    title={recording ? 'Detener grabacion' : 'Grabar audio'}
+                  >
+                    {recording ? <Square className="h-4 w-4" fill="currentColor" /> : <Mic className="h-5 w-5" />}
+                  </button>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-white">Audio rapido</p>
-                      <p className="text-xs text-white/60">{transcribingAudio ? 'Transcribiendo audio...' : recording ? 'Grabando ' + recordingDuration + 's' : 'Toca para grabar (max ' + MAX_RECORDING_SECONDS + 's)'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleMicToggle}
-                      disabled={transcribingAudio || parseLocked}
-                      className={'btn-icon-glass h-12 w-12' + (recording ? ' border-rose-400/40 bg-rose-500/20 text-rose-100' : '')}
-                      aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
-                      title={recording ? 'Detener grabacion' : 'Grabar audio'}
-                    >
-                      <span className={'h-3.5 w-3.5 rounded-full' + (recording ? ' bg-rose-400 animate-pulse' : ' bg-white/70')} />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Detecta monto, fecha, categoria</span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Sugiere metodo de pago</span>
-                </div>
-                {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
                 <button
                   onClick={handleInterpret}
                   disabled={interpreting || transcribingAudio || parseLocked}
@@ -925,49 +923,47 @@ export function QuickAddSheet({
                 >
                   {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
                 </button>
+                {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
+                {showAiHints && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Detecta monto, fecha, categoria</span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Sugiere metodo de pago</span>
+                  </div>
+                )}
                 {parsedSuggestion && (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-[var(--text)] shadow-sm">
-                    <div className="mb-2 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold">Revision rapida</h3>
-                      {parsedSuggestion.confidence !== undefined && (
-                        <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-[var(--text)]">
-                          Confianza aprox. {(parsedSuggestion.confidence * 100).toFixed(0)}%
+                  <>
+                    <div className={`rounded-2xl border bg-white/5 p-4 ${suggestionBorderClass}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
+                            <CategoryIcon name={suggestedCategoryIcon} size={24} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white" title={suggestedCategoryTooltip}>
+                              {suggestedCategoryDisplay}
+                            </p>
+                            {suggestionNote && (
+                              <p className="truncate text-xs text-white/60" title={suggestionNote}>
+                                {suggestionNote}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className={`text-2xl font-bold ${suggestionAmountClass}`}>
+                          ${parsedSuggestion.amount.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
+                        <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1">
+                          {parsedSuggestion.date}
                         </span>
-                      )}
+                        <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 capitalize">
+                          {parsedSuggestion.paymentMethod}
+                        </span>
+                      </div>
                     </div>
-                    <dl className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <dt className="text-[var(--muted)]">Monto</dt>
-                        <dd className="font-semibold">${parsedSuggestion.amount.toLocaleString()}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[var(--muted)]">Tipo</dt>
-                        <dd className="font-semibold text-emerald-200">
-                          {parsedSuggestion.type === 'income' ? 'Ingreso' : 'Gasto'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-[var(--muted)]">Categoria sugerida</dt>
-                        <dd className="font-semibold capitalize" title={suggestedCategoryTooltip}>
-                          {suggestedCategoryDisplay}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-[var(--muted)]">Fecha</dt>
-                        <dd className="font-semibold">{parsedSuggestion.date}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[var(--muted)]">Metodo</dt>
-                        <dd className="font-semibold capitalize">{parsedSuggestion.paymentMethod}</dd>
-                      </div>
-                    </dl>
-                    {parsedSuggestion.note && (
-                      <p className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-xs text-slate-200">
-                        Nota: {parsedSuggestion.note}
-                      </p>
-                    )}
-                    {fallbackCategory && <p className="mt-2 text-xs text-amber-200">{fallbackMessage}</p>}
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    {fallbackCategory && <p className="text-xs text-amber-200">{fallbackMessage}</p>}
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => {
                           setAmount(parsedSuggestion.amount.toString());
@@ -990,7 +986,7 @@ export function QuickAddSheet({
                         {saving ? 'Guardando...' : 'Confirmar y guardar'}
                       </button>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
