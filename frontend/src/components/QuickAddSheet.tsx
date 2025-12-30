@@ -8,10 +8,10 @@ import { formatAmountHero } from '../utils/amount';
 import { buildCategoryResolver, resolveCategoryLabel, truncateCategoryId } from '../utils/categoryResolver';
 import { ResponsiveSelect } from './ResponsiveSelect';
 import { CategoryIcon } from './ui/CategoryIcon';
+import { CustomKeypad, type KeypadKey } from './CustomKeypad';
 import type { CategoryKind, ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
 
 type Mode = 'quick' | 'details' | 'ai';
-type KeypadKey = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' | '.' | 'backspace';
 type SelectedTemplateIntent = 'use' | 'edit';
 
 interface QuickAddFormState {
@@ -84,64 +84,6 @@ const createInitialState = (): QuickAddFormState => ({
   feedback: null,
 });
 
-const KEYPAD_KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'];
-
-interface CustomKeypadProps {
-  disabled?: boolean;
-  actionDisabled?: boolean;
-  onInput: (key: KeypadKey) => void;
-  onAction: () => void;
-}
-
-function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: CustomKeypadProps) {
-  return (
-    <div className="flex gap-4">
-      <div className="grid flex-1 grid-cols-3 gap-3">
-        {KEYPAD_KEYS.map((key) => {
-          const isBackspace = key === 'backspace';
-          const isDecimal = key === '.';
-          const ariaLabel = isBackspace ? 'Borrar' : isDecimal ? 'coma decimal' : `Tecla ${key}`;
-
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onInput(key)}
-              disabled={disabled}
-              className="btn-glass h-16 text-3xl font-semibold sm:h-20"
-              aria-label={ariaLabel}
-            >
-              {isBackspace ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M10 9l-3 3 3 3" />
-                  <path d="M7 12h10" />
-                  <path d="M11 6h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5-6 5-6z" />
-                </svg>
-              ) : isDecimal ? (
-                ','
-              ) : (
-                key
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <button
-        type="button"
-        onClick={onAction}
-        disabled={actionDisabled}
-        className="flex w-24 flex-col items-center justify-center self-stretch rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-2 py-4 text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90 active:scale-95 disabled:opacity-60 sm:w-28"
-        aria-label="Guardar"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M5 12l4 4L19 6" />
-        </svg>
-        <span className="mt-1 text-xs font-semibold">Guardar</span>
-      </button>
-    </div>
-  );
-}
-
 export function QuickAddSheet({
   open,
   onClose,
@@ -162,7 +104,6 @@ export function QuickAddSheet({
 }: QuickAddSheetProps) {
   const [formState, setFormState] = useState<QuickAddFormState>(() => createInitialState());
   const [seedingIncome, setSeedingIncome] = useState(false);
-  const [detailsFooterH, setDetailsFooterH] = useState(0);
   const updateFormState = useCallback((updates: Partial<QuickAddFormState>) => {
     setFormState((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -228,7 +169,6 @@ export function QuickAddSheet({
   const skipTranscriptionRef = useRef(false);
   const lastNonAiModeRef = useRef<Mode>('quick');
   const templateNameInputRef = useRef<HTMLInputElement | null>(null);
-  const detailsFooterRef = useRef<HTMLDivElement | null>(null);
   const focusTemplateNameRef = useRef(false);
 
   const isOpen = open;
@@ -841,18 +781,6 @@ export function QuickAddSheet({
   const canEditTemplate = !!onUpdateTemplate;
   const showTemplateCard = editingTemplate ? canEditTemplate : canCreateTemplate;
 
-  useEffect(() => {
-    if (!showDetails) return;
-    const el = detailsFooterRef.current;
-    if (!el) return;
-
-    const update = () => setDetailsFooterH(Math.ceil(el.getBoundingClientRect().height));
-    update();
-
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [showDetails, showTemplateCard, editingTemplate, recurring, templateName]);
 
   const smartSaveDisabled = saving || (editingTemplate ? !templateName.trim() : !formReady);
   if (!isOpen) return null;
@@ -865,214 +793,208 @@ export function QuickAddSheet({
         aria-hidden="true"
       />
       <div
-        className="glass-sheet p-4 sm:p-6 animate-sheet-up relative flex max-h-[92vh] w-full flex-col overflow-hidden sm:max-h-[85vh]"
+        className="glass-sheet p-4 sm:p-6 animate-sheet-up relative flex h-full max-h-[90vh] w-full flex-col overflow-hidden sm:max-h-[85vh]"
         role="dialog"
         aria-modal="true"
         aria-label="Nuevo movimiento"
         onClick={(event) => event.stopPropagation()}
         style={{ zIndex: 70 }}
       >
-        <div className="flex flex-1 flex-col gap-3 pt-0 min-h-0">
-          <div className="flex items-center justify-between">
-            <div className="h-10 w-10">
-              {showDetails && (
-                <button type="button" onClick={handleLeftAction} className="btn-icon-glass" aria-label="Volver">
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAiToggle}
-                className={`btn-icon-glass ${mode === 'ai' ? 'border-emerald-500/50 text-emerald-200' : ''}`}
-                aria-label={mode === 'ai' ? 'Salir de modo frase' : 'Modo frase'}
-              >
-                <Sparkles className="h-4 w-4" />
-              </button>
-              <button type="button" onClick={onClose} className="btn-icon-glass" aria-label="Cerrar">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          {mode === 'ai' ? (
-            <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-              <div className="flex-1 min-h-0 space-y-4 overflow-y-auto pb-4 [-webkit-overflow-scrolling:touch]">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--muted)]">Describe el movimiento</label>
-                <textarea
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[var(--text)] focus:border-emerald-500/50 focus:outline-none"
-                  rows={4}
-                  placeholder="Ej. Ayer gaste 23.500 en Uber con tarjeta de credito."
-                />
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0 pt-4 pb-2 space-y-3">
+            <div className="relative flex items-center justify-between pb-2">
+              <div className="h-10 w-10">
+                {showDetails && (
+                  <button type="button" onClick={handleLeftAction} className="btn-icon-glass" aria-label="Volver">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-white">Audio rapido</p>
-                    <p className="text-xs text-white/60">{transcribingAudio ? 'Transcribiendo audio...' : recording ? 'Grabando ' + recordingDuration + 's' : 'Toca para grabar (max ' + MAX_RECORDING_SECONDS + 's)'}</p>
-                  </div>
+              {mode !== 'ai' && (
+                <div className="absolute left-1/2 top-4 z-20 flex h-10 -translate-x-1/2 items-center rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-md">
                   <button
                     type="button"
-                    onClick={handleMicToggle}
-                    disabled={transcribingAudio || parseLocked}
-                    className={'btn-icon-glass h-12 w-12' + (recording ? ' border-rose-400/40 bg-rose-500/20 text-rose-100' : '')}
-                    aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
-                    title={recording ? 'Detener grabacion' : 'Grabar audio'}
+                    onClick={() => {
+                      setType('expense');
+                    }}
+                    className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
+                      type === 'expense'
+                        ? 'bg-rose-500/20 text-rose-200 ring-1 ring-inset ring-rose-500/50'
+                        : 'text-white/40 hover:text-white/70'
+                    }`}
                   >
-                    <span className={'h-3.5 w-3.5 rounded-full' + (recording ? ' bg-rose-400 animate-pulse' : ' bg-white/70')} />
+                    Gasto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setType('income');
+                    }}
+                    className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
+                      type === 'income'
+                        ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/50'
+                        : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    Ingreso
                   </button>
                 </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAiToggle}
+                  className={`btn-icon-glass ${mode === 'ai' ? 'border-emerald-500/50 text-emerald-200' : ''}`}
+                  aria-label={mode === 'ai' ? 'Salir de modo frase' : 'Modo frase'}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={onClose} className="btn-icon-glass" aria-label="Cerrar">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Detecta monto, fecha, categoria</span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Sugiere metodo de pago</span>
-              </div>
-
-              {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
-
-              <button
-                onClick={handleInterpret}
-                disabled={interpreting || transcribingAudio || parseLocked}
-                className="btn-primary-glass"
-              >
-                {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
-              </button>
-
-              {parsedSuggestion && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-[var(--text)] shadow-sm">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Revision rapida</h3>
-                    {parsedSuggestion.confidence !== undefined && (
-                      <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-[var(--text)]">
-                        Confianza aprox. {(parsedSuggestion.confidence * 100).toFixed(0)}%
-                      </span>
-                    )}
+            </div>
+            {mode !== 'ai' && (
+              <>
+                {editingTemplate && (
+                  <span className="text-xs text-[var(--muted)]">
+                    Editando plantilla: <span className="font-semibold text-white/80">{editingTemplate.name}</span>
+                  </span>
+                )}
+                <div
+                  className={`w-full max-w-full px-4 text-center font-bold text-white ${heroSizeClass} leading-none tabular-nums whitespace-nowrap tracking-tight`}
+                  aria-label={`Monto ${heroAmount}`}
+                >
+                  {'$'}{heroAmount}
+                </div>
+                {!showDetails && (
+                  <div className="flex justify-center">
+                    <button type="button" onClick={() => setShowDetails(true)} className="btn-glass text-xs">
+                      <span>Agregar detalle</span>
+                      <ChevronRight size={14} className="opacity-60" />
+                    </button>
                   </div>
-                  <dl className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <dt className="text-[var(--muted)]">Monto</dt>
-                      <dd className="font-semibold">${parsedSuggestion.amount.toLocaleString()}</dd>
+                )}
+              </>
+            )}
+          </div>
+          {mode === 'ai' ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-4 [-webkit-overflow-scrolling:touch]">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--muted)]">Describe el movimiento</label>
+                  <textarea
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[var(--text)] focus:border-emerald-500/50 focus:outline-none"
+                    rows={4}
+                    placeholder="Ej. Ayer gaste 23.500 en Uber con tarjeta de credito."
+                  />
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-white">Audio rapido</p>
+                      <p className="text-xs text-white/60">{transcribingAudio ? 'Transcribiendo audio...' : recording ? 'Grabando ' + recordingDuration + 's' : 'Toca para grabar (max ' + MAX_RECORDING_SECONDS + 's)'}</p>
                     </div>
-                    <div>
-                      <dt className="text-[var(--muted)]">Tipo</dt>
-                      <dd className="font-semibold text-emerald-200">
-                        {parsedSuggestion.type === 'income' ? 'Ingreso' : 'Gasto'}
-                      </dd>
+                    <button
+                      type="button"
+                      onClick={handleMicToggle}
+                      disabled={transcribingAudio || parseLocked}
+                      className={'btn-icon-glass h-12 w-12' + (recording ? ' border-rose-400/40 bg-rose-500/20 text-rose-100' : '')}
+                      aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
+                      title={recording ? 'Detener grabacion' : 'Grabar audio'}
+                    >
+                      <span className={'h-3.5 w-3.5 rounded-full' + (recording ? ' bg-rose-400 animate-pulse' : ' bg-white/70')} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Detecta monto, fecha, categoria</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Sugiere metodo de pago</span>
+                </div>
+                {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
+                <button
+                  onClick={handleInterpret}
+                  disabled={interpreting || transcribingAudio || parseLocked}
+                  className="btn-primary-glass"
+                >
+                  {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
+                </button>
+                {parsedSuggestion && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-[var(--text)] shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold">Revision rapida</h3>
+                      {parsedSuggestion.confidence !== undefined && (
+                        <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-[var(--text)]">
+                          Confianza aprox. {(parsedSuggestion.confidence * 100).toFixed(0)}%
+                        </span>
+                      )}
                     </div>
+                    <dl className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <dt className="text-[var(--muted)]">Monto</dt>
+                        <dd className="font-semibold">${parsedSuggestion.amount.toLocaleString()}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--muted)]">Tipo</dt>
+                        <dd className="font-semibold text-emerald-200">
+                          {parsedSuggestion.type === 'income' ? 'Ingreso' : 'Gasto'}
+                        </dd>
+                      </div>
                       <div>
                         <dt className="text-[var(--muted)]">Categoria sugerida</dt>
                         <dd className="font-semibold capitalize" title={suggestedCategoryTooltip}>
                           {suggestedCategoryDisplay}
                         </dd>
                       </div>
-                    <div>
-                      <dt className="text-[var(--muted)]">Fecha</dt>
-                      <dd className="font-semibold">{parsedSuggestion.date}</dd>
+                      <div>
+                        <dt className="text-[var(--muted)]">Fecha</dt>
+                        <dd className="font-semibold">{parsedSuggestion.date}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--muted)]">Metodo</dt>
+                        <dd className="font-semibold capitalize">{parsedSuggestion.paymentMethod}</dd>
+                      </div>
+                    </dl>
+                    {parsedSuggestion.note && (
+                      <p className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-xs text-slate-200">
+                        Nota: {parsedSuggestion.note}
+                      </p>
+                    )}
+                    {fallbackCategory && <p className="mt-2 text-xs text-amber-200">{fallbackMessage}</p>}
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          setAmount(parsedSuggestion.amount.toString());
+                          setCategory(parsedSuggestion.categoryId);
+                          setNote(parsedSuggestion.note ?? '');
+                          setType(parsedSuggestion.type);
+                          setPaymentMethod(parsedSuggestion.paymentMethod);
+                          setDate(parsedSuggestion.date);
+                          setMode('quick');
+                        }}
+                        className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-[var(--text)] hover:bg-white/20"
+                      >
+                        Editar antes de guardar
+                      </button>
+                      <button
+                        onClick={handleSaveParsed}
+                        disabled={saving}
+                        className="rounded-xl bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
+                      >
+                        {saving ? 'Guardando...' : 'Confirmar y guardar'}
+                      </button>
                     </div>
-                    <div>
-                      <dt className="text-[var(--muted)]">Metodo</dt>
-                      <dd className="font-semibold capitalize">{parsedSuggestion.paymentMethod}</dd>
-                    </div>
-                  </dl>
-                  {parsedSuggestion.note && (
-                    <p className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-xs text-slate-200">
-                      Nota: {parsedSuggestion.note}
-                    </p>
-                  )}
-                  {fallbackCategory && <p className="mt-2 text-xs text-amber-200">{fallbackMessage}</p>}
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        setAmount(parsedSuggestion.amount.toString());
-                        setCategory(parsedSuggestion.categoryId);
-                        setNote(parsedSuggestion.note ?? '');
-                        setType(parsedSuggestion.type);
-                        setPaymentMethod(parsedSuggestion.paymentMethod);
-                        setDate(parsedSuggestion.date);
-                        setMode('quick');
-                      }}
-                      className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-[var(--text)] hover:bg-white/20"
-                    >
-                      Editar antes de guardar
-                    </button>
-                    <button
-                      onClick={handleSaveParsed}
-                      disabled={saving}
-                      className="rounded-xl bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
-                    >
-                      {saving ? 'Guardando...' : 'Confirmar y guardar'}
-                    </button>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-          ) : (
-            <div className="flex flex-1 min-h-0 flex-col gap-5 overflow-hidden">
-              {editingTemplate && (
-                <span className="text-xs text-[var(--muted)]">
-                  Editando plantilla: <span className="font-semibold text-white/80">{editingTemplate.name}</span>
-                </span>
-              )}
-
-            <div
-              className={`w-full max-w-full px-4 text-center font-bold text-white ${heroSizeClass} leading-none tabular-nums whitespace-nowrap tracking-tight`}
-              aria-label={`Monto ${heroAmount}`}
-            >
-              {'$'}{heroAmount}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setType('expense');
-                }}
-                className={`flex items-center justify-center rounded-2xl border px-4 py-3 text-sm font-medium transition-all hover:bg-white/5 active:bg-white/10 ${
-                  type === 'expense'
-                    ? 'bg-white/10 ring-2 ring-inset ring-rose-400/50 border-transparent text-white'
-                    : 'border-white/10 text-white/70'
-                }`}
-              >
-                Gasto
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setType('income');
-                }}
-                className={`flex items-center justify-center rounded-2xl border px-4 py-3 text-sm font-medium transition-all hover:bg-white/5 active:bg-white/10 ${
-                  type === 'income'
-                    ? 'bg-white/10 ring-2 ring-inset ring-emerald-500/50 border-transparent text-white'
-                    : 'border-white/10 text-white/70'
-                }`}
-              >
-                Ingreso
-              </button>
-            </div>
-
-            {!showDetails && (
-              <div className="flex justify-center">
-                <button type="button" onClick={() => setShowDetails(true)} className="btn-glass text-xs">
-                  <span>Agregar detalle</span>
-                  <ChevronRight size={14} className="opacity-60" />
-                </button>
+                )}
               </div>
-            )}
-
-            <div className="flex-1 min-h-0">
-              {showDetails ? (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <div
-                    className="min-h-0 flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch]"
-                    style={{ paddingBottom: `calc(env(safe-area-inset-bottom) + ${detailsFooterH}px + 12px)` }}
-                  >
-                      <div className="space-y-4">
-  
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 min-h-0 overflow-y-auto [-webkit-overflow-scrolling:touch] px-1 py-2">
+                {showDetails ? (
+                  <div className="space-y-3">
                     {templates.length > 0 && (
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
                         <div className="mb-2 px-1 text-sm font-medium text-[var(--muted)]">Plantillas</div>
@@ -1121,8 +1043,6 @@ export function QuickAddSheet({
                         </div>
                       </div>
                     )}
-  
-  
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-sm font-medium text-[var(--muted)]">Metodo de pago</label>
@@ -1133,7 +1053,6 @@ export function QuickAddSheet({
                           title="Metodo de pago"
                         />
                       </div>
-  
                       <div>
                         <label className="mb-1 block text-sm font-medium text-[var(--muted)]">Fecha</label>
                         <input
@@ -1148,14 +1067,8 @@ export function QuickAddSheet({
                           </p>
                         )}
                       </div>
-  
                     </div>
-  
                     {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
-  
-                  </div>
-                  </div>
-                  <div ref={detailsFooterRef} className="sticky bottom-0 border-t border-white/10 bg-[var(--modal-surface)] pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
                     {showTemplateCard && (
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                         <div className="flex items-center justify-between">
@@ -1211,98 +1124,95 @@ export function QuickAddSheet({
                         </div>
                       </div>
                     )}
-                    {!editingTemplate && (
-                      <div className={showTemplateCard ? 'mt-3' : ''}>
-                        <button
-                          type="button"
-                          onClick={() => handleSave(true)}
-                          disabled={saving || !formReady}
-                          className="btn-primary-glass"
-                        >
-                          {saving ? 'Guardando...' : type === 'income' ? 'Guardar Ingreso' : 'Guardar Gasto'}
-                        </button>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="min-h-0 space-y-3 overflow-y-auto [-webkit-overflow-scrolling:touch]">
-                  {showCategorySkeleton ? (
-                    <div className="flex gap-2 overflow-hidden pb-2">
-                      {Array.from({ length: 6 }).map((_, idx) => (
-                        <div
-                          key={`category-skeleton-${idx}`}
-                          className="btn-glass h-16 min-w-[86px] shrink-0 animate-pulse"
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <>
-                      {showFallbackNotice && <p className="text-xs text-amber-200">{fallbackMessage}</p>}
-                      <div className={shouldHighlightCategorySelector ? 'rounded-2xl p-2 ring-2 ring-amber-400/60' : ''}>
-                        <div className="flex gap-2 overflow-x-auto pb-2 pr-1 [-webkit-overflow-scrolling:touch]">
-                          {visibleCategories.map((cat) => {
-                            const active = cat.id === category;
-                            return (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => setCategory(cat.id)}
-                                className={`btn-glass min-w-[86px] shrink-0 flex-col px-3 py-2 text-[11px] ${
-                                  active
-                                    ? 'border-emerald-500/50 bg-emerald-500/10 text-white'
-                                    : 'text-white/70'
-                                }`}
-                              >
-                                <CategoryIcon name={cat.icon} size={18} />
-                                <span className="mt-1">{cat.label}</span>
-                              </button>
-                            );
-                          })}
-                          <button
-                            type="button"
-                            onClick={() => onOpenSettings?.(type)}
-                            className="btn-glass min-w-[86px] shrink-0 flex-col border-dashed border-white/20 px-3 py-2 text-[11px] text-white/60 hover:text-white"
-                          >
-                            <Settings size={18} />
-                            <span className="mt-1">Configurar</span>
-                          </button>
-                        </div>
+                ) : (
+                  <div className="space-y-3">
+                    {showCategorySkeleton ? (
+                      <div className="flex gap-2 overflow-hidden pb-2">
+                        {Array.from({ length: 6 }).map((_, idx) => (
+                          <div
+                            key={`category-skeleton-${idx}`}
+                            className="btn-glass h-16 min-w-[86px] shrink-0 animate-pulse"
+                          />
+                        ))}
                       </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {!showDetails && (
-              <div className="space-y-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
-                <div className="border-b border-white/10 pb-2">
-                  <label className="sr-only" htmlFor="quick-add-note">
-                    Nota
-                  </label>
-                  <input
-                    id="quick-add-note"
-                    type="text"
-                    value={note}
-                    onChange={(event) => setNote(event.target.value.slice(0, 500))}
-                    placeholder="Nota (opcional)"
-                    className="w-full bg-transparent text-sm text-white placeholder-white/30 focus:outline-none"
-                  />
-                </div>
-                {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <CustomKeypad
-                    onInput={handleKeypadInput}
-                    onAction={handleSmartSave}
-                    disabled={saving}
-                    actionDisabled={smartSaveDisabled}
-                  />
-                </div>
+                    ) : (
+                      <>
+                        {showFallbackNotice && <p className="text-xs text-amber-200">{fallbackMessage}</p>}
+                        <div className={shouldHighlightCategorySelector ? 'rounded-2xl p-2 ring-2 ring-amber-400/60' : ''}>
+                          <div className="flex gap-2 overflow-x-auto pb-2 pr-1 [-webkit-overflow-scrolling:touch]">
+                            {visibleCategories.map((cat) => {
+                              const active = cat.id === category;
+                              return (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  onClick={() => setCategory(cat.id)}
+                                  className={`btn-glass min-w-[86px] shrink-0 flex-col px-3 py-2 text-[11px] ${
+                                    active
+                                      ? 'border-emerald-500/50 bg-emerald-500/10 text-white'
+                                      : 'text-white/70'
+                                  }`}
+                                >
+                                  <CategoryIcon name={cat.icon} size={18} />
+                                  <span className="mt-1">{cat.label}</span>
+                                </button>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              onClick={() => onOpenSettings?.(type)}
+                              className="btn-glass min-w-[86px] shrink-0 flex-col border-dashed border-white/20 px-3 py-2 text-[11px] text-white/60 hover:text-white"
+                            >
+                              <Settings size={18} />
+                              <span className="mt-1">Configurar</span>
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    <div className="border-b border-white/10 pb-2">
+                      <label className="sr-only" htmlFor="quick-add-note">
+                        Nota
+                      </label>
+                      <input
+                        id="quick-add-note"
+                        type="text"
+                        value={note}
+                        onChange={(event) => setNote(event.target.value.slice(0, 500))}
+                        placeholder="Nota (opcional)"
+                        className="w-full bg-transparent text-sm text-white placeholder-white/30 focus:outline-none"
+                      />
+                    </div>
+                    {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+              <div className="shrink-0 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] bg-gradient-to-t from-[var(--modal-surface)] to-transparent">
+                {showDetails ? (
+                  !editingTemplate && (
+                    <button
+                      type="button"
+                      onClick={() => handleSave(true)}
+                      disabled={saving || !formReady}
+                      className="btn-primary-glass"
+                    >
+                      {saving ? 'Guardando...' : type === 'income' ? 'Guardar Ingreso' : 'Guardar Gasto'}
+                    </button>
+                  )
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+                    <CustomKeypad
+                      onInput={handleKeypadInput}
+                      onAction={handleSmartSave}
+                      disabled={saving}
+                      actionDisabled={smartSaveDisabled}
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
