@@ -160,6 +160,18 @@ body {
   animation: gradientMove 12s ease infinite;
 }
 
+.animate-fade-in {
+  animation: fadeIn 180ms ease-out;
+}
+
+.animate-sheet-up {
+  animation: sheetUp 240ms ease-out;
+}
+
+.animate-sheet-in-right {
+  animation: sheetInRight 240ms ease-out;
+}
+
 .robot-blob {
   width: 120px;
   height: 120px;
@@ -190,6 +202,45 @@ body {
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheetInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-sheet-up,
+  .animate-sheet-in-right {
+    animation: none;
   }
 }
 

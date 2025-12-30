@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { Target } from 'lucide-react';
 import { ObjectiveCard } from '../components/objectives/ObjectiveCard';
 import { ObjectiveDetailsModal } from '../components/objectives/ObjectiveDetailsModal';
 import { ObjectiveEntryModal } from '../components/objectives/ObjectiveEntryModal';
@@ -83,7 +84,7 @@ export function ObjectivesPage({
       : summaryCount === 1
         ? 'deuda activa'
         : 'deudas activas';
-  const emptyTitle = activeType === 'goal' ? 'Aún no tienes metas' : 'Aún no tienes deudas';
+  const emptyTitle = activeType === 'goal' ? 'Aun no tienes metas' : 'Aun no tienes deudas';
   const emptyDescription =
     activeType === 'goal'
       ? 'Crea una meta para empezar a ahorrar.'
@@ -153,7 +154,9 @@ export function ObjectivesPage({
             <h3 className="text-base font-semibold text-white">
               {activeType === 'goal' ? 'Total ahorrado' : 'Deuda restante'}
             </h3>
-            <p className="text-xs text-[var(--text-muted)]">{summaryCount} {summaryLabel}</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {summaryCount} {summaryLabel}
+            </p>
           </div>
           <p className="text-2xl font-semibold text-white">{formatPesos(summaryValue)}</p>
         </div>
@@ -166,18 +169,24 @@ export function ObjectivesPage({
           <p className="text-sm text-[var(--text-muted)]">Cargando objetivos...</p>
         </div>
       ) : visibleObjectives.length === 0 ? (
-        <div className="card space-y-2">
-          <h3 className="text-base font-semibold text-white">{emptyTitle}</h3>
-          <p className="text-sm text-[var(--text-muted)]">{emptyDescription}</p>
-          <button
-            className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
-            onClick={openCreate}
-          >
-            {emptyCta}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={openCreate}
+          className="w-full rounded-3xl border border-dashed border-white/15 bg-white/5 px-6 py-8 text-left transition hover:border-primary/60 hover:bg-white/10"
+        >
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70">
+              <Target className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-white">{emptyTitle}</h3>
+              <p className="text-sm text-[var(--text-muted)]">{emptyDescription}</p>
+            </div>
+            <span className="text-sm font-semibold text-primary">{emptyCta}</span>
+          </div>
+        </button>
       ) : (
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           {visibleObjectives.map((objective) => (
             <ObjectiveCard
               key={objective.id}
@@ -230,3 +239,6 @@ export function ObjectivesPage({
     </section>
   );
 }
+
+
+

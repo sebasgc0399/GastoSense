@@ -34,6 +34,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
           : null;
   const iconName = objective.icon || defaultIconForType(objective.type);
   const iconBg = objective.color || defaultColorForType(objective.type);
+  const subtitle = objective.dueDate ? `Vence ${objective.dueDate}` : isGoal ? 'Meta de ahorro' : 'Deuda';
   const remainingLabel = hasOverTarget
     ? isGoal
       ? `Excedido por ${formatPesos(overAmount)}`
@@ -52,7 +53,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
 
   return (
     <div
-      className="card cursor-pointer space-y-3 transition hover:border-primary/60"
+      className="card cursor-pointer space-y-4 shadow-lg transition duration-200 hover:scale-[1.02] hover:border-white/20 hover:shadow-xl"
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
@@ -73,9 +74,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
           </div>
           <div>
             <h3 className="text-base font-semibold text-white">{objective.name}</h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              {isGoal ? 'Meta de ahorro' : 'Deuda'} {objective.dueDate ? `- Vence ${objective.dueDate}` : ''}
-            </p>
+            <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
           </div>
         </div>
         {statusLabel && (
@@ -98,25 +97,28 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className={`h-full rounded-full ${isGoal ? 'bg-emerald-500' : 'bg-sky-500'}`}
+            className={`h-full rounded-full ${
+              isGoal ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-sky-500 to-indigo-400'
+            }`}
             style={{ width: `${Math.min(progress * 100, 100)}%` }}
           />
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={handleQuickAction(isGoal ? 'deposit' : 'payment')}
-          className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/90 hover:border-primary"
         >
-          {isGoal ? '+ Abonar' : '+ Pagar'}
+          <span className="text-base leading-none">+</span>
+          {isGoal ? 'Abonar' : 'Pagar'}
         </button>
         {isGoal && (
           <button
             type="button"
             onClick={handleQuickAction('withdraw')}
-            className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+            className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:border-primary"
           >
             Retirar
           </button>
