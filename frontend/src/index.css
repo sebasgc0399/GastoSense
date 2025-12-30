@@ -153,6 +153,36 @@ body {
   color: var(--text);
 }
 
+/* Premium Glass */
+@layer components {
+  .glass-sheet {
+    @apply fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-white/10 bg-[var(--modal-surface)] p-6 shadow-2xl backdrop-blur-xl sm:static sm:z-auto sm:w-full sm:max-w-md sm:rounded-2xl sm:border;
+  }
+
+  .input-giant {
+    @apply w-full bg-transparent text-center text-5xl font-bold text-white placeholder-white/10 focus:outline-none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn-glass {
+    @apply flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:scale-[1.02] active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-icon-glass {
+    @apply flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 p-0 text-white transition-all hover:scale-105 hover:bg-white/10 active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-primary-glass {
+    @apply w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:opacity-90 hover:scale-[1.01] active:scale-95 disabled:opacity-50;
+  }
+}
+
+@layer utilities {
+  .caret-transparent {
+    caret-color: transparent;
+  }
+}
+
 /* Animaciones */
 .bg-animated {
   background: linear-gradient(120deg, var(--grad-1), var(--grad-2), var(--grad-3));
