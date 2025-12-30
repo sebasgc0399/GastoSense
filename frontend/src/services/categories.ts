@@ -134,12 +134,21 @@ export async function seedIncomeCategories(userId: string): Promise<boolean> {
 
   const batch = writeBatch(db);
   let didWrite = false;
-  // Nota: no hacemos backfill de iconos; solo sembramos lo que falte.
+  // Nota: no hacemos backfill de iconos; solo reparamos kind/isSystem/isArchived y sembramos faltantes.
 
   for (const cat of INCOME_DEFAULTS) {
     const existingCategory = existingById.get(cat.id);
     const icon = CATEGORY_ICONS[cat.id] ?? CATEGORY_ICONS.default ?? 'Tag';
     if (existingCategory) {
+      const updates: Record<string, unknown> = {};
+      if (resolveCategoryKind(existingCategory.kind) !== 'income') updates.kind = 'income';
+      if (existingCategory.isSystem !== true) updates.isSystem = true;
+      if (existingCategory.isArchived) updates.isArchived = false;
+      if (Object.keys(updates).length > 0) {
+        const docRef = doc(db, 'users', userId, COLLECTION, cat.id);
+        batch.update(docRef, updates);
+        didWrite = true;
+      }
       continue;
     }
     const docRef = doc(db, 'users', userId, COLLECTION, cat.id);

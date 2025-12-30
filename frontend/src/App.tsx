@@ -641,18 +641,21 @@ function App() {
           categoryFallbackReason?: ParsedTransactionSuggestion['categoryFallbackReason'];
         };
         const parsedType = raw.type === 'income' ? 'income' : 'expense';
+        const rawCategoryId =
+          typeof raw.categoryId === 'string' ? raw.categoryId.trim() : '';
         const rawCategory =
-          typeof raw.categoryId === 'string' ? raw.categoryId : typeof raw.category === 'string' ? raw.category : '';
+          rawCategoryId || (typeof raw.category === 'string' ? raw.category : '');
         const normalizedRawCategory = typeof rawCategory === 'string' ? rawCategory.trim().toLowerCase() : '';
         const hasCategories = Object.keys(categoryResolver?.categoriesById ?? {}).length > 0;
         let categoryId = '';
         let categoryFallbackReason = raw.categoryFallbackReason;
+        const fallbackId = parsedType === 'income' ? 'ingreso' : 'otros';
+        const resolvedCategoryId = rawCategoryId || resolveCanonicalCategoryId(rawCategory, categoryResolver);
         if (parsedType === 'expense') {
           if (normalizedRawCategory === 'otros') {
             categoryId = 'otros';
             categoryFallbackReason = categoryFallbackReason ?? 'explicit_other';
           } else {
-            const resolvedCategoryId = resolveCanonicalCategoryId(rawCategory, categoryResolver);
             const isValid = !hasCategories || !!categoryResolver?.categoriesById?.[resolvedCategoryId];
             if (!resolvedCategoryId || resolvedCategoryId === 'ingreso' || !isValid) {
               categoryId = 'otros';
@@ -663,8 +666,20 @@ function App() {
               categoryId = resolvedCategoryId;
             }
           }
+        } else {
+          if (normalizedRawCategory === 'ingreso') {
+            categoryId = 'ingreso';
+            categoryFallbackReason = categoryFallbackReason ?? 'explicit_other';
+          } else if (!resolvedCategoryId || resolvedCategoryId === 'otros') {
+            categoryId = 'ingreso';
+            if (!categoryFallbackReason) {
+              categoryFallbackReason = normalizedRawCategory ? 'no_match' : 'empty';
+            }
+          } else {
+            categoryId = resolvedCategoryId;
+          }
         }
-        const categoryFallback = parsedType === 'expense' && categoryId === 'otros';
+        const categoryFallback = categoryId === fallbackId;
         if (!categoryFallback) {
           categoryFallbackReason = undefined;
         } else if (!categoryFallbackReason) {

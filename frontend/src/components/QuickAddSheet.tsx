@@ -135,7 +135,7 @@ export function QuickAddSheet({
   const setAmount = (nextAmount: string) => updateFormState({ amount: nextAmount });
   const setCategory = useCallback((nextCategory: string) => updateFormState({ category: nextCategory }), [updateFormState]);
   const setNote = (nextNote: string) => updateFormState({ note: nextNote });
-  const setType = (nextType: TransactionInput['type']) => updateFormState({ type: nextType });
+  const setType = useCallback((nextType: TransactionInput['type']) => updateFormState({ type: nextType }), [updateFormState]);
   const setPaymentMethod = (nextMethod: TransactionInput['paymentMethod']) =>
     updateFormState({ paymentMethod: nextMethod });
   const setDate = (nextDate: string) => updateFormState({ date: nextDate });
@@ -169,18 +169,33 @@ export function QuickAddSheet({
   const lastNonAiModeRef = useRef<Mode>('quick');
   const templateNameInputRef = useRef<HTMLInputElement | null>(null);
   const focusTemplateNameRef = useRef(false);
+  const incomeAutoSwitchedRef = useRef(false);
+  const incomeSeededRef = useRef(false);
 
   const isOpen = open;
-  const hasIncomeAny = useMemo(
-    () => categories.some((cat) => resolveCategoryKind(cat.kind) === 'income'),
+  const hasIncomeNonFallback = useMemo(
+    () =>
+      categories.some(
+        (cat) =>
+          resolveCategoryKind(cat.kind) === 'income' &&
+          cat.id !== INCOME_FALLBACK_ID &&
+          !cat.isArchived,
+      ),
     [categories],
   );
 
   useEffect(() => {
-    if (!isOpen || type !== 'income' || hasIncomeAny) return;
+    if (!isOpen) return;
+    incomeAutoSwitchedRef.current = false;
+    incomeSeededRef.current = false;
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || type !== 'income' || hasIncomeNonFallback || incomeSeededRef.current) return;
     let cancelled = false;
 
     const seed = async () => {
+      incomeSeededRef.current = true;
       setSeedingIncome(true);
       try {
         await ensureIncomeCategories();
@@ -194,7 +209,7 @@ export function QuickAddSheet({
     return () => {
       cancelled = true;
     };
-  }, [ensureIncomeCategories, hasIncomeAny, isOpen, type]);
+  }, [ensureIncomeCategories, hasIncomeNonFallback, isOpen, type]);
 
   const amountValue = useMemo(() => Number(amount), [amount]);
   const formReady = useMemo(() => !!amount && amountValue > 0, [amount, amountValue]);
@@ -243,6 +258,7 @@ export function QuickAddSheet({
   const suggestionAmountClass = parsedSuggestion?.type === 'income' ? 'text-emerald-400' : 'text-rose-400';
   const suggestionBorderClass = parsedSuggestion?.type === 'income' ? 'border-emerald-500/30' : 'border-rose-500/30';
   const showAiHints = !rawText.trim() && !parsedSuggestion;
+  const showInterpretButton = !!rawText.trim();
   const shouldHighlightCategorySelector =
     !showDetails &&
     mode !== 'ai' &&
@@ -367,6 +383,16 @@ export function QuickAddSheet({
     };
   };
 
+  const maybeAutoSwitchIncome = useCallback(
+    (suggestion: ParsedTransactionSuggestion | null) => {
+      if (!suggestion || suggestion.type !== 'income') return;
+      if (type === 'income' || incomeAutoSwitchedRef.current) return;
+      incomeAutoSwitchedRef.current = true;
+      setType('income');
+    },
+    [setType, type],
+  );
+
   const interpretText = async (text: string) => {
     const cleaned = text.trim();
     if (parseLocked) {
@@ -386,8 +412,11 @@ export function QuickAddSheet({
       if (onInterpret) {
         const parsed = await onInterpret(cleaned);
         setParsedSuggestion(parsed);
+        maybeAutoSwitchIncome(parsed);
       } else {
-        setParsedSuggestion(fallbackParse(cleaned));
+        const parsed = fallbackParse(cleaned);
+        setParsedSuggestion(parsed);
+        maybeAutoSwitchIncome(parsed);
       }
     } catch (error) {
       console.error(error);
@@ -397,7 +426,9 @@ export function QuickAddSheet({
         setParsedSuggestion(null);
         setInterpretError(message);
       } else {
-        setParsedSuggestion(fallbackParse(cleaned));
+        const parsed = fallbackParse(cleaned);
+        setParsedSuggestion(parsed);
+        maybeAutoSwitchIncome(parsed);
         setInterpretError('No pudimos llamar a la IA, te mostramos una sugerencia estimada.');
       }
     } finally {
@@ -916,13 +947,15 @@ export function QuickAddSheet({
                     {recording ? <Square className="h-4 w-4" fill="currentColor" /> : <Mic className="h-5 w-5" />}
                   </button>
                 </div>
-                <button
-                  onClick={handleInterpret}
-                  disabled={interpreting || transcribingAudio || parseLocked}
-                  className="btn-primary-glass"
-                >
-                  {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
-                </button>
+                {showInterpretButton && (
+                  <button
+                    onClick={handleInterpret}
+                    disabled={interpreting || transcribingAudio || parseLocked}
+                    className="btn-primary-glass w-full py-2"
+                  >
+                    {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
+                  </button>
+                )}
                 {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
                 {showAiHints && (
                   <div className="mb-2 mt-4 flex flex-wrap justify-center gap-2">

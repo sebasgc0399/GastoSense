@@ -1086,9 +1086,16 @@ export const parseTransactionPhrase = onCall(
     await checkRateLimit(request.auth.uid, "parse", profile, effectiveRoleForLimit);
     const categoryCatalog = await loadUserCategoryCatalog(request.auth.uid);
     const categoryLookup = buildCategoryLookup(categoryCatalog);
-    const categoryList = categoryCatalog.length
-      ? categoryCatalog.map((cat) => '- ' + cat.id + ': ' + cat.label).join('\\n')
-      : '- ' + FALLBACK_CATEGORY_ID + ': Otros';
+    const incomeCategories = categoryCatalog.filter((cat) => cat.kind === "income");
+    const expenseCategories = categoryCatalog.filter((cat) => cat.kind !== "income");
+    const incomeCategoryList = [
+      ...incomeCategories.map((cat) => '- ' + cat.id + ': ' + cat.label),
+      '- ' + INCOME_FALLBACK_ID + ': Ingreso',
+    ].join('\n');
+    const expenseCategoryList = [
+      ...expenseCategories.map((cat) => '- ' + cat.id + ': ' + cat.label),
+      '- ' + FALLBACK_CATEGORY_ID + ': Otros',
+    ].join('\n');
 
     const schema = {
       type: "object",
@@ -1119,9 +1126,15 @@ export const parseTransactionPhrase = onCall(
         "category transporte, type expense, paymentMethod credito, date hoy. " +
         "Si ves ingresos, usa type income. " +
         "El campo category debe ser el id exacto de una categoria valida. " +
-        "Si no hay una coincidencia clara, usa \"otros\". " +
-        "Categorias validas (id: label):\\n" +
-        categoryList;
+        "Si type es expense, usa un id de expenseCategoryList; si no hay " +
+        "coincidencia clara, usa \"otros\". " +
+        "Si type es income, usa un id de incomeCategoryList; si no hay " +
+        "coincidencia clara, usa \"ingreso\". " +
+        "expenseCategoryList (id: label):\n" +
+        expenseCategoryList +
+        "\n" +
+        "incomeCategoryList (id: label):\n" +
+        incomeCategoryList;
 
       const primaryModel = "o4-mini";
       const fallbackModel = "gpt-5-mini";
@@ -1167,20 +1180,20 @@ export const parseTransactionPhrase = onCall(
 
       const rawCategory = typeof parsed.category === "string" ? parsed.category : "";
       const parsedType = (parsed.type as ParsedTransaction["type"]) ?? "expense";
-      const isExpense = parsedType === "expense";
       const categoryResolution = resolveCategoryIdFromCatalog(
         rawCategory,
         parsedType,
         categoryLookup,
       );
-      const categoryId = isExpense ? categoryResolution.categoryId : "";
-      const categoryFallback = isExpense && categoryId === FALLBACK_CATEGORY_ID;
+      const fallbackId = parsedType === "income" ? INCOME_FALLBACK_ID : FALLBACK_CATEGORY_ID;
+      const categoryId = categoryResolution.categoryId;
+      const categoryFallback = categoryId === fallbackId;
       const categoryFallbackReason = categoryFallback
         ? categoryResolution.fallbackReason ?? "no_match"
         : undefined;
       const baseConfidence = parsed.confidence ?? 0.6;
       const confidence = categoryFallback ? Math.min(baseConfidence, 0.4) : baseConfidence;
-      const categoryValue = categoryFallback ? FALLBACK_CATEGORY_ID : rawCategory || "sin-categoria";
+      const categoryValue = categoryFallback ? fallbackId : rawCategory || fallbackId;
 
       const result: ParsedTransaction = {
         amount: parsed.amount ?? 0,
