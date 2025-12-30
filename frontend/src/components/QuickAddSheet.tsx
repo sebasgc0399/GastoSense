@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronRight, Mic, Pencil, Settings, Sparkles, Square, X } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronRight, CreditCard, DollarSign, Mic, Pencil, Settings, Sparkles, Square, X } from 'lucide-react';
 import { paymentMethods } from '../data/frequentCategories';
 import { useCategoriesController } from '../hooks/useCategoriesController';
 import { useConfirm } from '../hooks/useConfirm';
@@ -890,25 +890,25 @@ export function QuickAddSheet({
           {mode === 'ai' ? (
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-4 [-webkit-overflow-scrolling:touch]">
-                <div
-                  className={`relative rounded-2xl border transition-colors ${
-                    recording ? 'border-rose-500/50 bg-rose-500/5 animate-pulse' : 'border-white/10 bg-white/5'
-                  }`}
-                >
-                  <textarea
-                    value={rawText}
-                    onChange={(e) => setRawText(e.target.value)}
-                    className="h-32 w-full resize-none bg-transparent p-4 pr-16 text-sm text-[var(--text)] focus:outline-none sm:h-40"
-                    rows={4}
-                    placeholder="Describe tu gasto o toca el microfono..."
-                    aria-label="Describe el movimiento"
-                  />
+                <div className="flex items-end gap-3">
+                  <div className="flex-1 rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                    <textarea
+                      value={rawText}
+                      onChange={(e) => setRawText(e.target.value)}
+                      className="h-24 w-full resize-none bg-transparent text-sm text-[var(--text)] focus:outline-none"
+                      rows={4}
+                      placeholder="Describe tu gasto o toca el microfono..."
+                      aria-label="Describe el movimiento"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={handleMicToggle}
                     disabled={transcribingAudio || parseLocked}
-                    className={`btn-icon-glass absolute bottom-3 right-3 h-12 w-12 ${
-                      recording ? 'border-rose-400/40 bg-rose-500/20 text-rose-200' : ''
+                    className={`btn-icon-glass h-12 w-12 sm:h-14 sm:w-14 ${
+                      recording
+                        ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/40 animate-pulse ring-4 ring-rose-500/20 border-rose-500/40'
+                        : ''
                     }`}
                     aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
                     title={recording ? 'Detener grabacion' : 'Grabar audio'}
@@ -925,9 +925,19 @@ export function QuickAddSheet({
                 </button>
                 {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
                 {showAiHints && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Detecta monto, fecha, categoria</span>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">Sugiere metodo de pago</span>
+                  <div className="mb-2 mt-4 flex flex-wrap justify-center gap-2">
+                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] font-medium text-white/50">
+                      <DollarSign className="h-3 w-3" />
+                      Monto y categoria
+                    </span>
+                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] font-medium text-white/50">
+                      <Calendar className="h-3 w-3" />
+                      Fecha rapida
+                    </span>
+                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] font-medium text-white/50">
+                      <CreditCard className="h-3 w-3" />
+                      Metodo de pago
+                    </span>
                   </div>
                 )}
                 {parsedSuggestion && (
@@ -974,14 +984,14 @@ export function QuickAddSheet({
                           setDate(parsedSuggestion.date);
                           setMode('quick');
                         }}
-                        className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-[var(--text)] hover:bg-white/20"
+                        className="btn-glass h-10 px-3 py-0 text-xs"
                       >
                         Editar antes de guardar
                       </button>
                       <button
                         onClick={handleSaveParsed}
                         disabled={saving}
-                        className="rounded-xl bg-[var(--primary)] px-3 py-2 text-sm font-semibold text-[var(--text-on-primary)] shadow hover:opacity-90 disabled:opacity-60"
+                        className="btn-primary-glass h-10 px-3 py-0 text-xs"
                       >
                         {saving ? 'Guardando...' : 'Confirmar y guardar'}
                       </button>
