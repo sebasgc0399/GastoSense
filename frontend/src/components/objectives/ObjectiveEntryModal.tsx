@@ -43,6 +43,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
     return objective.targetAmount > 0 && objective.currentAmount + amountValue > objective.targetAmount;
   }, [amountValue, isAmountValid, isWithdraw, objective]);
   const disableSave = saving || !isAmountValid || exceedsAvailable;
+  const caretClass = amountDigits ? 'caret-white' : 'caret-transparent';
 
   if (!open || !objective || !kind) return null;
 
@@ -111,7 +112,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
                 pattern="[0-9]*"
                 value={formatCOP(amountDigits)}
                 onChange={(event) => setAmountDigits(digitsOnly(event.target.value))}
-                className="w-full max-w-[240px] bg-transparent text-center text-5xl font-semibold text-white placeholder:text-[var(--text-muted)] focus:outline-none"
+                className={`w-full max-w-[240px] bg-transparent text-center text-5xl font-semibold text-white placeholder:text-[var(--text-muted)] focus:outline-none ${caretClass}`}
                 placeholder="0"
                 autoFocus
               />
