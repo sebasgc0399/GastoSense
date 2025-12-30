@@ -861,11 +861,15 @@ export function QuickAddSheet({
                     Editando plantilla: <span className="font-semibold text-white/80">{editingTemplate.name}</span>
                   </span>
                 )}
-                <div
-                  className={`w-full max-w-full px-4 text-center font-bold text-white ${heroSizeClass} leading-none tabular-nums whitespace-nowrap tracking-tight`}
-                  aria-label={`Monto ${heroAmount}`}
-                >
-                  {'$'}{heroAmount}
+                <div className="flex h-24 w-full shrink-0 items-center justify-center px-4">
+                  <div
+                    className={`text-center font-bold transition-colors duration-200 ${
+                      type === 'income' ? 'text-emerald-400' : 'text-rose-400'
+                    } ${heroSizeClass} leading-none tabular-nums whitespace-nowrap overflow-hidden text-ellipsis`}
+                    aria-label={`Monto ${heroAmount}`}
+                  >
+                    {'$'}{heroAmount}
+                  </div>
                 </div>
                 {!showDetails && (
                   <div className="flex justify-center">
