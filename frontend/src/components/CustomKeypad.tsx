@@ -24,7 +24,7 @@ export function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: Cu
               type="button"
               onClick={() => onInput(key)}
               disabled={disabled}
-              className="btn-glass h-[7vh] min-h-[48px] max-h-[72px] text-2xl font-semibold sm:h-20 sm:text-3xl"
+              className="btn-glass h-[7vh] min-h-[48px] max-h-[60px] text-2xl font-semibold sm:h-20 sm:text-3xl"
               aria-label={ariaLabel}
             >
               {isBackspace ? (
