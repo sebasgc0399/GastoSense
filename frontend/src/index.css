@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  /* =========================================
+     LEGACY VARIABLES (Conservadas para estabilidad)
+     ========================================= */
   /* --- DARK MODE (default) --- */
   color-scheme: dark;
   --bg: #0b1120;
@@ -37,6 +40,22 @@
   --blob-1: #f8fafc;
   --blob-2: #0ea5e9;
   --blob-3: #0b1120;
+
+  /* =========================================
+     NUEVAS VARIABLES (Sistema Premium Glass)
+     ========================================= */
+  --glass-surface: rgba(11, 17, 32, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.15);
+
+  /* --- NUEVAS VARIABLES GLASS / OVERLAYS --- */
+  --overlay-5: rgba(255, 255, 255, 0.05);
+  --overlay-10: rgba(255, 255, 255, 0.10);
+  --overlay-15: rgba(255, 255, 255, 0.15);
+  --border-10: rgba(255, 255, 255, 0.10);
+  --border-15: rgba(255, 255, 255, 0.15);
+  --border-20: rgba(255, 255, 255, 0.20);
+  --glass-text: #ffffff;
+  --glass-muted: rgba(255, 255, 255, 0.72);
 }
 
 :root[data-theme='light'] {
@@ -74,16 +93,34 @@
   --blob-1: #ffffff;
   --blob-2: #38bdf8;
   --blob-3: #e0f2fe;
+
+  /* Glass en Light mode: mantenemos oscuro para glass premium */
+  --glass-surface: rgba(15, 23, 42, 0.85);
+
+  /* --- OVERLAYS LIGHT (Sutilmente oscuros para contraste sobre fondos claros) --- */
+  --overlay-5: rgba(15, 23, 42, 0.04);
+  --overlay-10: rgba(15, 23, 42, 0.07);
+  --overlay-15: rgba(15, 23, 42, 0.10);
+  --border-10: rgba(15, 23, 42, 0.10);
+  --border-15: rgba(15, 23, 42, 0.14);
+  --border-20: rgba(15, 23, 42, 0.18);
+  --glass-text: #ffffff;
+  --glass-muted: rgba(255, 255, 255, 0.72);
 }
+
+html {
+  background-color: var(--bg);
+}
+
 
 html,
 body {
   height: 100%;
   width: 100%;
+  overflow: hidden;
   overflow-x: hidden;
   overscroll-behavior-y: none;
   touch-action: manipulation;
-  position: fixed;
 }
 
 body {
@@ -95,8 +132,9 @@ body {
 }
 
 #root {
-  height: 100%;
+  height: 100dvh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-overlay {
@@ -156,30 +194,98 @@ body {
 /* Premium Glass */
 @layer components {
   .glass-sheet {
-    @apply fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-white/10 bg-[var(--modal-surface)] p-6 shadow-2xl backdrop-blur-xl sm:static sm:z-auto sm:w-full sm:max-w-md sm:rounded-2xl sm:border;
+    @apply fixed inset-x-0 bottom-0 z-50 flex flex-col;
+    @apply border-t bg-[var(--glass-surface)];
+    @apply shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl;
+    @apply sm:static sm:z-auto sm:w-full sm:max-w-md sm:rounded-2xl sm:border sm:shadow-none sm:bg-transparent;
+    @apply rounded-t-3xl;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+    color: var(--glass-text);
+    border-color: var(--border-10);
+    /* --- FORCED DARK CONTEXT (P0 FIX) --- */
+    --overlay-5: rgba(255, 255, 255, 0.06);
+    --overlay-10: rgba(255, 255, 255, 0.10);
+    --overlay-15: rgba(255, 255, 255, 0.14);
+    --border-10: rgba(255, 255, 255, 0.10);
+    --border-15: rgba(255, 255, 255, 0.16);
+    --border-20: rgba(255, 255, 255, 0.22);
+    --text: var(--glass-text);
+    --text-muted: var(--glass-muted);
+    --muted: var(--glass-muted);
+    --input-bg: var(--overlay-5);
+    --input-border: var(--border-15);
+  }
+
+  .glass-modal-center {
+    @apply fixed inset-x-0 bottom-0 z-50 flex flex-col;
+    @apply border-t bg-[var(--glass-surface)] backdrop-blur-xl;
+    @apply rounded-t-3xl shadow-2xl;
+    @apply md:inset-0 md:m-auto md:h-auto md:max-h-[85vh] md:w-full md:max-w-2xl;
+    @apply md:rounded-3xl md:border md:shadow-2xl;
+    color: var(--glass-text);
+    border-color: var(--border-10);
+    /* --- FORCED DARK CONTEXT (P0 FIX) --- */
+    --overlay-5: rgba(255, 255, 255, 0.06);
+    --overlay-10: rgba(255, 255, 255, 0.10);
+    --overlay-15: rgba(255, 255, 255, 0.14);
+    --border-10: rgba(255, 255, 255, 0.10);
+    --border-15: rgba(255, 255, 255, 0.16);
+    --border-20: rgba(255, 255, 255, 0.22);
+    --text: var(--glass-text);
+    --text-muted: var(--glass-muted);
+    --muted: var(--glass-muted);
+    --input-bg: var(--overlay-5);
+    --input-border: var(--border-15);
   }
 
   .input-giant {
-    @apply w-full bg-transparent text-center text-5xl font-bold text-white placeholder-white/10 focus:outline-none;
+    @apply w-full bg-transparent text-center font-bold placeholder-white/10 focus:outline-none transition-all duration-300;
+    font-size: clamp(2.25rem, 7vw, 3.25rem);
+    line-height: 1.05;
+    color: var(--glass-text);
     font-variant-numeric: tabular-nums;
   }
 
   .btn-glass {
-    @apply flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:scale-[1.02] active:scale-95 disabled:opacity-50;
+    @apply flex items-center justify-center gap-2 rounded-2xl;
+    @apply border bg-white/5 text-sm font-medium;
+    @apply transition-all duration-200;
+    @apply hover:bg-white/10 active:scale-95 disabled:opacity-50;
+    color: var(--glass-text);
+    border-color: var(--border-10);
+  }
+
+  .btn-glass:hover {
+    border-color: var(--border-20);
   }
 
   .btn-icon-glass {
-    @apply flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 p-0 text-white transition-all hover:scale-105 hover:bg-white/10 active:scale-95 disabled:opacity-50;
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-full;
+    @apply border bg-white/5;
+    @apply transition-all duration-200;
+    @apply hover:bg-white/10 hover:scale-105 active:scale-90 disabled:opacity-50;
+    color: var(--glass-text);
+    border-color: var(--border-10);
   }
 
   .btn-primary-glass {
-    @apply w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:opacity-90 hover:scale-[1.01] active:scale-95 disabled:opacity-50;
+    @apply w-full flex items-center justify-center gap-2 rounded-2xl;
+    @apply bg-gradient-to-r from-emerald-500 to-teal-500;
+    @apply px-6 py-4 text-base font-bold;
+    @apply shadow-lg shadow-emerald-500/25 border;
+    @apply transition-all duration-200;
+    @apply hover:opacity-90 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50;
+    color: var(--glass-text);
+    border-color: var(--border-10);
   }
 }
 
 @layer utilities {
   .caret-transparent {
     caret-color: transparent;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
@@ -191,15 +297,15 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 180ms ease-out;
+  animation: fadeIn 180ms ease-out forwards;
 }
 
 .animate-sheet-up {
-  animation: sheetUp 240ms ease-out;
+  animation: sheetUp 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-sheet-in-right {
-  animation: sheetInRight 240ms ease-out;
+  animation: sheetInRight 240ms ease-out forwards;
 }
 
 .robot-blob {
@@ -247,7 +353,7 @@ body {
 @keyframes sheetUp {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
@@ -372,16 +478,46 @@ body {
   color: var(--accent) !important;
 }
 
-.bg-white\/5,
-.bg-white\/10,
-.bg-white\/15 {
-  background-color: var(--card) !important;
+/* =========================================
+   PROTECCION DEL SISTEMA GLASS (PATCHED)
+   ========================================= */
+
+/* 1. Forzar Texto Glass */
+.glass-sheet .text-white,
+.glass-modal-center .text-white,
+.btn-glass,
+.btn-primary-glass,
+.btn-icon-glass {
+  color: var(--glass-text) !important;
 }
 
-.border-white\/10,
-.border-white\/15,
+/* 2. Mapeo de Overlays (Usa transparencias reales, no --card solido) */
+.bg-white\/5 {
+  background-color: var(--overlay-5) !important;
+}
+.bg-white\/10 {
+  background-color: var(--overlay-10) !important;
+}
+.bg-white\/15 {
+  background-color: var(--overlay-15) !important;
+}
+
+.border-white\/10 {
+  border-color: var(--border-10) !important;
+}
+.border-white\/15 {
+  border-color: var(--border-15) !important;
+}
 .border-white\/20 {
-  border-color: var(--card-border) !important;
+  border-color: var(--border-20) !important;
+}
+
+/* 3. Fix especificos de colores */
+.bg-rose-500\/20 {
+  background-color: rgba(244, 63, 94, 0.2) !important;
+}
+.bg-emerald-500\/20 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
 }
 
 .bg-slate-50,

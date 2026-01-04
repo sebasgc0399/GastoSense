@@ -824,12 +824,12 @@ export function QuickAddSheet({
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4">
       <div
-        className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 z-[60] bg-[var(--modal-overlay)] backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="glass-sheet p-4 sm:p-6 animate-sheet-up relative flex h-full max-h-[90vh] w-full flex-col overflow-hidden sm:max-h-[85vh]"
+        className="glass-sheet px-4 pt-4 pb-0 sm:px-6 sm:pt-6 sm:pb-0 animate-sheet-up relative flex h-full max-h-[90vh] w-full flex-col overflow-hidden sm:max-h-[85vh]"
         role="dialog"
         aria-modal="true"
         aria-label="Nuevo movimiento"
@@ -926,7 +926,7 @@ export function QuickAddSheet({
                     <textarea
                       value={rawText}
                       onChange={(e) => setRawText(e.target.value)}
-                      className="h-24 w-full resize-none bg-transparent text-sm text-[var(--text)] focus:outline-none"
+                      className="h-24 w-full resize-none bg-transparent text-sm text-white placeholder-white/50 focus:outline-none"
                       rows={4}
                       placeholder="Describe tu gasto o toca el microfono..."
                       aria-label="Describe el movimiento"
@@ -1231,7 +1231,7 @@ export function QuickAddSheet({
                   </div>
                 )}
               </div>
-              <div className="shrink-0 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] bg-gradient-to-t from-[var(--modal-surface)] to-transparent">
+              <div className="shrink-0 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
                 {showDetails ? (
                   !editingTemplate && (
                     <button
