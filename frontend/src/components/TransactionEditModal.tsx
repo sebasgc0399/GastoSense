@@ -116,7 +116,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center px-0 md:items-center md:px-3">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 modal-scrim backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
         className="modal-surface relative flex h-[92vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl md:h-auto md:max-h-[85vh] md:max-w-md md:rounded-2xl"
         role="dialog"

@@ -12,7 +12,7 @@ const AlertDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
     ref={ref}
-    className={clsx('fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm', className)}
+    className={clsx('fixed inset-0 z-[200] modal-scrim backdrop-blur-sm', className)}
     {...props}
   />
 ));

@@ -277,7 +277,7 @@ export function BudgetManagerSheet({
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center px-0 md:items-center md:px-3">
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 modal-scrim backdrop-blur-sm transition-opacity"
             onClick={onClose}
             aria-hidden="true"
           />

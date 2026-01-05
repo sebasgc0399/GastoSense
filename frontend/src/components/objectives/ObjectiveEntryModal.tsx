@@ -71,7 +71,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center px-0 md:items-center md:px-3">
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xl animate-fade-in"
+        className="fixed inset-0 modal-scrim backdrop-blur-xl animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />

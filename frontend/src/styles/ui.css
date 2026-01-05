@@ -1,7 +1,7 @@
 @layer components {
   .card {
-    background: var(--card);
-    border: 1px solid var(--card-border);
+    background: var(--surface-1);
+    border: 1px solid var(--surface-border-1);
     border-radius: 1.25rem;
     box-shadow: var(--card-shadow);
     padding: 1.5rem;
@@ -11,8 +11,8 @@
   .input {
     width: 100%;
     border-radius: 0.75rem;
-    border: 1px solid var(--input-border);
-    background: var(--input-bg);
+    border: 1px solid var(--field-border);
+    background: var(--field-bg);
     padding: 0.6rem 1rem;
     color: var(--text);
   }
@@ -20,20 +20,21 @@
   .input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+    box-shadow: 0 0 0 3px var(--focus-ring);
   }
 
   .btn-glass {
     @apply flex items-center justify-center gap-2 rounded-2xl;
-    @apply border bg-[var(--overlay-5)] text-sm font-medium;
+    @apply border text-sm font-medium;
     @apply transition-all duration-200;
-    @apply hover:bg-[var(--overlay-10)] active:scale-95 disabled:opacity-50;
+    @apply active:scale-95 disabled:opacity-50;
+    background: var(--glass-surface);
     color: var(--glass-text);
-    border-color: var(--border-10);
+    border-color: var(--glass-border);
   }
 
   .btn-glass:hover {
-    border-color: var(--border-20);
+    border-color: var(--surface-border-3);
   }
 
   .modal-surface {
@@ -41,14 +42,19 @@
     @apply text-[var(--text)] shadow-2xl backdrop-blur;
   }
 
+  .modal-scrim {
+    background: var(--modal-overlay);
+    transition: opacity 150ms ease-out;
+  }
+
   .panel-card {
-    @apply rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3;
+    @apply rounded-xl border border-[var(--surface-border-1)] bg-[var(--surface-1)] p-3;
   }
 
   .panel-muted {
-    @apply rounded-xl border border-[var(--card-border)] p-3;
+    @apply rounded-xl border border-[var(--surface-border-1)] p-3;
     @apply text-sm text-[var(--text-muted)];
-    background-color: color-mix(in srgb, var(--card) 40%, transparent);
+    background-color: color-mix(in srgb, var(--surface-1) 40%, transparent);
   }
 
   .text-muted {
@@ -56,27 +62,27 @@
   }
 
   .surface-soft {
-    @apply border border-[var(--border-10)] bg-[var(--overlay-5)];
+    @apply border border-[var(--surface-border-1)] bg-[var(--surface-1)];
   }
 
   .surface-top {
-    @apply border-t border-[var(--border-10)] bg-[var(--overlay-5)];
+    @apply border-t border-[var(--surface-border-1)] bg-[var(--surface-1)];
   }
 
   .surface-dashed {
-    @apply border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)];
+    @apply border border-dashed border-[var(--surface-border-2)] bg-[var(--surface-1)];
   }
 
   .pill-surface {
-    @apply rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)];
+    @apply rounded-full border border-[var(--surface-border-1)] bg-[var(--surface-1)];
   }
 
   .pill-strong {
-    @apply rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)];
+    @apply rounded-full border border-[var(--surface-border-2)] bg-[var(--surface-2)];
   }
 
   .surface-strong {
-    @apply border border-[var(--border-10)] bg-[var(--overlay-10)];
+    @apply border border-[var(--surface-border-2)] bg-[var(--surface-2)];
   }
 
   .section-label {
@@ -84,17 +90,17 @@
   }
 
   .icon-button {
-    @apply flex items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)];
+    @apply flex items-center justify-center rounded-lg border border-[var(--surface-border-1)] bg-[var(--field-bg)];
     @apply text-[var(--text)] transition hover:border-primary disabled:opacity-60;
   }
 
   .btn-outline {
-    @apply rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)];
+    @apply rounded-xl border border-[var(--surface-border-1)] bg-[var(--field-bg)];
     @apply font-semibold text-[var(--text)] transition hover:border-primary disabled:opacity-60;
   }
 
   .surface-input {
-    @apply rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2;
+    @apply rounded-lg border border-[var(--surface-border-1)] bg-[var(--field-bg)] px-3 py-2;
   }
 
   .progress-fill {
@@ -132,6 +138,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .modal-scrim {
+    transition: none;
+  }
+
   .animate-fade-in,
   .animate-sheet-up {
     animation: none;

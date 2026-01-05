@@ -93,7 +93,7 @@ export function ObjectiveFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center px-0 md:items-center md:px-3">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 modal-scrim backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
         className="relative flex h-[90vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] text-[var(--text)] shadow-2xl backdrop-blur md:h-auto md:max-h-[85vh] md:max-w-lg md:rounded-2xl"
         role="dialog"

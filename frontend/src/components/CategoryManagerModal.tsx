@@ -460,7 +460,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end justify-center px-0 md:items-center md:px-3">
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 modal-scrim backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />

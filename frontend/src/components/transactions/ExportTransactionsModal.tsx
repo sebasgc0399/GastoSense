@@ -522,7 +522,7 @@ export function ExportTransactionsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
+      className="fixed inset-0 z-50 flex items-center justify-center modal-scrim backdrop-blur-sm p-3"
       onClick={onClose}
     >
       <div

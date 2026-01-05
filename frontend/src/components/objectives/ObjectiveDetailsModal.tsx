@@ -145,7 +145,7 @@ export function ObjectiveDetailsModal({
   return (
     <div className="fixed inset-0 z-50">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-xl animate-fade-in"
+        className="absolute inset-0 modal-scrim backdrop-blur-xl animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -198,7 +198,7 @@ export function ObjectiveDetailsModal({
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className="h-16 w-16 rounded-full p-1" style={ringStyle}>
-                    <div className="flex h-full w-full items-center justify-center rounded-full bg-[rgba(15,23,42,0.6)]">
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--modal-overlay)]">
                       <CategoryIcon name={iconName} size={26} className="text-[var(--text)]" />
                     </div>
                   </div>

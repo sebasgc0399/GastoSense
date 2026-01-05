@@ -27,7 +27,7 @@ export function SenseBot({ mood = 'idle', size = 'md' }: SenseBotProps) {
   return (
     <div
       className={clsx(
-        'relative inline-flex items-center justify-center rounded-3xl bg-[rgba(15,23,42,0.6)] px-6 py-5 shadow-2xl ring-4 ring-white/10 backdrop-blur',
+        'relative inline-flex items-center justify-center rounded-3xl bg-[var(--modal-overlay)] px-6 py-5 shadow-2xl ring-4 ring-[var(--border-10)] backdrop-blur',
         size === 'lg' ? 'min-w-[120px] min-h-[120px]' : size === 'md' ? 'min-w-[96px] min-h-[96px]' : 'min-w-[80px] min-h-[80px]',
       )}
     >
@@ -35,7 +35,7 @@ export function SenseBot({ mood = 'idle', size = 'md' }: SenseBotProps) {
         <span className={clsx(sizeMap[size], moodColors[mood])}>🤖</span>
       </div>
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/5 to-white/0" />
-      <div className="absolute -bottom-1 left-3 h-3 w-8 rounded-full bg-[rgba(15,23,42,0.6)] blur-lg" />
+      <div className="absolute -bottom-1 left-3 h-3 w-8 rounded-full bg-[var(--modal-overlay)] blur-lg" />
     </div>
   );
 }

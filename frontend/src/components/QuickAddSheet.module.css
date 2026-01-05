@@ -1,23 +1,22 @@
 .glassSheet {
   @apply z-50 flex flex-col;
   @apply border-t bg-[var(--glass-surface)];
-  @apply shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl;
+  @apply backdrop-blur-xl;
   @apply sm:z-auto sm:w-full sm:max-w-md sm:rounded-2xl sm:border sm:shadow-none sm:bg-transparent;
   @apply rounded-t-3xl;
+  box-shadow: var(--shadow-glass);
   color: var(--glass-text);
   border-color: var(--border-10);
   /* --- FORCED DARK CONTEXT (P0 FIX) --- */
-  --overlay-5: rgba(255, 255, 255, 0.06);
-  --overlay-10: rgba(255, 255, 255, 0.10);
-  --overlay-15: rgba(255, 255, 255, 0.14);
-  --border-10: rgba(255, 255, 255, 0.10);
-  --border-15: rgba(255, 255, 255, 0.16);
-  --border-20: rgba(255, 255, 255, 0.22);
+  --overlay-rgb: 255 255 255;
+  --border-rgb: 255 255 255;
   --text: var(--glass-text);
   --text-muted: var(--glass-muted);
   --muted: var(--glass-muted);
-  --input-bg: var(--overlay-5);
-  --input-border: var(--border-15);
+  --field-bg: var(--overlay-5);
+  --field-border: var(--border-15);
+  --input-bg: var(--field-bg);
+  --input-border: var(--field-border);
 }
 
 .btnIconGlass {
