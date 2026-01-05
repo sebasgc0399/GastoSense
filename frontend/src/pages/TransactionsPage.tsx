@@ -135,10 +135,10 @@ export function TransactionsPage({
           type="button"
           onClick={handleExportClick}
           aria-disabled={!canExport}
-          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
             canExport
-              ? 'border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)] hover:border-[var(--border-20)] hover:bg-[var(--overlay-10)]'
-              : 'cursor-not-allowed border-white/5 bg-[var(--overlay-5)] text-white/60 hover:border-[var(--border-10)]'
+              ? 'surface-soft text-[var(--text)] hover:border-[var(--border-20)] hover:bg-[var(--overlay-10)]'
+              : 'surface-soft cursor-not-allowed border-white/5 text-white/60 hover:border-[var(--border-10)]'
           }`}
         >
           {canExport ? <ArrowUpDown aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}
@@ -225,9 +225,9 @@ export function TransactionsPage({
           </div>
         ))}
         {transactions.length > txPageSize && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)]">
+          <div className="flex items-center justify-between gap-3 rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)]">
             <button
-              className="rounded-lg border border-[var(--border-20)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+              className="rounded-lg surface-soft border-[var(--border-20)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
               onClick={() => setTxPage((p) => Math.max(1, p - 1))}
               disabled={txPage === 1}
             >
@@ -237,7 +237,7 @@ export function TransactionsPage({
               Página {txPage} de {totalTxPages}
             </span>
             <button
-              className="rounded-lg border border-[var(--border-20)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+              className="rounded-lg surface-soft border-[var(--border-20)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
               onClick={() => setTxPage((p) => Math.min(totalTxPages, p + 1))}
               disabled={txPage >= totalTxPages}
             >

@@ -303,10 +303,10 @@ export function AdvisorPage({
                       if (lockedByQuota) return;
                       void handleAdvisorAction(item.action);
                     }}
-                    className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
+                    className={`flex h-full flex-col rounded-xl px-3 py-3 text-left transition ${
                       locked
-                        ? 'border-dashed border-[var(--border-20)] bg-[var(--overlay-5)]'
-                        : `border-[var(--border-10)] bg-[var(--overlay-5)] ${disabled ? '' : 'hover:border-primary'}`
+                        ? 'surface-dashed border-[var(--border-20)]'
+                        : `surface-soft ${disabled ? '' : 'hover:border-primary'}`
                     } ${disabled ? 'cursor-not-allowed opacity-50' : locked ? 'opacity-80' : ''}`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -420,7 +420,7 @@ export function AdvisorPage({
                                     <button
                                       type="button"
                                       onClick={() => onActionClick(item.actionData!)}
-                                      className="inline-flex items-center rounded-full border border-[var(--border-15)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] transition hover:border-primary"
+                                      className="inline-flex items-center pill-surface border-[var(--border-15)] px-3 py-1 text-xs font-semibold text-[var(--text)] transition hover:border-primary"
                                     >
                                       {item.actionData.label}
                                     </button>
