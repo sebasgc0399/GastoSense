@@ -165,7 +165,7 @@ export function TransactionsPage({
 
       <div className="space-y-3">
         {transactions.length === 0 && (
-          <p className="rounded-xl border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-3 text-sm text-[var(--text)]">
+          <p className="rounded-xl surface-dashed px-3 py-3 text-sm text-[var(--text)]">
             Aún no hay movimientos en este rango. Agrega el primero.
           </p>
         )}

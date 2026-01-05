@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Pencil, X } from 'lucide-react';
 import { useConfirm } from '../../hooks/useConfirm';
 import { formatPesos } from '../../utils/format';
@@ -71,6 +71,7 @@ export function ObjectiveDetailsModal({
   const heroTint = objective.color || (isGoal ? 'rgba(16, 185, 129, 0.35)' : 'rgba(56, 189, 248, 0.35)');
   const ringColor = objective.color || (isGoal ? '#34d399' : '#38bdf8');
   const progressPct = Math.round(progress * 100);
+  const progressStyle = { '--pct': `${Math.min(progress * 100, 100)}%` } as CSSProperties;
   const heroBackground = `linear-gradient(135deg, ${heroTint}, rgba(15, 23, 42, 0.95))`;
   const ringStyle = {
     background: `conic-gradient(${ringColor} ${progressPct}%, rgba(255,255,255,0.18) 0)`,
@@ -166,7 +167,7 @@ export function ObjectiveDetailsModal({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-muted">
                 {isGoal ? 'Meta de ahorro' : 'Deuda'} {objective.dueDate ? `- Vence ${objective.dueDate}` : ''}
               </p>
             </div>
@@ -217,10 +218,10 @@ export function ObjectiveDetailsModal({
               </div>
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
                 <div
-                  className={`h-full rounded-full ${
+                  className={`progress-fill h-full rounded-full ${
                     isGoal ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-sky-500 to-indigo-400'
                   }`}
-                  style={{ width: `${Math.min(progress * 100, 100)}%` }}
+                  style={progressStyle}
                 />
               </div>
             </div>
@@ -228,11 +229,11 @@ export function ObjectiveDetailsModal({
             <div>
               <div className="mb-3 flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-[var(--text)]">Historial</h4>
-                <span className="text-xs text-[var(--text-muted)]">{entries.length} movimientos</span>
+                <span className="text-xs text-muted">{entries.length} movimientos</span>
               </div>
               {entriesError && <p className="text-sm text-[var(--error-text)]">{entriesError}</p>}
               {entries.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                <div className="rounded-2xl surface-dashed px-4 py-3 text-sm text-muted">
                   Aun no hay movimientos.
                 </div>
               ) : (
@@ -243,7 +244,7 @@ export function ObjectiveDetailsModal({
                       const displayDate = entry.effectiveDate || entry.createdAt?.slice(0, 10) || '--';
                       return (
                         <li key={entry.id} className="flex gap-4">
-                          <div className="w-20 shrink-0 text-right text-xs text-[var(--text-muted)]">
+                          <div className="w-20 shrink-0 text-right text-xs text-muted">
                             {displayDate}
                           </div>
                           <div className="relative flex-1 rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
@@ -251,7 +252,7 @@ export function ObjectiveDetailsModal({
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-sm font-semibold text-[var(--text)]">{entryKindLabel(entry.kind)}</p>
-                                {entry.note && <p className="text-xs text-[var(--text-muted)]">{entry.note}</p>}
+                                {entry.note && <p className="text-xs text-muted">{entry.note}</p>}
                               </div>
                               <div className="flex flex-col items-end gap-2">
                                 <span className="text-sm font-semibold text-[var(--text)]">{formatPesos(entry.amount)}</span>

@@ -52,6 +52,22 @@
     background-color: color-mix(in srgb, var(--card) 40%, transparent);
   }
 
+  .text-muted {
+    @apply text-[var(--text-muted)];
+  }
+
+  .surface-soft {
+    @apply border border-[var(--border-10)] bg-[var(--overlay-5)];
+  }
+
+  .surface-dashed {
+    @apply border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)];
+  }
+
+  .pill-surface {
+    @apply rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)];
+  }
+
   .section-label {
     @apply text-[11px] uppercase tracking-wide text-[var(--text-muted)];
   }
@@ -68,6 +84,10 @@
 
   .surface-input {
     @apply rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2;
+  }
+
+  .progress-fill {
+    width: var(--pct);
   }
 }
 

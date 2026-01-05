@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import type { CSSProperties } from 'react';
 
 interface IaQuotaProgressProps {
   label: string;
@@ -12,6 +13,7 @@ export function IaQuotaProgress({ label, used, limit, ratio, onUpgradeClick }: I
   const percent = Math.round(ratio * 100);
   const state: 'ok' | 'warn' | 'danger' =
     ratio >= 1 ? 'danger' : ratio >= 0.8 ? 'warn' : 'ok';
+  const progressStyle = { '--pct': `${Math.min(percent, 100)}%` } as CSSProperties;
 
   return (
     <div className="space-y-1 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-3">
@@ -24,12 +26,12 @@ export function IaQuotaProgress({ label, used, limit, ratio, onUpgradeClick }: I
       <div className="h-2 w-full rounded-full bg-[var(--overlay-10)]">
         <div
           className={clsx(
-            'h-2 rounded-full transition-all',
+            'progress-fill h-2 rounded-full transition-all',
             state === 'ok' && 'bg-emerald-500',
             state === 'warn' && 'bg-amber-500',
             state === 'danger' && 'bg-rose-500',
           )}
-          style={{ width: `${Math.min(percent, 100)}%` }}
+          style={progressStyle}
         />
       </div>
       {state !== 'ok' && onUpgradeClick && (

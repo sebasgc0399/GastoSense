@@ -68,6 +68,7 @@ export function TransactionItemCard({
   const barClass =
     spentRatio >= 1 ? 'bg-red-400/80' : spentRatio >= 0.8 ? 'bg-amber-400/80' : 'bg-emerald-400/80';
   const progressValue = showPercent && typeof percentUsed === 'number' ? Math.min(percentUsed, 100) : 0;
+  const progressStyle = { '--pct': `${progressValue}%` } as React.CSSProperties;
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -238,7 +239,7 @@ export function TransactionItemCard({
           </div>
           {showPercent && (
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
-              <div className={`h-full ${barClass}`} style={{ width: `${progressValue}%` }} />
+              <div className={`progress-fill h-full ${barClass}`} style={progressStyle} />
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import { formatPesos } from '../../utils/format';
 import type { Objective, ObjectiveEntryKind } from '../../types';
 import { CategoryIcon } from '../ui/CategoryIcon';
@@ -42,6 +42,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
     : isGoal
       ? `Faltan ${formatPesos(remaining)}`
       : `Restante ${formatPesos(remaining)}`;
+  const progressStyle = { '--pct': `${Math.min(progress * 100, 100)}%` } as CSSProperties;
 
   const handleCardClick = () => onOpenDetails(objective);
   const handleQuickAction =
@@ -97,10 +98,10 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
           <div
-            className={`h-full rounded-full ${
+            className={`progress-fill h-full rounded-full ${
               isGoal ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-sky-500 to-indigo-400'
             }`}
-            style={{ width: `${Math.min(progress * 100, 100)}%` }}
+            style={progressStyle}
           />
         </div>
       </div>

@@ -100,6 +100,7 @@ export function MetricsPage({
   const hasBudget = budgetTotal > 0;
   const budgetProgress = hasBudget ? Math.min(monthlyExpense / budgetTotal, 1.2) : 0;
   const budgetAlert = !hasBudget ? 'none' : budgetProgress >= 1 ? 'max' : budgetProgress >= 0.8 ? 'warn' : 'ok';
+  const budgetProgressStyle = { '--pct': `${Math.min(budgetProgress * 100, 120)}%` } as React.CSSProperties;
 
   const currentAmount = isExpenseView ? monthlyExpense : monthlyIncome;
   const previousMonthExpense = previousMonth?.expense ?? 0;
@@ -421,14 +422,14 @@ export function MetricsPage({
                       </p>
                       <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
                         <div
-                          className={`h-full rounded-full ${
+                          className={`progress-fill h-full rounded-full ${
                             budgetAlert === 'ok'
                               ? 'bg-emerald-500'
                               : budgetAlert === 'warn'
                                 ? 'bg-amber-500'
                                 : 'bg-red-500'
                           }`}
-                          style={{ width: `${Math.min(budgetProgress * 100, 120)}%` }}
+                          style={budgetProgressStyle}
                         />
                       </div>
                       {budgetAlert !== 'ok' && (

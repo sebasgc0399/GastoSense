@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { formatPesos } from '../utils/format';
 import type { Budget } from '../types';
 
@@ -20,6 +20,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
   const percentUsed = target > 0 ? Math.round((totalExpense / target) * 100) : 0;
   const excess = target > 0 && totalExpense > target ? totalExpense - target : 0;
   const canSave = safeValue > 0;
+  const progressStyle = { '--pct': `${Math.min(progress * 100, 120)}%` } as CSSProperties;
 
   useEffect(() => {
     const next = budget?.total ?? 0;
@@ -66,10 +67,10 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
           <div
-            className={`h-full rounded-full ${
+            className={`progress-fill h-full rounded-full ${
               alertLevel === 'ok' ? 'bg-emerald-500' : alertLevel === 'warn' ? 'bg-amber-500' : 'bg-red-500'
             }`}
-            style={{ width: `${Math.min(progress * 100, 120)}%` }}
+            style={progressStyle}
           />
         </div>
         {alertLevel !== 'ok' && (
