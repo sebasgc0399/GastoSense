@@ -218,7 +218,7 @@ export function TransactionItemCard({
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]">
         {metaLine ? <span>{metaLine}</span> : null}
         {showCategoryChip && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]">
+          <span className="inline-flex items-center gap-1 pill-strong px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]">
             {showCategoryIconInChip && <CategoryIcon name={categoryIcon!} size={12} className="shrink-0" />}
             <span>{displayCategory}</span>
           </span>

@@ -72,6 +72,14 @@
     @apply rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)];
   }
 
+  .pill-strong {
+    @apply rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)];
+  }
+
+  .surface-strong {
+    @apply border border-[var(--border-10)] bg-[var(--overlay-10)];
+  }
+
   .section-label {
     @apply text-[11px] uppercase tracking-wide text-[var(--text-muted)];
   }

@@ -79,7 +79,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
           </div>
         </div>
         {statusLabel && (
-          <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-1 text-[11px] font-semibold text-[var(--text)]">
+          <span className="pill-strong px-2 py-1 text-[11px] font-semibold text-[var(--text)]">
             {statusLabel}
           </span>
         )}

@@ -1003,10 +1003,10 @@ export function QuickAddSheet({
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
-                        <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-1">
+                        <span className="pill-strong px-2 py-1">
                           {parsedSuggestion.date}
                         </span>
-                        <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-1 capitalize">
+                        <span className="pill-strong px-2 py-1 capitalize">
                           {parsedSuggestion.paymentMethod}
                         </span>
                       </div>

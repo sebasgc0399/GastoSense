@@ -162,7 +162,7 @@ export function ObjectiveDetailsModal({
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-[var(--text)]">{objective.name}</h3>
                 {statusLabel && (
-                  <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-1 text-[11px] font-semibold text-[var(--text)]">
+                  <span className="pill-strong px-2 py-1 text-[11px] font-semibold text-[var(--text)]">
                     {statusLabel}
                   </span>
                 )}

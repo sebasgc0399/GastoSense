@@ -122,7 +122,7 @@ export function TransactionsPage({
   return (
     <section className="space-y-4 pb-5">
       {importToast && (
-        <div className="fixed bottom-24 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-10)] px-4 py-3 text-center text-xs font-semibold text-[var(--text)] shadow-lg backdrop-blur">
+        <div className="fixed bottom-24 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl surface-strong px-4 py-3 text-center text-xs font-semibold text-[var(--text)] shadow-lg backdrop-blur">
           {importToast}
         </div>
       )}

@@ -55,16 +55,16 @@ export function TransactionsFiltersPanel({
             aria-controls="tx-filters-panel"
             aria-label={open ? 'Cerrar filtros' : 'Abrir filtros'}
           >
-            <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
+            <span className="pill-strong px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
               Rango: {rangeLabel}
             </span>
-            <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
+            <span className="pill-strong px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
               Cat: {categoryChip}
             </span>
           </button>
           <button
             type="button"
-            className="shrink-0 rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text)]"
+            className="shrink-0 pill-strong px-2.5 py-1 text-[11px] font-semibold text-[var(--text)]"
             onClick={(event) => {
               event.stopPropagation();
               toggleOpen();
@@ -78,14 +78,14 @@ export function TransactionsFiltersPanel({
         {canClear && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {showSearch && (
-              <span className="max-w-[220px] truncate rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
+              <span className="max-w-[220px] truncate pill-strong px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
                 Buscar: {searchValue}
               </span>
             )}
             {canClear && (
               <button
                 type="button"
-                className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]"
+                className="pill-strong px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]"
                 onClick={(event) => {
                   event.stopPropagation();
                   handleClear();

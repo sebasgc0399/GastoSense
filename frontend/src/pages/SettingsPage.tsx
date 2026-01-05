@@ -154,7 +154,7 @@ export function SettingsPage({
             <p className="text-xs text-[var(--text-muted)]">Alterna entre modo claro y oscuro.</p>
           </div>
           <button
-            className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
+            className="pill-strong px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
             onClick={toggleTheme}
           >
             {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
