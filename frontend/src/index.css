@@ -1,118 +1,12 @@
+@import "./styles/tokens.css";
 @import "./styles/ui.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* =========================================
-     LEGACY VARIABLES (Conservadas para estabilidad)
-     ========================================= */
-  /* --- DARK MODE (default) --- */
-  color-scheme: dark;
-  --bg: #0b1120;
-  --card: rgba(255, 255, 255, 0.06);
-  --card-border: rgba(255, 255, 255, 0.12);
-  --card-shadow: none;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --muted: var(--text-muted);
-  --text-on-primary: #ffffff;
-  --primary: #0ea5e9;
-  --accent: #22c55e;
-  --modal-overlay: rgba(2, 6, 23, 0.6);
-  --modal-surface: rgba(15, 23, 42, 0.92);
-  --modal-border: rgba(255, 255, 255, 0.18);
-  --modal-header: rgba(255, 255, 255, 0.08);
-  --danger-bg: rgba(248, 113, 113, 0.12);
-  --danger-border: rgba(248, 113, 113, 0.35);
-  --danger-text: #fecdd3;
-  --warn-bg: rgba(251, 191, 36, 0.16);
-  --warn-border: rgba(251, 191, 36, 0.4);
-  --warn-text: #fef9c3;
-  --input-bg: rgba(255, 255, 255, 0.08);
-  --input-border: rgba(255, 255, 255, 0.18);
-  --progress-bg: rgba(255, 255, 255, 0.1);
-  --error-text: #fecaca;
-
-  /* Animación dark */
-  --grad-1: #0ea5e9;
-  --grad-2: #0f766e;
-  --grad-3: #0b1120;
-  --blob-1: #f8fafc;
-  --blob-2: #0ea5e9;
-  --blob-3: #0b1120;
-
-  /* =========================================
-     NUEVAS VARIABLES (Sistema Premium Glass)
-     ========================================= */
-  --glass-surface: rgba(11, 17, 32, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.15);
-
-  /* --- NUEVAS VARIABLES GLASS / OVERLAYS --- */
-  --overlay-5: rgba(255, 255, 255, 0.05);
-  --overlay-10: rgba(255, 255, 255, 0.10);
-  --overlay-15: rgba(255, 255, 255, 0.15);
-  --border-10: rgba(255, 255, 255, 0.10);
-  --border-15: rgba(255, 255, 255, 0.15);
-  --border-20: rgba(255, 255, 255, 0.20);
-  --glass-text: #ffffff;
-  --glass-muted: rgba(255, 255, 255, 0.72);
-}
-
-:root[data-theme='light'] {
-  /* --- LIGHT MODE --- */
-  color-scheme: light;
-  --bg: #f0f4f8;
-  --card: #ffffff;
-  --card-border: #e2e8f0;
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --text: #1e293b;
-  --text-muted: #64748b;
-  --muted: var(--text-muted);
-  --text-on-primary: #ffffff;
-  --primary: #0ea5e9;
-  --accent: #0f766e;
-  --modal-overlay: rgba(15, 23, 42, 0.35);
-  --modal-surface: #ffffff;
-  --modal-border: #e2e8f0;
-  --modal-header: #f8fafc;
-  --danger-bg: #fef2f2;
-  --danger-border: #fecdd3;
-  --danger-text: #b91c1c;
-  --warn-bg: #fef3c7;
-  --warn-border: #fcd34d;
-  --warn-text: #92400e;
-  --input-bg: #ffffff;
-  --input-border: #cbd5e1;
-  --progress-bg: #e2e8f0;
-  --error-text: #dc2626;
-
-  /* Animación light (aurora) */
-  --grad-1: #bae6fd;
-  --grad-2: #ccfbf1;
-  --grad-3: #f0f9ff;
-  --blob-1: #ffffff;
-  --blob-2: #38bdf8;
-  --blob-3: #e0f2fe;
-
-  /* Glass en Light mode: mantenemos oscuro para glass premium */
-  --glass-surface: rgba(15, 23, 42, 0.85);
-
-  /* --- OVERLAYS LIGHT (Sutilmente oscuros para contraste sobre fondos claros) --- */
-  --overlay-5: rgba(15, 23, 42, 0.04);
-  --overlay-10: rgba(15, 23, 42, 0.07);
-  --overlay-15: rgba(15, 23, 42, 0.10);
-  --border-10: rgba(15, 23, 42, 0.10);
-  --border-15: rgba(15, 23, 42, 0.14);
-  --border-20: rgba(15, 23, 42, 0.18);
-  --glass-text: #ffffff;
-  --glass-muted: rgba(255, 255, 255, 0.72);
-}
-
 html {
   background-color: var(--bg);
 }
-
 
 html,
 body {
@@ -154,5 +48,3 @@ body {
     font-weight: 600;
   }
 }
-
-
