@@ -45,7 +45,7 @@ export function TransactionsFiltersPanel({
 
   return (
     <>
-      <div className="sm:hidden rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-2">
+      <div className="sm:hidden rounded-2xl surface-soft p-2">
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
@@ -97,7 +97,7 @@ export function TransactionsFiltersPanel({
           </div>
         )}
         <div id="tx-filters-panel" className={panelClasses} aria-hidden={!open}>
-          <div className="rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] p-3">
+          <div className="rounded-lg surface-soft p-3">
             <TransactionFilters
               startDate={filters.startDate}
               endDate={filters.endDate}

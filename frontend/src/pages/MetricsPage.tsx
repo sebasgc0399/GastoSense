@@ -351,7 +351,7 @@ export function MetricsPage({
             )}
           </div>
 
-          <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-1">
+          <div className="rounded-2xl surface-soft p-1">
             <div className="flex w-full gap-1 text-sm font-semibold">
               <button
                 type="button"

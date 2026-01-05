@@ -765,14 +765,14 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="flex items-center gap-2 rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
+              className="flex items-center gap-2 pill-surface px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
               onClick={() => openSettings('header')}
             >
               <img src="/icons/Gear_64.svg" alt="" aria-hidden="true" className="h-4 w-4 opacity-90" />
               <span>Config</span>
             </button>
             <button
-              className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
+              className="pill-surface px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
               onClick={logout}
             >
               Salir

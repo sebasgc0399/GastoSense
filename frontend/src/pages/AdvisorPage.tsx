@@ -650,7 +650,7 @@ export function AdvisorPage({
               )}
             </div>
 
-            <div className="shrink-0 border-t border-[var(--border-10)] bg-[var(--overlay-5)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+            <div className="shrink-0 surface-top px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
               <div className="flex items-end gap-2">
                 <textarea
                   ref={freeChatInputRef}

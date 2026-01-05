@@ -123,7 +123,7 @@ export function ObjectivesPage({
         </button>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-1">
+      <div className="rounded-2xl surface-soft p-1">
         <div className="flex w-full gap-1 text-sm font-semibold">
           <button
             type="button"
@@ -172,10 +172,10 @@ export function ObjectivesPage({
         <button
           type="button"
           onClick={openCreate}
-          className="w-full rounded-3xl border border-dashed border-[var(--border-15)] bg-[var(--overlay-5)] px-6 py-8 text-left transition hover:border-primary/60 hover:bg-[var(--overlay-10)]"
+          className="w-full rounded-3xl surface-dashed border-[var(--border-15)] px-6 py-8 text-left transition hover:border-primary/60 hover:bg-[var(--overlay-10)]"
         >
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] text-white/70">
+            <div className="flex h-14 w-14 items-center justify-center pill-surface text-white/70">
               <Target className="h-7 w-7" />
             </div>
             <div className="space-y-1">

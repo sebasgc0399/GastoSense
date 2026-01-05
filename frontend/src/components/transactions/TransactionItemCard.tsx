@@ -155,7 +155,7 @@ export function TransactionItemCard({
 
   return (
     <div
-      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+      className="flex cursor-pointer flex-col gap-2 rounded-xl surface-soft px-3 py-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
@@ -225,7 +225,7 @@ export function TransactionItemCard({
         )}
       </div>
       {isExpense && hasBudget && (
-        <div className="rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-2.5 py-2">
+        <div className="rounded-lg surface-soft px-2.5 py-2">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-[var(--text-muted)]">
               {hasLimit

@@ -16,7 +16,7 @@ export function IaQuotaProgress({ label, used, limit, ratio, onUpgradeClick }: I
   const progressStyle = { '--pct': `${Math.min(percent, 100)}%` } as CSSProperties;
 
   return (
-    <div className="space-y-1 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-3">
+    <div className="space-y-1 rounded-xl surface-soft p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-[var(--text)]">{label}</span>
         <span className="text-xs text-[var(--text-muted)]">

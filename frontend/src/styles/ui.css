@@ -60,6 +60,10 @@
     @apply border border-[var(--border-10)] bg-[var(--overlay-5)];
   }
 
+  .surface-top {
+    @apply border-t border-[var(--border-10)] bg-[var(--overlay-5)];
+  }
+
   .surface-dashed {
     @apply border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)];
   }

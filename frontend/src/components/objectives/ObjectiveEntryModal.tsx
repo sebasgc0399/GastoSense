@@ -91,7 +91,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
               <p className="text-sm text-white/80">{objective.name}</p>
             </div>
             <button
-              className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="pill-surface px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
               onClick={onClose}
             >
               Cerrar
@@ -129,7 +129,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
           </div>
 
           <div className="mt-6 space-y-3">
-            <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
+            <div className="rounded-2xl surface-soft px-4 py-3">
               <label className="sr-only" htmlFor="objective-entry-note">
                 Nota
               </label>
@@ -142,7 +142,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
                 placeholder="Nota (opcional)"
               />
             </div>
-            <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
+            <div className="rounded-2xl surface-soft px-4 py-3">
               <label className="sr-only" htmlFor="objective-entry-date">
                 Fecha
               </label>

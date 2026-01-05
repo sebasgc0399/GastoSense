@@ -54,7 +54,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         )}
       </div>
 
-      <div className="mt-3 rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2">
+      <div className="mt-3 rounded-lg surface-soft px-3 py-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-xs uppercase text-[var(--muted)]">Gastado</span>
           <span className="font-semibold text-[var(--text)]">

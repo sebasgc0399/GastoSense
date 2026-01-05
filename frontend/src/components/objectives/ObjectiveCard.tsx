@@ -110,7 +110,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
         <button
           type="button"
           onClick={handleQuickAction(isGoal ? 'deposit' : 'payment')}
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1.5 text-xs font-semibold text-white/90 hover:border-primary"
+          className="inline-flex items-center gap-2 pill-surface px-3 py-1.5 text-xs font-semibold text-white/90 hover:border-primary"
         >
           <span className="text-base leading-none">+</span>
           {isGoal ? 'Abonar' : 'Pagar'}

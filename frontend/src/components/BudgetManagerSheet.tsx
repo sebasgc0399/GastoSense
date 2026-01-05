@@ -221,7 +221,7 @@ export function BudgetManagerSheet({
             <div className="flex items-center gap-2">
               <p className="truncate text-sm font-semibold text-[var(--text)]">{cat.label}</p>
               {isFallback ? (
-                <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
+                <span className="pill-surface px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
                   Automatica
                 </span>
               ) : null}

@@ -175,7 +175,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={() => onEdit(objective)}
-                className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] p-2 text-white/80 hover:text-[var(--text)]"
+                className="pill-surface p-2 text-white/80 hover:text-[var(--text)]"
                 aria-label="Editar"
               >
                 <Pencil className="h-4 w-4" />
@@ -183,7 +183,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] p-2 text-white/80 hover:text-[var(--text)]"
+                className="pill-surface p-2 text-white/80 hover:text-[var(--text)]"
                 aria-label="Cerrar"
               >
                 <X className="h-4 w-4" />
@@ -247,7 +247,7 @@ export function ObjectiveDetailsModal({
                           <div className="w-20 shrink-0 text-right text-xs text-muted">
                             {displayDate}
                           </div>
-                          <div className="relative flex-1 rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
+                          <div className="relative flex-1 rounded-2xl surface-soft px-4 py-3">
                             <span className="absolute -left-5 top-4 h-2.5 w-2.5 rounded-full bg-white/40 ring-4 ring-[var(--modal-surface)]" />
                             <div className="flex items-start justify-between gap-3">
                               <div>
