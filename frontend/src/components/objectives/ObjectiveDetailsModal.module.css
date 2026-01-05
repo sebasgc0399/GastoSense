@@ -1,0 +1,22 @@
+@media (min-width: 768px) {
+  .sheetInRight {
+    animation: sheetInRight 240ms ease-out forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheetInRight {
+    animation: none;
+  }
+}
+
+@keyframes sheetInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

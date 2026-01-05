@@ -4,6 +4,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 import { formatPesos } from '../../utils/format';
 import type { Objective, ObjectiveEntry, ObjectiveEntryKind } from '../../types';
 import { CategoryIcon } from '../ui/CategoryIcon';
+import styles from './ObjectiveDetailsModal.module.css';
 
 interface ObjectiveDetailsModalProps {
   open: boolean;
@@ -148,7 +149,7 @@ export function ObjectiveDetailsModal({
         aria-hidden="true"
       />
       <div
-        className="absolute bottom-0 left-0 right-0 flex max-h-[92vh] flex-col overflow-hidden rounded-t-3xl border border-[var(--modal-border)] bg-[var(--modal-surface)]/95 text-[var(--text)] shadow-2xl backdrop-blur-xl animate-sheet-up md:bottom-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-none md:w-[420px] md:rounded-none md:rounded-l-3xl md:border-b-0 md:border-r-0 md:border-t-0 md:border-l md:animate-sheet-in-right"
+        className={`${styles.sheetInRight} absolute bottom-0 left-0 right-0 flex max-h-[92vh] flex-col overflow-hidden rounded-t-3xl border border-[var(--modal-border)] bg-[var(--modal-surface)]/95 text-[var(--text)] shadow-2xl backdrop-blur-xl animate-sheet-up md:bottom-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-none md:w-[420px] md:rounded-none md:rounded-l-3xl md:border-b-0 md:border-r-0 md:border-t-0 md:border-l`}
         role="dialog"
         aria-modal="true"
         aria-label="Detalle del objetivo"

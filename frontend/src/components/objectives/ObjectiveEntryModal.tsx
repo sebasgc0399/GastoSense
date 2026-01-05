@@ -3,6 +3,7 @@ import { todayIso } from '../../utils/dates';
 import { digitsOnly, formatCOP, parseCOP } from '../../utils/amount';
 import { formatPesos } from '../../utils/format';
 import type { Objective, ObjectiveEntryInput, ObjectiveEntryKind } from '../../types';
+import styles from './ObjectiveEntryModal.module.css';
 
 interface ObjectiveEntryModalProps {
   open: boolean;
@@ -43,7 +44,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
     return objective.targetAmount > 0 && objective.currentAmount + amountValue > objective.targetAmount;
   }, [amountValue, isAmountValid, isWithdraw, objective]);
   const disableSave = saving || !isAmountValid || exceedsAvailable;
-  const caretClass = amountDigits ? 'caret-white' : 'caret-transparent';
+  const caretClass = amountDigits ? 'caret-white' : styles.caretTransparent;
 
   if (!open || !objective || !kind) return null;
 

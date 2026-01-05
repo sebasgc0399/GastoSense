@@ -245,16 +245,9 @@ body {
 }
 
 @layer utilities {
-  .caret-transparent {
-    caret-color: transparent;
-  }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
-}
-
-.animate-sheet-in-right {
-  animation: sheetInRight 240ms ease-out forwards;
 }
 
 .robot-blob {
@@ -278,21 +271,9 @@ body {
   font-size: 42px;
 }
 
-@keyframes sheetInRight {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
-  .animate-sheet-up,
-  .animate-sheet-in-right {
+  .animate-sheet-up {
     animation: none;
   }
 }
