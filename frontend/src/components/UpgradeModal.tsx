@@ -58,7 +58,7 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
             return (
               <div
                 key={plan.id}
-                className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3 shadow-sm"
+                className="panel-card shadow-sm"
               >
                 <div className="mb-1 flex items-center justify-between">
                   <h4 className="text-base font-semibold text-[var(--text)]">{plan.label}</h4>

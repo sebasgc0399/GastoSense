@@ -248,7 +248,7 @@ export function BudgetManagerSheet({
             <button
               type="button"
               onClick={() => handleValueChange(cat.id, '')}
-              className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
+              className="btn-outline rounded-lg px-3 py-2 text-xs"
             >
               Sin tope
             </button>
@@ -282,7 +282,7 @@ export function BudgetManagerSheet({
             aria-hidden="true"
           />
           <div
-            className="relative flex h-[92vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] text-[var(--text)] shadow-2xl backdrop-blur md:h-auto md:max-h-[85vh] md:max-w-3xl md:rounded-2xl"
+            className="modal-surface relative flex h-[92vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl md:h-auto md:max-h-[85vh] md:max-w-3xl md:rounded-2xl"
             role="dialog"
             aria-modal="true"
             aria-label="Presupuestos por categoría"
@@ -296,7 +296,7 @@ export function BudgetManagerSheet({
                 </div>
                 <button
                   onClick={onClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
+                  className="icon-button h-9 w-9 rounded-full"
                   aria-label="Cerrar"
                 >
                   <X className="h-4 w-4" />
@@ -307,18 +307,18 @@ export function BudgetManagerSheet({
             <div className="flex-1 overflow-y-auto px-4 py-4">
               {error && <p className="text-xs text-[var(--error-text)]">{error}</p>}
               {loading && visibleCategories.length === 0 ? (
-                <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)]/40 p-3 text-sm text-[var(--text-muted)]">
+                <div className="panel-muted">
                   Cargando categorías...
                 </div>
               ) : visibleCategories.length === 0 ? (
-                <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)]/40 p-3 text-sm text-[var(--text-muted)]">
+                <div className="panel-muted">
                   No hay categorías disponibles.
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Activas</div>
+                  <div className="section-label">Activas</div>
                   {activeCategories.length === 0 ? (
-                    <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)]/40 p-3 text-sm text-[var(--text-muted)]">
+                    <div className="panel-muted">
                       No hay categorías activas.
                     </div>
                   ) : (
@@ -350,7 +350,7 @@ export function BudgetManagerSheet({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-3 text-sm font-semibold text-[var(--text)] hover:border-primary sm:w-auto"
+                  className="btn-outline w-full px-4 py-3 text-sm sm:w-auto"
                   disabled={saving}
                 >
                   Cancelar

@@ -36,6 +36,39 @@
   .btn-glass:hover {
     border-color: var(--border-20);
   }
+
+  .modal-surface {
+    @apply border border-[var(--modal-border)] bg-[var(--modal-surface)];
+    @apply text-[var(--text)] shadow-2xl backdrop-blur;
+  }
+
+  .panel-card {
+    @apply rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3;
+  }
+
+  .panel-muted {
+    @apply rounded-xl border border-[var(--card-border)] p-3;
+    @apply text-sm text-[var(--text-muted)];
+    background-color: color-mix(in srgb, var(--card) 40%, transparent);
+  }
+
+  .section-label {
+    @apply text-[11px] uppercase tracking-wide text-[var(--text-muted)];
+  }
+
+  .icon-button {
+    @apply flex items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)];
+    @apply text-[var(--text)] transition hover:border-primary disabled:opacity-60;
+  }
+
+  .btn-outline {
+    @apply rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)];
+    @apply font-semibold text-[var(--text)] transition hover:border-primary disabled:opacity-60;
+  }
+
+  .surface-input {
+    @apply rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2;
+  }
 }
 
 /* Animaciones */

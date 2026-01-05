@@ -526,7 +526,7 @@ export function ExportTransactionsModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90svh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] text-[var(--text)] shadow-2xl backdrop-blur"
+        className="modal-surface flex max-h-[90svh] w-full max-w-lg flex-col overflow-hidden rounded-2xl"
         role="dialog"
         aria-modal="true"
         aria-label="Administrar datos"
@@ -584,7 +584,7 @@ export function ExportTransactionsModal({
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
           {activeTab === 'export' ? (
             <div className="space-y-3">
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Periodo</p>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
                   Se exportaran {transactions.length} {countLabel} seg&uacute;n este rango.
@@ -598,7 +598,7 @@ export function ExportTransactionsModal({
                   </p>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm">
-                  <label className="flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                  <label className="surface-input flex items-center gap-2">
                     <input
                       type="radio"
                       name="export-period"
@@ -608,7 +608,7 @@ export function ExportTransactionsModal({
                     />
                     <span>{presetRanges?.month.label ?? 'Mes actual'}</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                  <label className="surface-input flex items-center gap-2">
                     <input
                       type="radio"
                       name="export-period"
@@ -618,7 +618,7 @@ export function ExportTransactionsModal({
                     />
                     <span>{presetRanges?.last30.label ?? 'Ultimos 30 dias'}</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                  <label className="surface-input flex items-center gap-2">
                     <input
                       type="radio"
                       name="export-period"
@@ -628,7 +628,7 @@ export function ExportTransactionsModal({
                     />
                     <span>{presetRanges?.last90.label ?? 'Ultimos 90 dias'}</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                  <label className="surface-input flex items-center gap-2">
                     <input
                       type="radio"
                       name="export-period"
@@ -638,7 +638,7 @@ export function ExportTransactionsModal({
                     />
                     <span>{presetRanges?.last365.label ?? 'Ultimos 365 dias'}</span>
                   </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2">
+                  <label className="surface-input flex items-center gap-2">
                     <input
                       type="radio"
                       name="export-period"
@@ -673,7 +673,7 @@ export function ExportTransactionsModal({
                 )}
               </div>
 
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Formato</p>
                 <div className="mt-2 space-y-2 text-sm">
                   <label className="flex items-start gap-2">
@@ -718,7 +718,7 @@ export function ExportTransactionsModal({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Opciones</p>
                 <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
                   <label className="flex items-center gap-2">
@@ -771,7 +771,7 @@ export function ExportTransactionsModal({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Como funciona</p>
                 <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-[var(--text-muted)]">
                   <li>Importa archivos Excel (.xlsx) exportados por GastoSense.</li>
@@ -781,20 +781,20 @@ export function ExportTransactionsModal({
                 <p className="mt-2 text-xs text-[var(--text-muted)]">Tambien puedes subir CSV.</p>
               </div>
 
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Plantilla</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={handleDownloadTemplate}
-                    className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary"
+                    className="btn-outline rounded-lg px-3 py-2 text-xs"
                   >
                     Descargar plantilla (Excel)
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Como preparar tu archivo
                 </p>
@@ -805,7 +805,7 @@ export function ExportTransactionsModal({
                   <li>Solo se importara la hoja Plantilla. La hoja Maestros es de ayuda.</li>
                   <li>Si Excel muestra un aviso de perdida de datos al guardar CSV, acepta.</li>
                 </ul>
-                <div className="mt-3 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                <div className="surface-input mt-3 text-xs text-[var(--text-muted)]">
                   <p className="font-semibold text-[var(--text)]">Reglas rapidas</p>
                   <p>Fecha: YYYY-MM-DD o DD/MM/YYYY.</p>
                   <p>Tipo: gasto o ingreso.</p>
@@ -814,7 +814,7 @@ export function ExportTransactionsModal({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Archivo</p>
                 <label className="mt-2 flex cursor-pointer items-center justify-between rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] hover:border-primary">
                   <span className="text-xs font-semibold">Seleccionar archivo</span>
@@ -834,7 +834,7 @@ export function ExportTransactionsModal({
               </div>
 
               {importReport && (
-                <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+                <div className="panel-card">
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Preview</p>
                   <div className="mt-2 text-sm text-[var(--text)]">
                     Filas: {importReport.total} | Validas: {importReport.valid} | Invalidas: {importReport.invalid}
@@ -855,7 +855,7 @@ export function ExportTransactionsModal({
                     </p>
                   )}
                   {importReport.errors.length > 0 && (
-                    <div className="mt-3 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                    <div className="surface-input mt-3 text-xs text-[var(--text-muted)]">
                       <p className="font-semibold text-[var(--text)]">Errores</p>
                       <ul className="mt-1 space-y-1">
                         {importReport.errors.slice(0, 5).map((error, index) => (
@@ -898,7 +898,7 @@ export function ExportTransactionsModal({
                 </div>
               )}
 
-              <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-3">
+              <div className="panel-card">
                 <button
                   type="button"
                   onClick={() => setShowAdvanced((prev) => !prev)}
@@ -960,7 +960,7 @@ export function ExportTransactionsModal({
               type="button"
               onClick={onClose}
               disabled={isBusy}
-              className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary disabled:opacity-60"
+              className="btn-outline px-4 py-2 text-sm"
             >
               Cancelar
             </button>

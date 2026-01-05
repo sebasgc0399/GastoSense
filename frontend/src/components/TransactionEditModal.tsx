@@ -118,7 +118,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
     <div className="fixed inset-0 z-50 flex items-end justify-center px-0 md:items-center md:px-3">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
-        className="relative flex h-[92vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-[var(--modal-border)] bg-[var(--modal-surface)] text-[var(--text)] shadow-2xl backdrop-blur md:h-auto md:max-h-[85vh] md:max-w-md md:rounded-2xl"
+        className="modal-surface relative flex h-[92vh] w-full max-w-none flex-col overflow-hidden rounded-t-2xl md:h-auto md:max-h-[85vh] md:max-w-md md:rounded-2xl"
         role="dialog"
         aria-modal="true"
         aria-label="Editar movimiento"
@@ -218,7 +218,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
             <button
               onClick={onClose}
               disabled={saving}
-              className="rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary disabled:opacity-60"
+              className="btn-outline px-4 py-2 text-sm"
             >
               Cancelar
             </button>

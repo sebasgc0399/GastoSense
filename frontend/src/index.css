@@ -162,13 +162,3 @@ body {
   }
 }
 
-
-/* =========================================
-   PROTECCION DEL SISTEMA GLASS (PATCHED)
-   ========================================= */
-
-/* 1. Forzar Texto Glass */
-.btn-glass {
-  color: var(--glass-text) !important;
-}
-

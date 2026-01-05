@@ -161,7 +161,7 @@ export function HomePage({
                   >
                     {smartCards.map((item) => (
                       <div key={item.id} className="w-full shrink-0 px-2" style={{ maxWidth: '100%' }}>
-                        <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-3">
+                        <div className="panel-card">
                           <p className="text-sm font-semibold text-[var(--text)]">{item.title}</p>
                           <p className="text-sm text-[var(--text-muted)]">{item.body}</p>
                           <div className="mt-2 flex gap-2">
