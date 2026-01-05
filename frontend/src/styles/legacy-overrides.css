@@ -1,0 +1,78 @@
+/* Overrides de utilidad para contraste en modo claro/oscuro */
+.text-white,
+.text-slate-50,
+.text-slate-100,
+.text-slate-200 {
+  color: var(--text) !important;
+}
+
+.text-slate-300,
+.text-slate-400,
+.text-slate-500 {
+  color: var(--text-muted) !important;
+}
+
+.text-slate-600,
+.text-slate-700,
+.text-slate-800,
+.text-slate-900 {
+  color: var(--text) !important;
+}
+
+.text-red-200,
+.text-red-300,
+.text-red-400,
+.text-red-600 {
+  color: var(--error-text) !important;
+}
+
+.text-emerald-200,
+.text-emerald-300,
+.text-emerald-500 {
+  color: var(--accent) !important;
+}
+
+/* 2. Mapeo de Overlays (Usa transparencias reales, no --card solido) */
+.bg-white\/5 {
+  background-color: var(--overlay-5) !important;
+}
+.bg-white\/10 {
+  background-color: var(--overlay-10) !important;
+}
+.bg-white\/15 {
+  background-color: var(--overlay-15) !important;
+}
+
+.border-white\/10 {
+  border-color: var(--border-10) !important;
+}
+.border-white\/15 {
+  border-color: var(--border-15) !important;
+}
+.border-white\/20 {
+  border-color: var(--border-20) !important;
+}
+
+/* 3. Fix especificos de colores */
+.bg-rose-500\/20 {
+  background-color: rgba(244, 63, 94, 0.2) !important;
+}
+.bg-emerald-500\/20 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.bg-slate-50,
+.bg-slate-100 {
+  background-color: var(--card) !important;
+  color: var(--text) !important;
+}
+
+.bg-slate-900 {
+  background-color: var(--bg) !important;
+}
+
+.bg-slate-900\/50,
+.bg-slate-900\/60,
+.bg-slate-900\/80 {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}

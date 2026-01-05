@@ -1,0 +1,41 @@
+.bgAnimated {
+  background: linear-gradient(120deg, var(--grad-1), var(--grad-2), var(--grad-3));
+  background-size: 300% 300%;
+  animation: gradientMove 12s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Fuerza modo oscuro en vistas puntuales (ej. login) sin importar el tema global */
+.loginForceDark {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --card-shadow: none;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --primary: #0ea5e9;
+  --accent: #22c55e;
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --input-border: rgba(255, 255, 255, 0.18);
+  --progress-bg: rgba(255, 255, 255, 0.1);
+  --error-text: #fecaca;
+  --grad-1: #0ea5e9;
+  --grad-2: #0f766e;
+  --grad-3: #0b1120;
+  --blob-1: #f8fafc;
+  --blob-2: #0ea5e9;
+  --blob-3: #0b1120;
+  background-color: var(--bg);
+}

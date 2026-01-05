@@ -5,6 +5,7 @@ import { getFirebaseAuth, firebaseInitError } from '../config/firebase';
 import { RobotAvatar } from './RobotAvatar';
 import { isIOSSafari } from '../utils/isIOSSafari';
 import { useAuth } from '../context/AuthContext';
+import styles from './LoginHero.module.css';
 
 type AuthErrorLike = { code?: string; message?: string };
 
@@ -171,7 +172,7 @@ export function LoginHero() {
 
   return (
     // Forzamos tema oscuro local con clase dedicada (sin afectar el tema global del usuario)
-    <div className="login-force-dark min-h-screen bg-animated flex items-center justify-center p-4">
+    <div className={`${styles.loginForceDark} ${styles.bgAnimated} min-h-screen flex items-center justify-center p-4`}>
       {/* Tarjeta principal */}
       <div className="card mx-auto flex w-full max-w-md flex-col items-center gap-6 p-8 shadow-2xl">
         {/* Robot */}

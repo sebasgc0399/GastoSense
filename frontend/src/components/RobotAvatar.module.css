@@ -1,0 +1,53 @@
+.eye {
+  transform-origin: center center;
+  transform-box: fill-box;
+  animation: robot-blink 5s infinite;
+}
+
+.armRight {
+  transform-box: fill-box;
+  transform-origin: 22% 28%;
+  animation: robot-wave 5s infinite ease-in-out;
+}
+
+.body {
+  transform-box: fill-box;
+  transform-origin: center 60%;
+  animation: robot-tilt 5s infinite ease-in-out;
+}
+
+@keyframes robot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes robot-wave {
+  0%,
+  90%,
+  100% {
+    transform: rotate(0deg);
+  }
+  93% {
+    transform: rotate(-12deg);
+  }
+  96% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes robot-tilt {
+  0%,
+  93%,
+  100% {
+    transform: rotate(0deg);
+  }
+  95% {
+    transform: rotate(-3deg);
+  }
+}
