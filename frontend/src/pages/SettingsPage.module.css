@@ -1,0 +1,5 @@
+.badgeWarn {
+  background-color: var(--warn-bg) !important;
+  border-color: var(--warn-border) !important;
+  color: var(--warn-text) !important;
+}

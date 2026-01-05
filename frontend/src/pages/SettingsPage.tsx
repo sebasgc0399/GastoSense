@@ -1,6 +1,7 @@
 import type React from 'react';
 import { IaQuotaProgress } from '../components/IaQuotaProgress';
 import { ResponsiveSelect } from '../components/ResponsiveSelect';
+import styles from './SettingsPage.module.css';
 import type { KeyPreference, PlanInfo, PlanPeriod, UserProfile, UserRole } from '../types';
 
 type PlanId = 'plan_byok' | 'plan_pro';
@@ -174,7 +175,7 @@ export function SettingsPage({
               className={`rounded-full border px-3 py-1 ${
                 userProfile?.subscription?.status === 'active'
                   ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                  : 'badge-warn'
+                  : styles.badgeWarn
               }`}
             >
               {userProfile?.subscription?.status === 'active' ? 'Membresía activa' : 'Membresía inactiva'}

@@ -170,29 +170,6 @@ body {
 
 /* Premium Glass */
 @layer components {
-  .glass-sheet {
-    @apply fixed inset-x-0 bottom-0 z-50 flex flex-col;
-    @apply border-t bg-[var(--glass-surface)];
-    @apply shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl;
-    @apply sm:static sm:z-auto sm:w-full sm:max-w-md sm:rounded-2xl sm:border sm:shadow-none sm:bg-transparent;
-    @apply rounded-t-3xl;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
-    color: var(--glass-text);
-    border-color: var(--border-10);
-    /* --- FORCED DARK CONTEXT (P0 FIX) --- */
-    --overlay-5: rgba(255, 255, 255, 0.06);
-    --overlay-10: rgba(255, 255, 255, 0.10);
-    --overlay-15: rgba(255, 255, 255, 0.14);
-    --border-10: rgba(255, 255, 255, 0.10);
-    --border-15: rgba(255, 255, 255, 0.16);
-    --border-20: rgba(255, 255, 255, 0.22);
-    --text: var(--glass-text);
-    --text-muted: var(--glass-muted);
-    --muted: var(--glass-muted);
-    --input-bg: var(--overlay-5);
-    --input-border: var(--border-15);
-  }
-
   .glass-modal-center {
     @apply fixed inset-x-0 bottom-0 z-50 flex flex-col;
     @apply border-t bg-[var(--glass-surface)] backdrop-blur-xl;
@@ -223,25 +200,6 @@ body {
     font-variant-numeric: tabular-nums;
   }
 
-  .btn-icon-glass {
-    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-full;
-    @apply border bg-white/5;
-    @apply transition-all duration-200;
-    @apply hover:bg-white/10 hover:scale-105 active:scale-90 disabled:opacity-50;
-    color: var(--glass-text);
-    border-color: var(--border-10);
-  }
-
-  .btn-primary-glass {
-    @apply w-full flex items-center justify-center gap-2 rounded-2xl;
-    @apply bg-gradient-to-r from-emerald-500 to-teal-500;
-    @apply px-6 py-4 text-base font-bold;
-    @apply shadow-lg shadow-emerald-500/25 border;
-    @apply transition-all duration-200;
-    @apply hover:opacity-90 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50;
-    color: var(--glass-text);
-    border-color: var(--border-10);
-  }
 }
 
 @layer utilities {
@@ -294,18 +252,9 @@ body {
    ========================================= */
 
 /* 1. Forzar Texto Glass */
-.glass-sheet .text-white,
 .glass-modal-center .text-white,
-.btn-glass,
-.btn-primary-glass,
-.btn-icon-glass {
+.btn-glass {
   color: var(--glass-text) !important;
-}
-
-.badge-warn {
-  background-color: var(--warn-bg) !important;
-  border-color: var(--warn-border) !important;
-  color: var(--warn-text) !important;
 }
 
 .text-muted {

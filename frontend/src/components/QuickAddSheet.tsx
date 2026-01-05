@@ -10,6 +10,7 @@ import { ResponsiveSelect } from './ResponsiveSelect';
 import { CategoryIcon } from './ui/CategoryIcon';
 import { CustomKeypad, type KeypadKey } from './CustomKeypad';
 import type { CategoryKind, ParsedTransactionSuggestion, Template, TransactionInput } from '../types';
+import styles from './QuickAddSheet.module.css';
 
 type Mode = 'quick' | 'details' | 'ai';
 type SelectedTemplateIntent = 'use' | 'edit';
@@ -829,7 +830,7 @@ export function QuickAddSheet({
         aria-hidden="true"
       />
       <div
-        className="glass-sheet px-4 pt-4 pb-0 sm:px-6 sm:pt-6 sm:pb-0 animate-sheet-up relative flex h-full max-h-[90vh] w-full flex-col overflow-hidden sm:max-h-[85vh]"
+        className={`${styles.glassSheet} px-4 pt-4 pb-0 sm:px-6 sm:pt-6 sm:pb-0 animate-sheet-up relative flex h-full max-h-[90vh] w-full flex-col overflow-hidden sm:max-h-[85vh]`}
         role="dialog"
         aria-modal="true"
         aria-label="Nuevo movimiento"
@@ -841,7 +842,12 @@ export function QuickAddSheet({
             <div className="relative flex items-center justify-between pb-2">
               <div className="h-10 w-10">
                 {showDetails && (
-                  <button type="button" onClick={handleLeftAction} className="btn-icon-glass" aria-label="Volver">
+                  <button
+                    type="button"
+                    onClick={handleLeftAction}
+                    className={`${styles.btnIconGlass} h-10 w-10`}
+                    aria-label="Volver"
+                  >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                 )}
@@ -880,12 +886,12 @@ export function QuickAddSheet({
                 <button
                   type="button"
                   onClick={handleAiToggle}
-                  className={`btn-icon-glass ${mode === 'ai' ? 'border-emerald-500/50 text-emerald-200' : ''}`}
+                  className={`${styles.btnIconGlass} h-10 w-10 ${mode === 'ai' ? 'border-emerald-500/50 text-emerald-200' : ''}`}
                   aria-label={mode === 'ai' ? 'Salir de modo frase' : 'Modo frase'}
                 >
                   <Sparkles className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={onClose} className="btn-icon-glass" aria-label="Cerrar">
+                <button type="button" onClick={onClose} className={`${styles.btnIconGlass} h-10 w-10`} aria-label="Cerrar">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -936,7 +942,7 @@ export function QuickAddSheet({
                     type="button"
                     onClick={handleMicToggle}
                     disabled={transcribingAudio || parseLocked}
-                    className={`btn-icon-glass h-12 w-12 sm:h-14 sm:w-14 ${
+                    className={`${styles.btnIconGlass} h-12 w-12 sm:h-14 sm:w-14 ${
                       recording
                         ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/40 animate-pulse ring-4 ring-rose-500/20 border-rose-500/40'
                         : ''
@@ -951,7 +957,7 @@ export function QuickAddSheet({
                   <button
                     onClick={handleInterpret}
                     disabled={interpreting || transcribingAudio || parseLocked}
-                    className="btn-primary-glass w-full py-2"
+                    className={`${styles.btnPrimaryGlass} w-full px-6 py-2 text-base`}
                   >
                     {transcribingAudio ? 'Transcribiendo audio...' : interpreting ? 'Interpretando...' : 'Interpretar frase con IA'}
                   </button>
@@ -1024,7 +1030,7 @@ export function QuickAddSheet({
                       <button
                         onClick={handleSaveParsed}
                         disabled={saving}
-                        className="btn-primary-glass h-10 px-3 py-0 text-xs"
+                        className={`${styles.btnPrimaryGlass} h-10 w-full px-3 py-0 text-xs`}
                       >
                         {saving ? 'Guardando...' : 'Confirmar y guardar'}
                       </button>
@@ -1062,7 +1068,7 @@ export function QuickAddSheet({
                                   <button
                                     type="button"
                                     onClick={() => applyTemplateForEdit(tpl, true)}
-                                    className="btn-icon-glass shrink-0"
+                                  className={`${styles.btnIconGlass} h-10 w-10 shrink-0`}
                                     aria-label={'Editar plantilla ' + tpl.name}
                                     title="Editar plantilla"
                                   >
@@ -1073,7 +1079,7 @@ export function QuickAddSheet({
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTemplate(tpl.id)}
-                                    className="btn-icon-glass shrink-0"
+                                  className={`${styles.btnIconGlass} h-10 w-10 shrink-0`}
                                     aria-label={'Eliminar plantilla ' + tpl.name}
                                     title="Eliminar plantilla"
                                   >
@@ -1238,7 +1244,7 @@ export function QuickAddSheet({
                       type="button"
                       onClick={() => handleSave(true)}
                       disabled={saving || !formReady}
-                      className="btn-primary-glass"
+                      className={`${styles.btnPrimaryGlass} w-full px-6 py-4 text-base`}
                     >
                       {saving ? 'Guardando...' : type === 'income' ? 'Guardar Ingreso' : 'Guardar Gasto'}
                     </button>

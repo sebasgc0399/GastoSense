@@ -1,3 +1,5 @@
+import styles from './CustomKeypad.module.css';
+
 type KeypadKey = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' | '.' | 'backspace';
 
 const KEYPAD_KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'];
@@ -24,7 +26,7 @@ export function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: Cu
               type="button"
               onClick={() => onInput(key)}
               disabled={disabled}
-              className="btn-glass h-[7vh] min-h-[48px] max-h-[60px] text-2xl font-semibold sm:h-20 sm:text-3xl"
+              className={`btn-glass ${styles.keyButton}`}
               aria-label={ariaLabel}
             >
               {isBackspace ? (
@@ -46,7 +48,7 @@ export function CustomKeypad({ disabled, actionDisabled, onInput, onAction }: Cu
         type="button"
         onClick={onAction}
         disabled={actionDisabled}
-        className="flex h-auto w-20 flex-col items-center justify-center self-stretch rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-2 py-2 text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90 active:scale-95 disabled:opacity-60 sm:w-24"
+        className={styles.actionButton}
         aria-label="Guardar"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

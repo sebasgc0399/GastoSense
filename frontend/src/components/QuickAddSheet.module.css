@@ -1,0 +1,45 @@
+.glassSheet {
+  @apply z-50 flex flex-col;
+  @apply border-t bg-[var(--glass-surface)];
+  @apply shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl;
+  @apply sm:z-auto sm:w-full sm:max-w-md sm:rounded-2xl sm:border sm:shadow-none sm:bg-transparent;
+  @apply rounded-t-3xl;
+  color: var(--glass-text);
+  border-color: var(--border-10);
+  /* --- FORCED DARK CONTEXT (P0 FIX) --- */
+  --overlay-5: rgba(255, 255, 255, 0.06);
+  --overlay-10: rgba(255, 255, 255, 0.10);
+  --overlay-15: rgba(255, 255, 255, 0.14);
+  --border-10: rgba(255, 255, 255, 0.10);
+  --border-15: rgba(255, 255, 255, 0.16);
+  --border-20: rgba(255, 255, 255, 0.22);
+  --text: var(--glass-text);
+  --text-muted: var(--glass-muted);
+  --muted: var(--glass-muted);
+  --input-bg: var(--overlay-5);
+  --input-border: var(--border-15);
+}
+
+.glassSheet :global(.text-white) {
+  color: var(--glass-text) !important;
+}
+
+.btnIconGlass {
+  @apply flex shrink-0 items-center justify-center rounded-full;
+  @apply border bg-white/5;
+  @apply transition-all duration-200;
+  @apply hover:bg-white/10 hover:scale-105 active:scale-90 disabled:opacity-50;
+  color: var(--glass-text);
+  border-color: var(--border-10);
+}
+
+.btnPrimaryGlass {
+  @apply flex items-center justify-center gap-2 rounded-2xl;
+  @apply bg-gradient-to-r from-emerald-500 to-teal-500;
+  @apply font-bold;
+  @apply shadow-lg shadow-emerald-500/25 border;
+  @apply transition-all duration-200;
+  @apply hover:opacity-90 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50;
+  color: var(--glass-text);
+  border-color: var(--border-10);
+}
