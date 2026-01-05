@@ -15,9 +15,9 @@ interface StatsSummaryCardProps {
 }
 
 const getToneClass = (tone?: SummaryTone) => {
-  if (tone === 'success') return 'text-emerald-300';
-  if (tone === 'danger') return 'text-red-300';
-  return 'text-white';
+  if (tone === 'success') return 'text-[var(--accent)]';
+  if (tone === 'danger') return 'text-[var(--error-text)]';
+  return 'text-[var(--text)]';
 };
 
 export function StatsSummaryCard({ title = 'Resumen', items, className }: StatsSummaryCardProps) {

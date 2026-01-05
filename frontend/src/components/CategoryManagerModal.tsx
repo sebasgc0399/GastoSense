@@ -504,7 +504,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
               {error && <p className="text-xs text-[var(--error-text)]">{error}</p>}
               {formError && <p className="text-xs text-[var(--error-text)]">{formError}</p>}
               <div className="flex items-center justify-between">
-                <div className="inline-flex rounded-full bg-white/10 p-1 text-xs font-semibold text-[var(--text)]">
+                <div className="inline-flex rounded-full bg-[var(--overlay-10)] p-1 text-xs font-semibold text-[var(--text)]">
                   <button
                     type="button"
                     onClick={() => setSelectedKind('expense')}
@@ -612,7 +612,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                   onClick={() => handleToggleActive(cat)}
                                   className={`flex items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold transition ${
                                     cat.isArchived
-                                      ? 'border-white/10 text-[var(--text-muted)]'
+                                      ? 'border-[var(--border-10)] text-[var(--text-muted)]'
                                       : 'border-primary/40 text-[var(--text)]'
                                   }`}
                                   aria-pressed={!cat.isArchived}
@@ -622,7 +622,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                   <span className="sr-only sm:not-sr-only">Activa</span>
                                   <span
                                     className={`relative inline-flex h-4 w-7 items-center rounded-full ${
-                                      cat.isArchived ? 'bg-white/10' : 'bg-primary/70'
+                                      cat.isArchived ? 'bg-[var(--overlay-10)]' : 'bg-primary/70'
                                     }`}
                                   >
                                     <span
@@ -682,13 +682,13 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                               <button
                                 type="button"
                                 onClick={() => handleToggleActive(cat)}
-                                className="flex items-center gap-1 rounded-full border border-white/10 px-1.5 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition"
+                                className="flex items-center gap-1 rounded-full border border-[var(--border-10)] px-1.5 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition"
                                 aria-pressed={!cat.isArchived}
                                 aria-label="Activar categoría"
                                 disabled={saving || cat.id === fallbackId}
                               >
                                 <span className="sr-only sm:not-sr-only">Inactiva</span>
-                                <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-white/10">
+                                <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-[var(--overlay-10)]">
                                   <span className="inline-block h-3 w-3 translate-x-1 transform rounded-full bg-white" />
                                 </span>
                               </button>
@@ -771,7 +771,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
             <button
               type="button"
               onClick={handleNew}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:opacity-90"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90"
             >
               <Plus className="h-4 w-4" />
               Nueva categoría
@@ -793,7 +793,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                 type="button"
                 onClick={handleSave}
                 disabled={saving || !userId}
-                className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:opacity-90 disabled:opacity-60"
+                className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>

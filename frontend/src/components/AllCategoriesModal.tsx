@@ -75,7 +75,7 @@ export function AllCategoriesModal({
                   aria-pressed={mode === 'spent'}
                   onClick={() => onModeChange('spent')}
                   className={`rounded-md px-3 py-2 font-semibold ${
-                    mode === 'spent' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                    mode === 'spent' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                   }`}
                 >
                   Barras
@@ -87,7 +87,7 @@ export function AllCategoriesModal({
                   title={!budgetModeAvailable ? budgetModeHelperText : undefined}
                   onClick={() => onModeChange('budget')}
                   className={`rounded-md px-3 py-2 font-semibold ${
-                    mode === 'budget' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                    mode === 'budget' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                   } ${!budgetModeAvailable ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   Presupuesto

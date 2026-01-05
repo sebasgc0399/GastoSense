@@ -57,7 +57,7 @@ export function TopCategoriesChart({
   const highlightEdit = !budgetModeAvailable && onEditBudgets;
   const editButtonClass = highlightEdit
     ? 'h-9 rounded-xl border border-primary/50 bg-primary/10 px-3 text-xs font-semibold text-[var(--text)] hover:border-primary hover:bg-primary/20'
-    : 'h-9 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 text-xs font-semibold text-[var(--text)] hover:bg-white/5 hover:border-primary';
+    : 'h-9 rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-3 text-xs font-semibold text-[var(--text)] hover:bg-[var(--overlay-5)] hover:border-primary';
   const canViewAll = Boolean(showViewAll && onViewAll && items.length > resolvedLimit);
 
   return (
@@ -65,7 +65,7 @@ export function TopCategoriesChart({
       <div className="mb-3 space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <h3 className="text-lg font-semibold text-[var(--text)]">{title}</h3>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -91,7 +91,7 @@ export function TopCategoriesChart({
                   aria-pressed={mode === 'spent'}
                   onClick={() => onModeChange('spent')}
                   className={`rounded-md px-3 py-2 font-semibold ${
-                    mode === 'spent' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                    mode === 'spent' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                   }`}
                 >
                   Barras
@@ -103,7 +103,7 @@ export function TopCategoriesChart({
                   title={!budgetModeAvailable ? budgetModeHelperText : undefined}
                   onClick={() => onModeChange('budget')}
                   className={`rounded-md px-3 py-2 font-semibold ${
-                    mode === 'budget' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                    mode === 'budget' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                   } ${!budgetModeAvailable ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   Presupuesto

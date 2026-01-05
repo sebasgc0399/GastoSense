@@ -126,7 +126,7 @@ export function ObjectiveFormModal({
                   disabled={isEdit}
                   onClick={() => setType('goal')}
                   className={`flex-1 rounded-md px-3 py-2 font-semibold ${
-                    type === 'goal' ? 'bg-emerald-500 text-white' : 'text-[var(--text)]'
+                    type === 'goal' ? 'bg-emerald-500 text-[var(--text)]' : 'text-[var(--text)]'
                   } ${isEdit ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
                   Ahorro
@@ -137,7 +137,7 @@ export function ObjectiveFormModal({
                   disabled={isEdit}
                   onClick={() => setType('debt')}
                   className={`flex-1 rounded-md px-3 py-2 font-semibold ${
-                    type === 'debt' ? 'bg-sky-500 text-white' : 'text-[var(--text)]'
+                    type === 'debt' ? 'bg-sky-500 text-[var(--text)]' : 'text-[var(--text)]'
                   } ${isEdit ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
                   Deuda
@@ -193,7 +193,7 @@ export function ObjectiveFormModal({
                   placeholder="Ej. #22c55e"
                 />
                 <div
-                  className="h-10 w-10 rounded-xl border border-white/10"
+                  className="h-10 w-10 rounded-xl border border-[var(--border-10)]"
                   style={{ backgroundColor: color || 'rgba(255,255,255,0.08)' }}
                 />
               </div>
@@ -216,11 +216,11 @@ export function ObjectiveFormModal({
         </div>
 
         <div className="shrink-0 border-t border-[var(--modal-border)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-          {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
+          {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <button
             onClick={handleSave}
             disabled={!canSave || saving}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:bg-emerald-700 disabled:opacity-60"
           >
             {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear objetivo'}
           </button>

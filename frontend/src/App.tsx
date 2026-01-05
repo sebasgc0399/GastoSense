@@ -757,22 +757,22 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] pb-24 text-[var(--text)]">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[var(--bg)]/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-[var(--border-10)] bg-[var(--bg)]/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Gastos personales</p>
-            <h1 className="text-xl font-semibold text-white">Tu dinero bajo control</h1>
+            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Gastos personales</p>
+            <h1 className="text-xl font-semibold text-[var(--text)]">Tu dinero bajo control</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
+              className="flex items-center gap-2 rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
               onClick={() => openSettings('header')}
             >
               <img src="/icons/Gear_64.svg" alt="" aria-hidden="true" className="h-4 w-4 opacity-90" />
               <span>Config</span>
             </button>
             <button
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
+              className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
               onClick={logout}
             >
               Salir
@@ -937,7 +937,7 @@ function App() {
       {!(activeTab === 'metrics' && monthTransactions.length === 0) && (
         <button
           onClick={() => setShowQuickAdd(true)}
-          className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
+          className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow-lg shadow-emerald-500/30 hover:bg-sky-600 sm:bottom-24"
         >
           <span className="text-lg">+</span> Registrar
         </button>

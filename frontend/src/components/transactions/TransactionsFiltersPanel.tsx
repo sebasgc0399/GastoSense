@@ -45,7 +45,7 @@ export function TransactionsFiltersPanel({
 
   return (
     <>
-      <div className="sm:hidden rounded-2xl border border-white/10 bg-white/5 p-2">
+      <div className="sm:hidden rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-2">
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
@@ -55,16 +55,16 @@ export function TransactionsFiltersPanel({
             aria-controls="tx-filters-panel"
             aria-label={open ? 'Cerrar filtros' : 'Abrir filtros'}
           >
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
+            <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
               Rango: {rangeLabel}
             </span>
-            <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
+            <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
               Cat: {categoryChip}
             </span>
           </button>
           <button
             type="button"
-            className="shrink-0 rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white"
+            className="shrink-0 rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text)]"
             onClick={(event) => {
               event.stopPropagation();
               toggleOpen();
@@ -78,14 +78,14 @@ export function TransactionsFiltersPanel({
         {canClear && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {showSearch && (
-              <span className="max-w-[220px] truncate rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
+              <span className="max-w-[220px] truncate rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text)]">
                 Buscar: {searchValue}
               </span>
             )}
             {canClear && (
               <button
                 type="button"
-                className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
+                className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]"
                 onClick={(event) => {
                   event.stopPropagation();
                   handleClear();
@@ -97,7 +97,7 @@ export function TransactionsFiltersPanel({
           </div>
         )}
         <div id="tx-filters-panel" className={panelClasses} aria-hidden={!open}>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <div className="rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] p-3">
             <TransactionFilters
               startDate={filters.startDate}
               endDate={filters.endDate}

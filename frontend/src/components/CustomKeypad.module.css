@@ -5,7 +5,7 @@
 
 .actionButton {
   @apply flex h-auto w-20 flex-col items-center justify-center self-stretch rounded-2xl;
-  @apply bg-gradient-to-r from-emerald-500 to-teal-500 px-2 py-2 text-white;
+  @apply bg-gradient-to-r from-emerald-500 to-teal-500 px-2 py-2 text-[var(--text)];
   @apply shadow-lg shadow-emerald-500/20 transition;
   @apply hover:opacity-90 active:scale-95 disabled:opacity-60;
   @apply sm:w-24;

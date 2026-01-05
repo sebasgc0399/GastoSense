@@ -111,26 +111,26 @@ export function ObjectivesPage({
     <section className="space-y-4 pb-5">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-white">Objetivos</h2>
-          <p className="text-xs text-slate-400">Ahorros y deudas en un solo lugar.</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Objetivos</h2>
+          <p className="text-xs text-[var(--text-muted)]">Ahorros y deudas en un solo lugar.</p>
         </div>
         <button
           type="button"
           onClick={openCreate}
-          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-[var(--text)] hover:opacity-90"
         >
           Nuevo
         </button>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-1">
+      <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-1">
         <div className="flex w-full gap-1 text-sm font-semibold">
           <button
             type="button"
             aria-pressed={activeType === 'goal'}
             onClick={() => setActiveType('goal')}
             className={`flex-1 rounded-xl px-3 py-2 transition ${
-              activeType === 'goal' ? 'bg-emerald-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
+              activeType === 'goal' ? 'bg-emerald-500 text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
             }`}
           >
             Ahorros
@@ -140,7 +140,7 @@ export function ObjectivesPage({
             aria-pressed={activeType === 'debt'}
             onClick={() => setActiveType('debt')}
             className={`flex-1 rounded-xl px-3 py-2 transition ${
-              activeType === 'debt' ? 'bg-sky-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
+              activeType === 'debt' ? 'bg-sky-500 text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
             }`}
           >
             Deudas
@@ -151,18 +151,18 @@ export function ObjectivesPage({
       <div className="card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-white">
+            <h3 className="text-base font-semibold text-[var(--text)]">
               {activeType === 'goal' ? 'Total ahorrado' : 'Deuda restante'}
             </h3>
             <p className="text-xs text-[var(--text-muted)]">
               {summaryCount} {summaryLabel}
             </p>
           </div>
-          <p className="text-2xl font-semibold text-white">{formatPesos(summaryValue)}</p>
+          <p className="text-2xl font-semibold text-[var(--text)]">{formatPesos(summaryValue)}</p>
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--error-text)]">{error}</p>}
 
       {!objectivesReady ? (
         <div className="card">
@@ -172,14 +172,14 @@ export function ObjectivesPage({
         <button
           type="button"
           onClick={openCreate}
-          className="w-full rounded-3xl border border-dashed border-white/15 bg-white/5 px-6 py-8 text-left transition hover:border-primary/60 hover:bg-white/10"
+          className="w-full rounded-3xl border border-dashed border-[var(--border-15)] bg-[var(--overlay-5)] px-6 py-8 text-left transition hover:border-primary/60 hover:bg-[var(--overlay-10)]"
         >
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] text-white/70">
               <Target className="h-7 w-7" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-semibold text-white">{emptyTitle}</h3>
+              <h3 className="text-base font-semibold text-[var(--text)]">{emptyTitle}</h3>
               <p className="text-sm text-[var(--text-muted)]">{emptyDescription}</p>
             </div>
             <span className="text-sm font-semibold text-primary">{emptyCta}</span>

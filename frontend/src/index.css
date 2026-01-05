@@ -138,11 +138,6 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.modal-overlay {
-  touch-action: none;
-  overscroll-behavior: none;
-}
-
 @media (orientation: landscape) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
   #root::before {
     content: 'Gira tu telefono para continuar';
@@ -160,89 +155,10 @@ body {
   }
 }
 
-/* Reutilizables */
-.pill-btn {
-  border-radius: 9999px;
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  color: var(--text);
-}
-
-/* Premium Glass */
-@layer components {
-  .glass-modal-center {
-    @apply fixed inset-x-0 bottom-0 z-50 flex flex-col;
-    @apply border-t bg-[var(--glass-surface)] backdrop-blur-xl;
-    @apply rounded-t-3xl shadow-2xl;
-    @apply md:inset-0 md:m-auto md:h-auto md:max-h-[85vh] md:w-full md:max-w-2xl;
-    @apply md:rounded-3xl md:border md:shadow-2xl;
-    color: var(--glass-text);
-    border-color: var(--border-10);
-    /* --- FORCED DARK CONTEXT (P0 FIX) --- */
-    --overlay-5: rgba(255, 255, 255, 0.06);
-    --overlay-10: rgba(255, 255, 255, 0.10);
-    --overlay-15: rgba(255, 255, 255, 0.14);
-    --border-10: rgba(255, 255, 255, 0.10);
-    --border-15: rgba(255, 255, 255, 0.16);
-    --border-20: rgba(255, 255, 255, 0.22);
-    --text: var(--glass-text);
-    --text-muted: var(--glass-muted);
-    --muted: var(--glass-muted);
-    --input-bg: var(--overlay-5);
-    --input-border: var(--border-15);
-  }
-
-  .input-giant {
-    @apply w-full bg-transparent text-center font-bold placeholder-white/10 focus:outline-none transition-all duration-300;
-    font-size: clamp(2.25rem, 7vw, 3.25rem);
-    line-height: 1.05;
-    color: var(--glass-text);
-    font-variant-numeric: tabular-nums;
-  }
-
-}
-
-@layer utilities {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}
-
-.robot-blob {
-  width: 120px;
-  height: 120px;
-  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-  background: radial-gradient(circle at 30% 30%, var(--blob-1) 0 20%, var(--blob-2) 21% 35%, var(--blob-3) 36% 100%);
-  box-shadow:
-    0 20px 60px rgba(14, 165, 233, 0.35),
-    0 10px 20px rgba(15, 118, 110, 0.25);
-  animation: floaty 6s ease-in-out infinite;
-  position: relative;
-}
-
-.robot-blob::after {
-  content: '🤖';
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 42px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-sheet-up {
     animation: none;
-  }
-}
-
-@keyframes floaty {
-  0%,
-  100% {
-    transform: translateY(0px) rotate(-2deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(2deg);
   }
 }
 
@@ -252,17 +168,7 @@ body {
    ========================================= */
 
 /* 1. Forzar Texto Glass */
-.glass-modal-center .text-white,
 .btn-glass {
   color: var(--glass-text) !important;
-}
-
-.text-muted {
-  color: var(--text-muted);
-}
-
-.bg-surface {
-  background: var(--card);
-  border: 1px solid var(--card-border);
 }
 

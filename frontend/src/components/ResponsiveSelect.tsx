@@ -143,7 +143,7 @@ export function ResponsiveSelect<T extends string>({
                     <button
                       type="button"
                       onClick={() => setIsOpen(false)}
-                      className="rounded-full bg-white/5 p-1.5 text-[var(--text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--text)]"
+                      className="rounded-full bg-[var(--overlay-5)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--overlay-10)] hover:text-[var(--text)]"
                     >
                       <X className="h-5 w-5" />
                     </button>
@@ -169,7 +169,7 @@ export function ResponsiveSelect<T extends string>({
                             ? 'cursor-not-allowed text-[var(--text-muted)] opacity-50'
                             : isSelected
                               ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-semibold'
-                              : 'text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text)] active:bg-white/10',
+                              : 'text-[var(--text-muted)] hover:bg-[var(--overlay-5)] hover:text-[var(--text)] active:bg-[var(--overlay-10)]',
                         )}
                       >
                         <span className="truncate">{option.label}</span>

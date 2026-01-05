@@ -116,18 +116,18 @@ export function SettingsPage({
     <section className="space-y-4">
       <div className="card flex flex-col gap-3">
         <div className="space-y-1">
-          <p className="text-xs uppercase text-slate-400">Cuenta</p>
-          <h2 className="text-lg font-semibold text-white">ID de usuario</h2>
-          <p className="text-xs text-slate-300">ID para soporte o auditoría.</p>
+          <p className="text-xs uppercase text-[var(--text-muted)]">Cuenta</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">ID de usuario</h2>
+          <p className="text-xs text-[var(--text-muted)]">ID para soporte o auditoría.</p>
         </div>
         <div className="flex w-full items-center gap-2">
-          <div className="max-w-full grow overflow-x-auto rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-mono text-white">
+          <div className="max-w-full grow overflow-x-auto rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-[11px] font-mono text-[var(--text)]">
             {userUid}
           </div>
           <button
             onClick={handleCopyUid}
             aria-label="Copiar ID de usuario"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white hover:border-primary"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)] hover:border-primary"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -149,12 +149,12 @@ export function SettingsPage({
       <div className="card space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs uppercase text-slate-400">Apariencia</p>
-            <h2 className="text-lg font-semibold text-white">Tema</h2>
-            <p className="text-xs text-slate-300">Alterna entre modo claro y oscuro.</p>
+            <p className="text-xs uppercase text-[var(--text-muted)]">Apariencia</p>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Tema</h2>
+            <p className="text-xs text-[var(--text-muted)]">Alterna entre modo claro y oscuro.</p>
           </div>
           <button
-            className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:border-white/20"
+            className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
             onClick={toggleTheme}
           >
             {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
@@ -165,16 +165,16 @@ export function SettingsPage({
       <div className="card space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs uppercase text-slate-400">IA / Suscripción</p>
-            <h2 className="text-lg font-semibold text-white">Gestiona tus claves</h2>
-            <p className="text-xs text-slate-300">BYOK se guarda en backend (Secret Manager). El cliente nunca ve la clave.</p>
+            <p className="text-xs uppercase text-[var(--text-muted)]">IA / Suscripción</p>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Gestiona tus claves</h2>
+            <p className="text-xs text-[var(--text-muted)]">BYOK se guarda en backend (Secret Manager). El cliente nunca ve la clave.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">Rol: {roleLabel}</span>
+            <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[var(--text)]">Rol: {roleLabel}</span>
             <span
               className={`rounded-full border px-3 py-1 ${
                 userProfile?.subscription?.status === 'active'
-                  ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                  ? 'border-emerald-400/40 bg-emerald-500/10 text-[var(--accent)]'
                   : styles.badgeWarn
               }`}
             >
@@ -183,14 +183,14 @@ export function SettingsPage({
             <span
               className={`rounded-full border px-3 py-1 ${
                 userProfile?.openaiKeyStored
-                  ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                  : 'border-white/10 bg-white/5 text-slate-200'
+                  ? 'border-emerald-400/40 bg-emerald-500/10 text-[var(--accent)]'
+                  : 'border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
               }`}
             >
               {userProfile?.openaiKeyStored ? 'Key BYOK guardada' : 'Sin key BYOK'}
             </span>
             {userProfile?.subscription?.expiresAt ? (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white">
+              <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[var(--text)]">
                 Expira: {formatDate(userProfile.subscription.expiresAt) || '--'}
               </span>
             ) : null}
@@ -204,11 +204,11 @@ export function SettingsPage({
         )}
 
         {iaQuota && (
-          <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className="space-y-3 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-white">Uso semanal de IA</p>
-                <p className="text-xs text-slate-300">Se renueva cada semana (lunes). Úsalo para registrar por voz y pedir consejos.</p>
+                <p className="text-sm font-semibold text-[var(--text)]">Uso semanal de IA</p>
+                <p className="text-xs text-[var(--text-muted)]">Se renueva cada semana (lunes). Úsalo para registrar por voz y pedir consejos.</p>
               </div>
               <button type="button" onClick={onShowLimitsHelp} className="text-[11px] font-semibold text-primary underline">
                 ¿Cómo se calculan los límites?
@@ -235,19 +235,19 @@ export function SettingsPage({
 
         {showKeySettings && (
           <>
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="space-y-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white">Tu API key de OpenAI (BYOK)</p>
-                  <p className="text-xs text-slate-300">Se guarda en el backend; usa formato sk-.</p>
+                  <p className="text-sm font-semibold text-[var(--text)]">Tu API key de OpenAI (BYOK)</p>
+                  <p className="text-xs text-[var(--text-muted)]">Se guarda en el backend; usa formato sk-.</p>
                 </div>
-                {profileLoading && <span className="text-[11px] text-slate-300">Cargando perfil...</span>}
+                {profileLoading && <span className="text-[11px] text-[var(--text-muted)]">Cargando perfil...</span>}
               </div>
               <input
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder="sk-..."
-                className="w-full rounded-xl border border-white/10 bg-[var(--input-bg)] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-primary"
+                className="w-full rounded-xl border border-[var(--border-10)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text)]0 focus:border-primary"
                 type="password"
                 disabled={keySaving}
               />
@@ -255,7 +255,7 @@ export function SettingsPage({
                 <button
                   onClick={handleSaveApiKey}
                   disabled={keySaving || !apiKeyInput.trim()}
-                  className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-[var(--text)] hover:opacity-90 disabled:opacity-50"
                 >
                   {keySaving ? 'Guardando...' : 'Guardar key'}
                 </button>
@@ -263,24 +263,24 @@ export function SettingsPage({
                   <button
                     onClick={handleClearApiKey}
                     disabled={keySaving}
-                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:border-primary disabled:opacity-50"
+                    className="rounded-lg border border-[var(--border-20)] bg-[var(--overlay-5)] px-4 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary disabled:opacity-50"
                   >
                     {keySaving ? 'Procesando...' : 'Eliminar key'}
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 {userProfile?.openaiKeyStored
                   ? 'Key guardada en backend. Nunca se expone al cliente.'
                   : 'Pega tu clave privada de OpenAI. Se almacenará solo en el servidor.'}
               </p>
             </div>
 
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="space-y-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">Preferencia de clave</p>
+                <p className="text-sm font-semibold text-[var(--text)]">Preferencia de clave</p>
                 {userProfile?.preferredKey && (
-                  <span className="text-[11px] text-slate-300">
+                  <span className="text-[11px] text-[var(--text-muted)]">
                     Actual: {userProfile.preferredKey === 'byok' ? 'Mi key' : 'Key GastoSense'}
                   </span>
                 )}
@@ -291,8 +291,8 @@ export function SettingsPage({
                   disabled={!userProfile?.openaiKeyStored || preferenceSaving}
                   className={`rounded-lg px-4 py-2 text-xs font-semibold ${
                     userProfile?.preferredKey === 'byok'
-                      ? 'bg-primary text-white'
-                      : 'border border-white/10 bg-white/5 text-white'
+                      ? 'bg-primary text-[var(--text)]'
+                      : 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
                   } disabled:opacity-50`}
                 >
                   Usar mi key (BYOK)
@@ -302,14 +302,14 @@ export function SettingsPage({
                   disabled={!canUseManaged || preferenceSaving}
                   className={`rounded-lg px-4 py-2 text-xs font-semibold ${
                     userProfile?.preferredKey === 'managed'
-                      ? 'bg-primary text-white'
-                      : 'border border-white/10 bg-white/5 text-white'
+                      ? 'bg-primary text-[var(--text)]'
+                      : 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
                   } disabled:opacity-50`}
                 >
                   Usar key de GastoSense
                 </button>
               </div>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 Si usas tu key (BYOK) tienes más cuota; con key GastoSense aplican límites de plan Free.
               </p>
             </div>
@@ -320,8 +320,8 @@ export function SettingsPage({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase text-indigo-200">Planes</p>
-              <h3 className="text-lg font-semibold text-white">Elige tu plan</h3>
-              <p className="text-xs text-slate-300">Precios muestran promo y descuentos por periodo.</p>
+              <h3 className="text-lg font-semibold text-[var(--text)]">Elige tu plan</h3>
+              <p className="text-xs text-[var(--text-muted)]">Precios muestran promo y descuentos por periodo.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -333,27 +333,27 @@ export function SettingsPage({
               const switchingPlan = hasActiveSubscription && currentPaidPlan && currentPaidPlan !== (plan.id as PlanId);
               const sameActivePlan = hasActiveSubscription && currentPaidPlan === (plan.id as PlanId);
               return (
-                <div key={plan.id} className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm flex flex-col gap-2">
+                <div key={plan.id} className="rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4 shadow-sm flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-base font-semibold text-white">{plan.label}</h4>
-                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] text-white">
+                    <h4 className="text-base font-semibold text-[var(--text)]">{plan.label}</h4>
+                    <span className="rounded-full bg-[var(--overlay-10)] px-2 py-1 text-[11px] text-[var(--text)]">
                       {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}
                     </span>
                   </div>
                   {plan.promoActive && plan.promoPriceCents ? (
-                    <div className="text-sm text-emerald-200">
+                    <div className="text-sm text-[var(--accent)]">
                       Promo: {formatCurrency(plan.promoPriceCents)} {formatUsdApprox(plan.promoPriceCents)} / mes · hasta{' '}
                       {plan.promoEndsAt ? new Date(plan.promoEndsAt).toISOString().slice(0, 10) : ''}
                     </div>
                   ) : (
-                    <div className="text-sm text-slate-200">
+                    <div className="text-sm text-[var(--text)]">
                       Precio: {formatCurrency(plan.basePriceCents)} {formatUsdApprox(plan.basePriceCents)} / mes
                     </div>
                   )}
-                  <div className="text-xs text-slate-300">
+                  <div className="text-xs text-[var(--text-muted)]">
                     Periodo: {months} {months === 1 ? 'mes' : 'meses'} ({Math.round((periodInfo?.discount ?? 0) * 100)}% desc.)
                   </div>
-                  <div className="text-lg font-semibold text-white">
+                  <div className="text-lg font-semibold text-[var(--text)]">
                     Total {formatCurrency(price)} {formatUsdApprox(price)} {plan.currency}
                   </div>
                   {switchingPlan && (
@@ -362,7 +362,7 @@ export function SettingsPage({
                     </p>
                   )}
                   {sameActivePlan && (
-                    <p className="text-[11px] text-slate-200">
+                    <p className="text-[11px] text-[var(--text)]">
                       Al renovar extiendes tu vencimiento {months > 1 ? `(+${months} meses)` : '(+1 mes)'} desde la fecha actual.
                     </p>
                   )}
@@ -382,13 +382,13 @@ export function SettingsPage({
                     ]}
                     title="Elige periodo"
                   />
-                  <div className="text-xs text-slate-300">
+                  <div className="text-xs text-[var(--text-muted)]">
                     Incluye: {plan.id === 'plan_byok' ? 'IA con tu propia API key' : 'IA con clave gestionada'}.
                   </div>
                   <button
                     onClick={() => handleCheckout(plan.id as 'plan_byok' | 'plan_pro')}
                     disabled={checkoutLoading === plan.id}
-                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90 disabled:opacity-50"
                   >
                     {checkoutLoading === plan.id ? 'Generando...' : 'Pagar con Wompi'}
                   </button>
@@ -396,7 +396,7 @@ export function SettingsPage({
               );
             })}
             {plans.length === 0 && (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+              <div className="rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4 text-sm text-[var(--text-muted)]">
                 No pudimos cargar los planes. Intenta más tarde.
               </div>
             )}
@@ -408,15 +408,15 @@ export function SettingsPage({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase text-primary/80">Admin</p>
-                <h3 className="text-lg font-semibold text-white">Usuarios y roles</h3>
-                <p className="text-xs text-slate-300">Cambia rol o preferencia. Máx 200 usuarios.</p>
+                <h3 className="text-lg font-semibold text-[var(--text)]">Usuarios y roles</h3>
+                <p className="text-xs text-[var(--text-muted)]">Cambia rol o preferencia. Máx 200 usuarios.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   value={adminSearch}
                   onChange={(e) => setAdminSearch(e.target.value)}
                   placeholder="Buscar UID..."
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white outline-none placeholder:text-slate-400"
+                  className="rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-[11px] text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
                 />
                 <button
                   onClick={handleAdminReload}
@@ -427,9 +427,9 @@ export function SettingsPage({
                 </button>
               </div>
             </div>
-            <div className="overflow-auto rounded-lg border border-white/10">
-              <table className="min-w-full text-left text-xs text-white">
-                <thead className="bg-white/5 text-[11px] uppercase tracking-wide text-slate-300">
+            <div className="overflow-auto rounded-lg border border-[var(--border-10)]">
+              <table className="min-w-full text-left text-xs text-[var(--text)]">
+                <thead className="bg-[var(--overlay-5)] text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
                   <tr>
                     <th className="px-3 py-2">UID</th>
                     <th className="px-3 py-2">Rol</th>
@@ -443,7 +443,7 @@ export function SettingsPage({
                     .filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase()))
                     .map((u) => (
                       <tr key={u.uid} className="border-t border-white/5">
-                        <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{u.uid}</td>
+                        <td className="px-3 py-2 font-mono text-[11px] text-[var(--text)]">{u.uid}</td>
                         <td className="px-3 py-2">
                           <ResponsiveSelect
                             value={u.role}
@@ -460,7 +460,7 @@ export function SettingsPage({
                             buttonClassName="text-[11px]"
                           />
                         </td>
-                        <td className="px-3 py-2 text-[11px] text-slate-200 space-y-1">
+                        <td className="px-3 py-2 text-[11px] text-[var(--text)] space-y-1">
                           <ResponsiveSelect
                             value={u.subscriptionStatus || 'expired'}
                             onChange={(val) =>
@@ -507,7 +507,7 @@ export function SettingsPage({
                                 ),
                               )
                             }
-                            className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white"
+                            className="w-full rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-2 py-1 text-[11px] text-[var(--text)]"
                             disabled={adminLoading}
                           />
                         </td>
@@ -515,14 +515,14 @@ export function SettingsPage({
                           <span
                             className={`rounded-full px-2 py-1 ${
                               u.openaiKeyStored
-                                ? 'bg-emerald-500/10 text-emerald-200'
-                                : 'bg-white/5 text-slate-300'
+                                ? 'bg-emerald-500/10 text-[var(--accent)]'
+                                : 'bg-[var(--overlay-5)] text-[var(--text-muted)]'
                             }`}
                           >
                             {u.openaiKeyStored ? 'Sí' : 'No'}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-[11px] text-slate-200 space-y-1">
+                        <td className="px-3 py-2 text-[11px] text-[var(--text)] space-y-1">
                           <div>Pref: {u.preferredKey ?? 'n/a'}</div>
                           <button
                             onClick={() => handleAdminSaveUser(u.uid)}
@@ -536,7 +536,7 @@ export function SettingsPage({
                     ))}
                   {adminUsers.filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase())).length === 0 && (
                     <tr>
-                      <td className="px-3 py-2 text-slate-300" colSpan={5}>
+                      <td className="px-3 py-2 text-[var(--text-muted)]" colSpan={5}>
                         {adminLoading ? 'Cargando...' : 'Sin usuarios que coincidan.'}
                       </td>
                     </tr>

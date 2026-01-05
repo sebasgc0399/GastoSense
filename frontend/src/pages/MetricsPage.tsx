@@ -303,8 +303,8 @@ export function MetricsPage({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-white">Métricas</h2>
-        <p className="text-xs text-slate-400">Visualiza tu mes en segundos.</p>
+        <h2 className="text-lg font-semibold text-[var(--text)]">Métricas</h2>
+        <p className="text-xs text-[var(--text-muted)]">Visualiza tu mes en segundos.</p>
       </div>
 
       <ReferenceMonthCard
@@ -316,11 +316,11 @@ export function MetricsPage({
 
       {txCount === 0 ? (
         <div className="card space-y-2">
-          <h3 className="text-base font-semibold text-white">Aún no hay datos</h3>
+          <h3 className="text-base font-semibold text-[var(--text)]">Aún no hay datos</h3>
           <p className="text-sm text-[var(--text-muted)]">Registra tu primer movimiento (gasto o ingreso) para empezar a ver métricas.</p>
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
               onClick={onOpenQuickAdd}
             >
               Registrar
@@ -350,14 +350,14 @@ export function MetricsPage({
             )}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-1">
+          <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-1">
             <div className="flex w-full gap-1 text-sm font-semibold">
               <button
                 type="button"
                 aria-pressed={isExpenseView}
                 onClick={() => handleMetricsTypeChange('expense')}
                 className={`flex-1 rounded-xl px-3 py-2 transition ${
-                  isExpenseView ? 'bg-rose-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
+                  isExpenseView ? 'bg-rose-500 text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
                 }`}
               >
                 Gastos
@@ -367,7 +367,7 @@ export function MetricsPage({
                 aria-pressed={!isExpenseView}
                 onClick={() => handleMetricsTypeChange('income')}
                 className={`flex-1 rounded-xl px-3 py-2 transition ${
-                  isExpenseView ? 'text-[var(--text-muted)] hover:text-white' : 'bg-emerald-500 text-white shadow-sm'
+                  isExpenseView ? 'text-[var(--text-muted)] hover:text-[var(--text)]' : 'bg-emerald-500 text-[var(--text)] shadow-sm'
                 }`}
               >
                 Ingresos
@@ -377,11 +377,11 @@ export function MetricsPage({
 
           {showTabEmptyState ? (
             <div className="card space-y-3">
-              <h3 className="text-base font-semibold text-white">{emptyTabTitle}</h3>
+              <h3 className="text-base font-semibold text-[var(--text)]">{emptyTabTitle}</h3>
               <div className="flex flex-wrap gap-2">
                 {canSwitchToOtherTab && (
                   <button
-                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
                     onClick={() => handleMetricsTypeChange(isExpenseView ? 'income' : 'expense')}
                   >
                     {emptyTabSwitchLabel}
@@ -400,7 +400,7 @@ export function MetricsPage({
               {isExpenseView ? (
                 <div className="card">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">
+                    <h3 className="text-lg font-semibold text-[var(--text)]">
                       {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
                     </h3>
                     <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
@@ -410,7 +410,7 @@ export function MetricsPage({
                     <>
                       <div className="flex items-center justify-between text-sm text-[var(--muted)]">
                         <span>Gastado</span>
-                        <span className="text-white">
+                        <span className="text-[var(--text)]">
                           ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
                         </span>
                       </div>
@@ -419,7 +419,7 @@ export function MetricsPage({
                           ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
                           : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
                       </p>
-                      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
+                      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
                         <div
                           className={`h-full rounded-full ${
                             budgetAlert === 'ok'
@@ -432,7 +432,7 @@ export function MetricsPage({
                         />
                       </div>
                       {budgetAlert !== 'ok' && (
-                        <p className="mt-2 text-xs font-semibold text-red-200">
+                        <p className="mt-2 text-xs font-semibold text-[var(--error-text)]">
                           {budgetAlert === 'warn'
                             ? 'Alerta: superaste el 80% de tu presupuesto.'
                             : 'Alerta: alcanzaste o superaste el 100% del presupuesto.'}
@@ -447,7 +447,7 @@ export function MetricsPage({
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
-                      className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                      className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
                       onClick={onAdjustBudget}
                     >
                       {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
@@ -465,20 +465,20 @@ export function MetricsPage({
               ) : (
                 <div className="card">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">Ingresos del mes</h3>
+                    <h3 className="text-lg font-semibold text-[var(--text)]">Ingresos del mes</h3>
                     <span className="text-xs text-[var(--muted)]">Resumen</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-white/5 p-3">
+                    <div className="rounded-xl bg-[var(--overlay-5)] p-3">
                       <p className="text-xs text-[var(--muted)]">Total</p>
-                      <p className="mt-1 text-base font-extrabold text-emerald-200">
+                      <p className="mt-1 text-base font-extrabold text-[var(--accent)]">
                         ${monthlyIncome.toLocaleString('es-CO')}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-white/5 p-3">
+                    <div className="rounded-xl bg-[var(--overlay-5)] p-3">
                       <p className="text-xs text-[var(--muted)]">Promedio diario</p>
-                      <p className="mt-1 text-base font-extrabold text-white">
+                      <p className="mt-1 text-base font-extrabold text-[var(--text)]">
                         ${avgDailyAmount.toLocaleString('es-CO')}
                       </p>
                     </div>
@@ -501,7 +501,7 @@ export function MetricsPage({
             <div className="card">
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Evolución del mes</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text)]">Evolución del mes</h3>
                   {trendInsight && <p className="text-xs text-[var(--muted)]">{trendInsight}</p>}
                 </div>
 
@@ -511,7 +511,7 @@ export function MetricsPage({
                     aria-pressed={effectiveEvolutionView === 'daily'}
                     onClick={() => handleEvolutionToggle('daily')}
                     className={`flex-1 rounded-md px-3 py-2 font-semibold sm:flex-none ${
-                      effectiveEvolutionView === 'daily' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                      effectiveEvolutionView === 'daily' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                     }`}
                   >
                     Diario
@@ -523,7 +523,7 @@ export function MetricsPage({
                     title={!canUseCumulative ? 'Define presupuesto para ver el acumulado.' : undefined}
                     onClick={() => handleEvolutionToggle('cumulative')}
                     className={`flex-1 rounded-md px-3 py-2 font-semibold sm:flex-none ${
-                      effectiveEvolutionView === 'cumulative' ? 'bg-primary text-white' : 'text-[var(--text)]'
+                      effectiveEvolutionView === 'cumulative' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                     } ${!canUseCumulative ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     Acumulado

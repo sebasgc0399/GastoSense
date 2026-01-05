@@ -20,15 +20,11 @@
   --input-border: var(--border-15);
 }
 
-.glassSheet :global(.text-white) {
-  color: var(--glass-text) !important;
-}
-
 .btnIconGlass {
   @apply flex shrink-0 items-center justify-center rounded-full;
-  @apply border bg-white/5;
+  @apply border bg-[var(--overlay-5)];
   @apply transition-all duration-200;
-  @apply hover:bg-white/10 hover:scale-105 active:scale-90 disabled:opacity-50;
+  @apply hover:bg-[var(--overlay-10)] hover:scale-105 active:scale-90 disabled:opacity-50;
   color: var(--glass-text);
   border-color: var(--border-10);
 }

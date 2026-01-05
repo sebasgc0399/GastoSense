@@ -100,8 +100,8 @@ export function TransactionFilters({
             onClick={() => onChange({ startDate, endDate, search, category: 'all', type: option.id })}
             className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
               type === option.id
-                ? 'bg-primary text-white'
-                : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                ? 'bg-primary text-[var(--text)]'
+                : 'bg-[var(--overlay-5)] text-[var(--text-muted)] hover:bg-[var(--overlay-10)]'
             }`}
           >
             {option.label}

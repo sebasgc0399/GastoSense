@@ -39,7 +39,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
     <div className="card">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-base font-semibold text-white">Control mensual</h3>
+          <h3 className="text-base font-semibold text-[var(--text)]">Control mensual</h3>
           <p className="text-xs uppercase text-[var(--muted)]">Presupuesto {month}</p>
         </div>
         {budget?.updatedAt && (
@@ -53,18 +53,18 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         )}
       </div>
 
-      <div className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+      <div className="mt-3 rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-xs uppercase text-[var(--muted)]">Gastado</span>
-          <span className="font-semibold text-white">
+          <span className="font-semibold text-[var(--text)]">
             {formatPesos(totalExpense)} / {target > 0 ? formatPesos(target) : 'Sin definir'}
           </span>
         </div>
         <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--muted)]">
           <span>{target > 0 ? `${percentUsed}% usado` : 'Sin tope definido'}</span>
-          {excess > 0 && <span className="font-semibold text-red-200">{`Exceso: ${formatPesos(excess)}`}</span>}
+          {excess > 0 && <span className="font-semibold text-[var(--error-text)]">{`Exceso: ${formatPesos(excess)}`}</span>}
         </div>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
           <div
             className={`h-full rounded-full ${
               alertLevel === 'ok' ? 'bg-emerald-500' : alertLevel === 'warn' ? 'bg-amber-500' : 'bg-red-500'
@@ -75,7 +75,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         {alertLevel !== 'ok' && (
           <p
             className={`mt-2 text-xs font-semibold ${
-              alertLevel === 'warn' ? 'text-amber-200' : 'text-red-200'
+              alertLevel === 'warn' ? 'text-amber-200' : 'text-[var(--error-text)]'
             }`}
           >
             {alertLevel === 'warn' ? `Vas en ${percentUsed}% del presupuesto` : 'Excediste el presupuesto'}
@@ -102,7 +102,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         <button
           onClick={handleSave}
           disabled={loading || !canSave}
-          className="h-11 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60 sm:w-auto"
+          className="h-11 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--text)] hover:bg-sky-600 disabled:opacity-60 sm:w-auto"
         >
           {loading ? 'Guardando...' : 'Guardar'}
         </button>

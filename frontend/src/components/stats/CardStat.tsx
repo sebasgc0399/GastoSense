@@ -6,7 +6,7 @@ interface Props {
 }
 
 export function CardStat({ title, value, subtitle, tone = 'neutral' }: Props) {
-  const color = tone === 'success' ? 'text-emerald-300' : tone === 'danger' ? 'text-red-300' : 'text-white';
+  const color = tone === 'success' ? 'text-[var(--accent)]' : tone === 'danger' ? 'text-[var(--error-text)]' : 'text-[var(--text)]';
   return (
     <div className="card">
       <p className="text-xs uppercase text-[var(--muted)]">{title}</p>

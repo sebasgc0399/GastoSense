@@ -61,10 +61,10 @@ export function TransactionItemCard({
   const spentRatio = showPercent ? spentInCategory / safeBudgetValue : 0;
   const toneClass =
     spentRatio >= 1
-      ? 'bg-red-500/10 text-red-200'
+      ? 'bg-red-500/10 text-[var(--error-text)]'
       : spentRatio >= 0.8
         ? 'bg-amber-500/10 text-amber-200'
-        : 'bg-emerald-500/10 text-emerald-200';
+        : 'bg-emerald-500/10 text-[var(--accent)]';
   const barClass =
     spentRatio >= 1 ? 'bg-red-400/80' : spentRatio >= 0.8 ? 'bg-amber-400/80' : 'bg-emerald-400/80';
   const progressValue = showPercent && typeof percentUsed === 'number' ? Math.min(percentUsed, 100) : 0;
@@ -154,7 +154,7 @@ export function TransactionItemCard({
 
   return (
     <div
-      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
@@ -165,7 +165,7 @@ export function TransactionItemCard({
       onPointerCancel={handleCardPointerCancel}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-sm font-medium text-white line-clamp-2">
+        <p className="min-w-0 flex-1 text-sm font-medium text-[var(--text)] line-clamp-2">
           {showCategoryIconInTitle && (
             <CategoryIcon name={categoryIcon!} size={14} className="mr-1 inline-block align-text-bottom" />
           )}
@@ -173,7 +173,7 @@ export function TransactionItemCard({
         </p>
         <div className="flex items-start gap-2">
           <p
-            className={`shrink-0 text-base font-bold tabular-nums ${isExpense ? 'text-red-300' : 'text-emerald-300'}`}
+            className={`shrink-0 text-base font-bold tabular-nums ${isExpense ? 'text-[var(--error-text)]' : 'text-[var(--accent)]'}`}
           >
             {isExpense ? '-' : '+'}${tx.amount.toLocaleString()}
           </p>
@@ -185,16 +185,16 @@ export function TransactionItemCard({
             onPointerUp={(event) => event.stopPropagation()}
           >
             <summary
-              className="flex h-7 w-7 list-none items-center justify-center rounded-full text-slate-300 hover:bg-white/10 [&::-webkit-details-marker]:hidden"
+              className="flex h-7 w-7 list-none items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--overlay-10)] [&::-webkit-details-marker]:hidden"
               aria-label="Acciones"
               aria-haspopup="menu"
             >
               ⋯
             </summary>
-            <div className="absolute right-0 top-7 z-10 w-28 rounded-lg border border-white/10 bg-slate-950/95 p-1 text-[11px] text-slate-200 shadow-lg backdrop-blur">
+            <div className="absolute right-0 top-7 z-10 w-28 rounded-lg border border-[var(--border-10)] bg-slate-950/95 p-1 text-[11px] text-[var(--text)] shadow-lg backdrop-blur">
               <button
                 type="button"
-                className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-white/10"
+                className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-[var(--overlay-10)]"
                 onClick={(event) => {
                   event.stopPropagation();
                   closeDetails();
@@ -205,7 +205,7 @@ export function TransactionItemCard({
               </button>
               <button
                 type="button"
-                className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-red-200 hover:bg-white/10"
+                className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-[var(--error-text)] hover:bg-[var(--overlay-10)]"
                 onClick={handleDelete}
               >
                 Borrar
@@ -214,19 +214,19 @@ export function TransactionItemCard({
           </details>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]">
         {metaLine ? <span>{metaLine}</span> : null}
         {showCategoryChip && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
+          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]">
             {showCategoryIconInChip && <CategoryIcon name={categoryIcon!} size={12} className="shrink-0" />}
             <span>{displayCategory}</span>
           </span>
         )}
       </div>
       {isExpense && hasBudget && (
-        <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
+        <div className="rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-2.5 py-2">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-slate-300">
+            <p className="text-[11px] text-[var(--text-muted)]">
               {hasLimit
                 ? `Presupuesto ${budgetAmount} · Gastado mes $${spentInCategory.toLocaleString()}`
                 : `Presupuesto: ${budgetAmount} · Gastado mes $${spentInCategory.toLocaleString()}`}
@@ -237,7 +237,7 @@ export function TransactionItemCard({
             {showPercent && <span className={`rounded-full px-2 py-0.5 text-[10px] ${toneClass}`}>{percentUsed}%</span>}
           </div>
           {showPercent && (
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
               <div className={`h-full ${barClass}`} style={{ width: `${progressValue}%` }} />
             </div>
           )}

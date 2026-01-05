@@ -14,14 +14,14 @@ export function IaQuotaProgress({ label, used, limit, ratio, onUpgradeClick }: I
     ratio >= 1 ? 'danger' : ratio >= 0.8 ? 'warn' : 'ok';
 
   return (
-    <div className="space-y-1 rounded-xl border border-white/10 bg-white/5 p-3">
+    <div className="space-y-1 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-white">{label}</span>
-        <span className="text-xs text-slate-300">
+        <span className="text-sm font-medium text-[var(--text)]">{label}</span>
+        <span className="text-xs text-[var(--text-muted)]">
           {used}/{limit} ({percent}%)
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-white/10">
+      <div className="h-2 w-full rounded-full bg-[var(--overlay-10)]">
         <div
           className={clsx(
             'h-2 rounded-full transition-all',

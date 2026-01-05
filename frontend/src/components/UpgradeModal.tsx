@@ -67,7 +67,7 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
                   </span>
                 </div>
                 {promoPrice ? (
-                  <div className="text-sm text-emerald-500 dark:text-emerald-200">
+                  <div className="text-sm text-[var(--accent)] dark:text-[var(--accent)]">
                     <span className="line-through text-[var(--text-muted)]">{formatCurrency(listPrice)}</span>{' '}
                     <span className="font-semibold text-[var(--text)]">{formatCurrency(promoPrice)}</span> / mes por 3
                     meses
@@ -83,7 +83,7 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
                     onClose();
                     onGoToPlans();
                   }}
-                  className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+                  className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
                 >
                   Ver planes y pagar
                 </button>

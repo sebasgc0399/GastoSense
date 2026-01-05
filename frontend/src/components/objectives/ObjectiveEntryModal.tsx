@@ -91,7 +91,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
               <p className="text-sm text-white/80">{objective.name}</p>
             </div>
             <button
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
               onClick={onClose}
             >
               Cerrar
@@ -113,13 +113,13 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
                 pattern="[0-9]*"
                 value={formatCOP(amountDigits)}
                 onChange={(event) => setAmountDigits(digitsOnly(event.target.value))}
-                className={`w-full max-w-[240px] bg-transparent text-center text-5xl font-semibold text-white placeholder:text-[var(--text-muted)] focus:outline-none ${caretClass}`}
+                className={`w-full max-w-[240px] bg-transparent text-center text-5xl font-semibold text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none ${caretClass}`}
                 placeholder="0"
                 autoFocus
               />
             </div>
             {exceedsAvailable && (
-              <p className="mt-2 text-xs text-red-300">No puedes retirar mas de lo ahorrado.</p>
+              <p className="mt-2 text-xs text-[var(--error-text)]">No puedes retirar mas de lo ahorrado.</p>
             )}
             {exceedsTarget && (
               <p className="mt-2 text-xs text-amber-200">
@@ -129,7 +129,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
           </div>
 
           <div className="mt-6 space-y-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
               <label className="sr-only" htmlFor="objective-entry-note">
                 Nota
               </label>
@@ -142,7 +142,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
                 placeholder="Nota (opcional)"
               />
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
               <label className="sr-only" htmlFor="objective-entry-date">
                 Fecha
               </label>
@@ -157,12 +157,12 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-white/10 bg-[var(--modal-surface)]/95 px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-xl">
-          {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
+        <div className="shrink-0 border-t border-[var(--border-10)] bg-[var(--modal-surface)]/95 px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-xl">
+          {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <button
             onClick={handleSave}
             disabled={disableSave}
-            className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:opacity-90 disabled:opacity-60"
+            className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
           >
             {saving ? 'Guardando...' : 'Guardar movimiento'}
           </button>

@@ -231,7 +231,7 @@ function RecurringTemplateItem({
 
           <details className="relative shrink-0" ref={detailsRef}>
             <summary
-              className="flex h-8 w-8 list-none items-center justify-center rounded-lg text-[var(--text)] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/40 [&::-webkit-details-marker]:hidden"
+              className="flex h-8 w-8 list-none items-center justify-center rounded-lg text-[var(--text)] hover:bg-[var(--overlay-10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/40 [&::-webkit-details-marker]:hidden"
               aria-label="Acciones de plantilla"
               aria-haspopup="menu"
             >
@@ -241,7 +241,7 @@ function RecurringTemplateItem({
             <div className="absolute right-0 top-9 z-[999] w-32 rounded-lg border border-[var(--modal-border)] bg-[var(--modal-surface)] p-1 text-[11px] text-[var(--text)] shadow-lg backdrop-blur-xl">
               <button
                 type="button"
-                className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-white/10"
+                className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-[var(--overlay-10)]"
                 onClick={() => {
                   closeDetails();
                   onEditTemplate(template);

@@ -206,11 +206,11 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
         </div>
 
         <div className="shrink-0 border-t border-[var(--modal-border)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-          {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
+          {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:bg-emerald-700 disabled:opacity-60"
           >
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
@@ -225,7 +225,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="text-sm font-semibold text-red-300 hover:text-red-200 disabled:opacity-60"
+              className="text-sm font-semibold text-[var(--error-text)] hover:text-[var(--error-text)] disabled:opacity-60"
             >
               Eliminar
             </button>

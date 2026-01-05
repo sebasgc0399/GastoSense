@@ -166,7 +166,7 @@ export function HomePage({
                           <p className="text-sm text-[var(--text-muted)]">{item.body}</p>
                           <div className="mt-2 flex gap-2">
                             <button
-                              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
+                              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-[var(--text)]"
                               onClick={item.primaryAction.onClick}
                             >
                               {item.primaryAction.label}

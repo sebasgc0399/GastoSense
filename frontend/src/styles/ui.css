@@ -26,9 +26,9 @@
 @layer components {
   .btn-glass {
     @apply flex items-center justify-center gap-2 rounded-2xl;
-    @apply border bg-white/5 text-sm font-medium;
+    @apply border bg-[var(--overlay-5)] text-sm font-medium;
     @apply transition-all duration-200;
-    @apply hover:bg-white/10 active:scale-95 disabled:opacity-50;
+    @apply hover:bg-[var(--overlay-10)] active:scale-95 disabled:opacity-50;
     color: var(--glass-text);
     border-color: var(--border-10);
   }

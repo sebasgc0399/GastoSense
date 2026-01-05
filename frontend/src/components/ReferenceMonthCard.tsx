@@ -54,7 +54,7 @@ export function ReferenceMonthCard({
       </div>
       <div className="flex w-full flex-col gap-2 sm:w-auto">
         <div className="relative w-full sm:min-w-[220px]">
-          <div className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--text)] shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-emerald-400/40">
+          <div className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)] shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-emerald-400/40">
             <span className="font-semibold">{monthLabel}</span>
             <Calendar className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           </div>
@@ -70,7 +70,7 @@ export function ReferenceMonthCard({
         <div className="hidden items-center gap-2 sm:flex">
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--text)] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)] hover:border-[var(--border-20)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             onClick={() => onChange(prevMonth)}
             aria-label="Mes anterior"
           >
@@ -78,14 +78,14 @@ export function ReferenceMonthCard({
           </button>
           <button
             type="button"
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:border-[var(--border-20)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             onClick={() => onChange(defaultMonth)}
           >
             Mes actual
           </button>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--text)] hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)] hover:border-[var(--border-20)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             onClick={() => onChange(nextMonth)}
             aria-label="Mes siguiente"
           >

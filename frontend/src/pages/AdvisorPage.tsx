@@ -220,9 +220,9 @@ export function AdvisorPage({
           <RobotAvatar className="h-16 w-16 md:h-20 md:w-20" />
           <div className="flex flex-1 flex-col gap-2">
             <div className="space-y-1">
-              <p className="text-xs uppercase text-slate-400">Asesor IA</p>
-              <h2 className="text-lg font-semibold text-white">Finanzas chat</h2>
-              <p className="text-xs text-slate-300">Elige el tono y lanza una accion; la respuesta aparece en el feed.</p>
+              <p className="text-xs uppercase text-[var(--text-muted)]">Asesor IA</p>
+              <h2 className="text-lg font-semibold text-[var(--text)]">Finanzas chat</h2>
+              <p className="text-xs text-[var(--text-muted)]">Elige el tono y lanza una accion; la respuesta aparece en el feed.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {(['amable', 'reganon'] as AdvisorMode[]).map((mode) => (
@@ -230,7 +230,7 @@ export function AdvisorPage({
                   key={mode}
                   onClick={() => handleToneChange(mode)}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    advisorMode === mode ? 'bg-primary text-white' : 'border border-white/10 bg-white/5 text-white'
+                    advisorMode === mode ? 'bg-primary text-[var(--text)]' : 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
                   }`}
                 >
                   {mode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}
@@ -238,12 +238,12 @@ export function AdvisorPage({
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1 text-xs font-semibold text-white">
+              <div className="inline-flex rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] p-1 text-xs font-semibold text-[var(--text)]">
                 <button
                   type="button"
                   onClick={() => setAdvisorEnvironment('actions')}
                   className={`rounded-full px-3 py-1 ${
-                    advisorEnvironment === 'actions' ? 'bg-primary text-white' : 'text-slate-200'
+                    advisorEnvironment === 'actions' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                   }`}
                 >
                   Acciones
@@ -253,7 +253,7 @@ export function AdvisorPage({
                     type="button"
                     onClick={() => setAdvisorEnvironment('free_chat')}
                     className={`rounded-full px-3 py-1 ${
-                      advisorEnvironment === 'free_chat' ? 'bg-primary text-white' : 'text-slate-200'
+                      advisorEnvironment === 'free_chat' ? 'bg-primary text-[var(--text)]' : 'text-[var(--text)]'
                     }`}
                   >
                     Chat libre
@@ -270,7 +270,7 @@ export function AdvisorPage({
                     }
                     openUpgrade('feature_locked');
                   }}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                  className="inline-flex items-center gap-1 rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[11px] font-semibold text-[var(--text)]"
                 >
                   <Lock aria-hidden="true" className="h-3 w-3" />
                   <span>Chat libre (BYOK)</span>
@@ -304,14 +304,14 @@ export function AdvisorPage({
                     }}
                     className={`flex h-full flex-col rounded-xl border px-3 py-3 text-left transition ${
                       locked
-                        ? 'border-dashed border-white/20 bg-white/5'
-                        : `border-white/10 bg-white/5 ${disabled ? '' : 'hover:border-primary'}`
+                        ? 'border-dashed border-[var(--border-20)] bg-[var(--overlay-5)]'
+                        : `border-[var(--border-10)] bg-[var(--overlay-5)] ${disabled ? '' : 'hover:border-primary'}`
                     } ${disabled ? 'cursor-not-allowed opacity-50' : locked ? 'opacity-80' : ''}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-white">{item.label}</p>
+                      <p className="text-sm font-semibold text-[var(--text)]">{item.label}</p>
                       {badge && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-200">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text)]">
                           {locked && (
                             <Lock aria-hidden="true" className="h-3 w-3" />
                           )}
@@ -319,7 +319,7 @@ export function AdvisorPage({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-300">{item.description}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{item.description}</p>
                     {locked && (
                       <p className="text-[11px] font-medium text-primary">
                         {lockedByQuota ? 'Limite semanal alcanzado. Se renueva el lunes.' : 'Toca para ver como desbloquearlo'}
@@ -344,9 +344,9 @@ export function AdvisorPage({
               </div>
             )}
 
-            <div className="relative flex h-[55vh] max-h-[60vh] flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5">
-              <div className="shrink-0 border-b border-white/10 px-3 py-2">
-                <div className="flex items-center justify-between text-xs text-slate-300">
+            <div className="relative flex h-[55vh] max-h-[60vh] flex-col overflow-hidden rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)]">
+              <div className="shrink-0 border-b border-[var(--border-10)] px-3 py-2">
+                <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                   <span>Feed IA</span>
                   <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}</span>
                 </div>
@@ -362,13 +362,13 @@ export function AdvisorPage({
                       <button
                         type="button"
                         onClick={() => setActionsExpanded(true)}
-                        className="mb-3 self-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                        className="mb-3 self-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[11px] font-semibold text-[var(--text)]"
                       >
                         Ver mensajes anteriores ({actionsHiddenCount})
                       </button>
                     )}
                     {actionsVisible.length === 0 && !advisorLoading ? (
-                      <div className="my-auto rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
+                      <div className="my-auto rounded-lg border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-3 text-sm text-[var(--text)]">
                         Aun no hay mensajes. Lanza una accion arriba para ver el estilo chat.
                       </div>
                     ) : (
@@ -379,7 +379,7 @@ export function AdvisorPage({
                             <div key={item.id} className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}>
                               <div
                                 className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                                  item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
+                                  item.from === 'ia' ? 'bg-[var(--overlay-10)] text-[var(--text)]' : 'bg-primary text-[var(--text)]'
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
@@ -399,11 +399,11 @@ export function AdvisorPage({
                                       const pct = Math.round((ct.amount / max) * 100);
                                       return (
                                         <div key={ct.category} className="space-y-1">
-                                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                                          <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--text)]">
                                             <span className="truncate">{ct.category}</span>
                                             <span className="whitespace-nowrap font-semibold">{formatPesos(ct.amount)}</span>
                                           </div>
-                                          <div className="h-2 rounded-full bg-white/10">
+                                          <div className="h-2 rounded-full bg-[var(--overlay-10)]">
                                             <div
                                               className="h-full rounded-full bg-primary"
                                               style={{ width: `${pct}%`, minWidth: '4%' }}
@@ -419,7 +419,7 @@ export function AdvisorPage({
                                     <button
                                       type="button"
                                       onClick={() => onActionClick(item.actionData!)}
-                                      className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-primary"
+                                      className="inline-flex items-center rounded-full border border-[var(--border-15)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] transition hover:border-primary"
                                     >
                                       {item.actionData.label}
                                     </button>
@@ -435,7 +435,7 @@ export function AdvisorPage({
                           ))}
                           {advisorLoading && (
                             <div className="flex justify-start">
-                              <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-sm text-white shadow-sm">
+                              <div className="max-w-[70%] rounded-2xl bg-[var(--overlay-10)] px-3 py-2 text-sm text-[var(--text)] shadow-sm">
                                 <span className="sr-only">IA escribiendo</span>
                                 <span className="flex items-center gap-1">
                                   <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
@@ -467,7 +467,7 @@ export function AdvisorPage({
                     }}
                     className={`absolute bottom-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all duration-200 active:scale-90 ${
                       actionsHasNew
-                        ? 'bg-primary text-white shadow-primary/40'
+                        ? 'bg-primary text-[var(--text)] shadow-primary/40'
                         : 'bg-slate-700/80 text-white/80 backdrop-blur-sm hover:bg-slate-600'
                     }`}
                   >
@@ -484,40 +484,40 @@ export function AdvisorPage({
             </div>
           </>
         ) : (
-          <div className="flex h-[70vh] max-h-[75vh] flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5">
-            <div className="shrink-0 space-y-2 border-b border-white/10 p-3">
-              <div className="flex items-center justify-between text-xs text-slate-300">
+          <div className="flex h-[70vh] max-h-[75vh] flex-col overflow-hidden rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)]">
+            <div className="shrink-0 space-y-2 border-b border-[var(--border-10)] p-3">
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                 <span>Chat libre</span>
                 <span>{freeChatRangeLabel}</span>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <label className="space-y-1 text-xs text-slate-300">
+                <label className="space-y-1 text-xs text-[var(--text-muted)]">
                   <span>Desde</span>
                   <input
                     type="date"
                     value={freeChatFrom}
                     onChange={(event) => setFreeChatFrom(event.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)]"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-slate-300">
+                <label className="space-y-1 text-xs text-[var(--text-muted)]">
                   <span>Hasta</span>
                   <input
                     type="date"
                     value={freeChatTo}
                     onChange={(event) => setFreeChatTo(event.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)]"
                   />
                 </label>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)]">
                 <span>Max 1 mes (31 dias).</span>
                 <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}</span>
               </div>
               {freeChatRangeError && (
                 <p className="text-[11px] font-medium text-primary">{freeChatRangeError}</p>
               )}
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)]">
                 <span>La IA usa un resumen + ultimos 2 intercambios.</span>
                 <div className="flex items-center gap-2">
                   <button
@@ -532,8 +532,8 @@ export function AdvisorPage({
                       }}
                     className={`rounded-full px-3 py-2 text-[11px] font-semibold ${
                       freeChatLoading
-                        ? 'border border-white/10 bg-white/5 text-slate-400'
-                        : 'border border-white/10 text-slate-200'
+                        ? 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text-muted)]'
+                        : 'border border-[var(--border-10)] text-[var(--text)]'
                     }`}
                   >
                     Nuevo chat
@@ -546,8 +546,8 @@ export function AdvisorPage({
                     }}
                     className={`rounded-full px-3 py-2 text-[11px] font-semibold ${
                       freeChatLoading
-                        ? 'border border-white/10 bg-white/5 text-slate-400'
-                        : 'border border-white/10 text-slate-200'
+                        ? 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text-muted)]'
+                        : 'border border-[var(--border-10)] text-[var(--text)]'
                     }`}
                   >
                     Recuperar chat
@@ -567,13 +567,13 @@ export function AdvisorPage({
                     <button
                       type="button"
                       onClick={() => setFreeChatExpanded(true)}
-                      className="mb-3 self-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                      className="mb-3 self-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[11px] font-semibold text-[var(--text)]"
                     >
                       Ver mensajes anteriores ({freeChatHiddenCount})
                     </button>
                   )}
                   {freeChatVisible.length === 0 ? (
-                    <div className="my-auto rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
+                    <div className="my-auto rounded-lg border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-3 text-sm text-[var(--text)]">
                       Aun no hay mensajes. Envia el primero para iniciar el chat.
                     </div>
                   ) : (
@@ -584,7 +584,7 @@ export function AdvisorPage({
                           <div key={item.id} className={`flex ${item.from === 'ia' ? 'justify-start' : 'justify-end'}`}>
                             <div
                               className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                                item.from === 'ia' ? 'bg-white/10 text-white' : 'bg-primary text-white'
+                                item.from === 'ia' ? 'bg-[var(--overlay-10)] text-[var(--text)]' : 'bg-primary text-[var(--text)]'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide opacity-80">
@@ -602,7 +602,7 @@ export function AdvisorPage({
                         ))}
                         {freeChatLoading && (
                           <div className="flex justify-start">
-                            <div className="max-w-[70%] rounded-2xl bg-white/10 px-3 py-2 text-sm text-white shadow-sm">
+                            <div className="max-w-[70%] rounded-2xl bg-[var(--overlay-10)] px-3 py-2 text-sm text-[var(--text)] shadow-sm">
                               <span className="sr-only">IA escribiendo</span>
                               <span className="flex items-center gap-1">
                                 <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
@@ -634,7 +634,7 @@ export function AdvisorPage({
                   }}
                   className={`absolute bottom-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all duration-200 active:scale-90 ${
                     freeChatHasNew
-                      ? 'bg-primary text-white shadow-primary/40'
+                      ? 'bg-primary text-[var(--text)] shadow-primary/40'
                       : 'bg-slate-700/80 text-white/80 backdrop-blur-sm hover:bg-slate-600'
                   }`}
                 >
@@ -649,7 +649,7 @@ export function AdvisorPage({
               )}
             </div>
 
-            <div className="shrink-0 border-t border-white/10 bg-white/5 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+            <div className="shrink-0 border-t border-[var(--border-10)] bg-[var(--overlay-5)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
               <div className="flex items-end gap-2">
                 <textarea
                   ref={freeChatInputRef}
@@ -664,7 +664,7 @@ export function AdvisorPage({
                   }}
                   rows={1}
                   placeholder="Escribe tu mensaje para la IA..."
-                  className="min-h-[44px] max-h-[120px] w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                  className="min-h-[44px] max-h-[120px] w-full resize-none rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)]"
                 />
                 <button
                   type="button"
@@ -675,8 +675,8 @@ export function AdvisorPage({
                   }}
                   className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
                     canSendFreeChat
-                      ? 'bg-primary text-white shadow-primary/40'
-                      : 'border border-white/10 bg-white/5 text-slate-400'
+                      ? 'bg-primary text-[var(--text)] shadow-primary/40'
+                      : 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text-muted)]'
                   }`}
                 >
                   <SendHorizontal className="h-5 w-5" />

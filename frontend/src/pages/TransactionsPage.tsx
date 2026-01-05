@@ -122,14 +122,14 @@ export function TransactionsPage({
   return (
     <section className="space-y-4 pb-5">
       {importToast && (
-        <div className="fixed bottom-24 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-center text-xs font-semibold text-white shadow-lg backdrop-blur">
+        <div className="fixed bottom-24 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-10)] px-4 py-3 text-center text-xs font-semibold text-[var(--text)] shadow-lg backdrop-blur">
           {importToast}
         </div>
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-white">Movimientos</h2>
-          <p className="text-xs text-slate-400">Filtra por fecha o categoría.</p>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Movimientos</h2>
+          <p className="text-xs text-[var(--text-muted)]">Filtra por fecha o categoría.</p>
         </div>
         <button
           type="button"
@@ -137,8 +137,8 @@ export function TransactionsPage({
           aria-disabled={!canExport}
           className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
             canExport
-              ? 'border-white/10 bg-white/5 text-white hover:border-white/20 hover:bg-white/10'
-              : 'cursor-not-allowed border-white/5 bg-white/5 text-white/60 hover:border-white/10'
+              ? 'border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)] hover:border-[var(--border-20)] hover:bg-[var(--overlay-10)]'
+              : 'cursor-not-allowed border-white/5 bg-[var(--overlay-5)] text-white/60 hover:border-[var(--border-10)]'
           }`}
         >
           {canExport ? <ArrowUpDown aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}
@@ -161,11 +161,11 @@ export function TransactionsPage({
         categoryLabel={categoryLabel}
       />
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--error-text)]">{error}</p>}
 
       <div className="space-y-3">
         {transactions.length === 0 && (
-          <p className="rounded-xl border border-dashed border-white/10 bg-white/5 px-3 py-3 text-sm text-slate-200">
+          <p className="rounded-xl border border-dashed border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-3 text-sm text-[var(--text)]">
             Aún no hay movimientos en este rango. Agrega el primero.
           </p>
         )}
@@ -225,19 +225,19 @@ export function TransactionsPage({
           </div>
         ))}
         {transactions.length > txPageSize && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)]">
             <button
-              className="rounded-lg border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded-lg border border-[var(--border-20)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
               onClick={() => setTxPage((p) => Math.max(1, p - 1))}
               disabled={txPage === 1}
             >
               Anterior
             </button>
-            <span className="text-xs text-slate-300">
+            <span className="text-xs text-[var(--text-muted)]">
               Página {txPage} de {totalTxPages}
             </span>
             <button
-              className="rounded-lg border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded-lg border border-[var(--border-20)] bg-[var(--overlay-5)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
               onClick={() => setTxPage((p) => Math.min(totalTxPages, p + 1))}
               disabled={txPage >= totalTxPages}
             >

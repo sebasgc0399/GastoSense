@@ -853,7 +853,7 @@ export function QuickAddSheet({
                 )}
               </div>
               {mode !== 'ai' && (
-                <div className="absolute left-1/2 top-4 z-20 flex h-10 -translate-x-1/2 items-center rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-md">
+                <div className="absolute left-1/2 top-4 z-20 flex h-10 -translate-x-1/2 items-center rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] p-1 backdrop-blur-md">
                   <button
                     type="button"
                     onClick={() => {
@@ -874,7 +874,7 @@ export function QuickAddSheet({
                     }}
                     className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
                       type === 'income'
-                        ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-inset ring-emerald-500/50'
+                        ? 'bg-emerald-500/20 text-[var(--accent)] ring-1 ring-inset ring-emerald-500/50'
                         : 'text-white/40 hover:text-white/70'
                     }`}
                   >
@@ -886,7 +886,7 @@ export function QuickAddSheet({
                 <button
                   type="button"
                   onClick={handleAiToggle}
-                  className={`${styles.btnIconGlass} h-10 w-10 ${mode === 'ai' ? 'border-emerald-500/50 text-emerald-200' : ''}`}
+                  className={`${styles.btnIconGlass} h-10 w-10 ${mode === 'ai' ? 'border-emerald-500/50 text-[var(--accent)]' : ''}`}
                   aria-label={mode === 'ai' ? 'Salir de modo frase' : 'Modo frase'}
                 >
                   <Sparkles className="h-4 w-4" />
@@ -928,11 +928,11 @@ export function QuickAddSheet({
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-4 [-webkit-overflow-scrolling:touch]">
                 <div className="flex items-end gap-3">
-                  <div className="flex-1 rounded-3xl border border-white/10 bg-white/5 px-4 py-3">
+                  <div className="flex-1 rounded-3xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-4 py-3">
                     <textarea
                       value={rawText}
                       onChange={(e) => setRawText(e.target.value)}
-                      className="h-24 w-full resize-none bg-transparent text-sm text-white placeholder-white/50 focus:outline-none"
+                      className="h-24 w-full resize-none bg-transparent text-sm text-[var(--text)] placeholder-white/50 focus:outline-none"
                       rows={4}
                       placeholder="Describe tu gasto o toca el microfono..."
                       aria-label="Describe el movimiento"
@@ -944,7 +944,7 @@ export function QuickAddSheet({
                     disabled={transcribingAudio || parseLocked}
                     className={`${styles.btnIconGlass} h-12 w-12 sm:h-14 sm:w-14 ${
                       recording
-                        ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/40 animate-pulse ring-4 ring-rose-500/20 border-rose-500/40'
+                        ? 'bg-rose-500 text-[var(--text)] shadow-lg shadow-rose-500/40 animate-pulse ring-4 ring-rose-500/20 border-rose-500/40'
                         : ''
                     }`}
                     aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
@@ -965,15 +965,15 @@ export function QuickAddSheet({
                 {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
                 {showAiHints && (
                   <div className="mb-2 mt-4 flex flex-wrap justify-center gap-2">
-                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] font-medium text-white/50">
+                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-[var(--overlay-5)] px-3 py-1 text-[10px] font-medium text-white/50">
                       <DollarSign className="h-3 w-3" />
                       Monto y categoria
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] font-medium text-white/50">
+                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-[var(--overlay-5)] px-3 py-1 text-[10px] font-medium text-white/50">
                       <Calendar className="h-3 w-3" />
                       Fecha rapida
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-white/5 px-3 py-1 text-[10px] font-medium text-white/50">
+                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-[var(--overlay-5)] px-3 py-1 text-[10px] font-medium text-white/50">
                       <CreditCard className="h-3 w-3" />
                       Metodo de pago
                     </span>
@@ -981,14 +981,14 @@ export function QuickAddSheet({
                 )}
                 {parsedSuggestion && (
                   <>
-                    <div className={`rounded-2xl border bg-white/5 p-4 ${suggestionBorderClass}`}>
+                    <div className={`rounded-2xl border bg-[var(--overlay-5)] p-4 ${suggestionBorderClass}`}>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--overlay-10)] text-[var(--text)]">
                             <CategoryIcon name={suggestedCategoryIcon} size={24} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white" title={suggestedCategoryTooltip}>
+                            <p className="text-sm font-semibold text-[var(--text)]" title={suggestedCategoryTooltip}>
                               {suggestedCategoryDisplay}
                             </p>
                             {suggestionNote && (
@@ -1003,10 +1003,10 @@ export function QuickAddSheet({
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
-                        <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1">
+                        <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-1">
                           {parsedSuggestion.date}
                         </span>
-                        <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 capitalize">
+                        <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-10)] px-2 py-1 capitalize">
                           {parsedSuggestion.paymentMethod}
                         </span>
                       </div>
@@ -1045,7 +1045,7 @@ export function QuickAddSheet({
                 {showDetails ? (
                   <div className="space-y-3">
                     {templates.length > 0 && (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+                      <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-2">
                         <div className="mb-2 px-1 text-sm font-medium text-[var(--muted)]">Plantillas</div>
                         <div className="max-h-44 overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]">
                           <div className="space-y-2">
@@ -1059,7 +1059,7 @@ export function QuickAddSheet({
                                 >
                                   <span className="min-w-0 truncate text-sm font-semibold">{tpl.name}</span>
                                   {tpl.recurring && (
-                                    <span className="ml-2 rounded-full bg-white/10 px-2 py-1 text-[10px] text-white/80">
+                                    <span className="ml-2 rounded-full bg-[var(--overlay-10)] px-2 py-1 text-[10px] text-white/80">
                                       {tpl.frequency ?? 'recurr.'}
                                     </span>
                                   )}
@@ -1108,7 +1108,7 @@ export function QuickAddSheet({
                           type="date"
                           value={date}
                           onChange={(e) => setDate(e.target.value)}
-                          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-emerald-500/40 focus:outline-none"
+                          className="w-full rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)] focus:border-emerald-500/40 focus:outline-none"
                         />
                         {editingTemplate?.createdAt && (
                           <p className="mt-1 text-[11px] text-[var(--muted)]">
@@ -1119,7 +1119,7 @@ export function QuickAddSheet({
                     </div>
                     {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
                     {showTemplateCard && (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-3">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-white/60">
                             {editingTemplate ? 'Actualizar plantilla' : 'Guardar como plantilla'}
@@ -1159,7 +1159,7 @@ export function QuickAddSheet({
                               value={templateName}
                               onChange={(e) => setTemplateName(e.target.value)}
                               placeholder="Ej. Renta, Netflix"
-                              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-emerald-500/40 focus:outline-none"
+                              className="w-full rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-sm text-[var(--text)] focus:border-emerald-500/40 focus:outline-none"
                             />
                             <button
                               type="button"
@@ -1199,7 +1199,7 @@ export function QuickAddSheet({
                                   onClick={() => setCategory(cat.id)}
                                   className={`btn-glass min-w-[86px] shrink-0 flex-col px-3 py-2 text-[11px] ${
                                     active
-                                      ? 'border-emerald-500/50 bg-emerald-500/10 text-white'
+                                      ? 'border-emerald-500/50 bg-emerald-500/10 text-[var(--text)]'
                                       : 'text-white/70'
                                   }`}
                                 >
@@ -1211,7 +1211,7 @@ export function QuickAddSheet({
                             <button
                               type="button"
                               onClick={() => onOpenSettings?.(type)}
-                              className="btn-glass min-w-[86px] shrink-0 flex-col border-dashed border-white/20 px-3 py-2 text-[11px] text-white/60 hover:text-white"
+                              className="btn-glass min-w-[86px] shrink-0 flex-col border-dashed border-[var(--border-20)] px-3 py-2 text-[11px] text-white/60 hover:text-[var(--text)]"
                             >
                               <Settings size={18} />
                               <span className="mt-1">Configurar</span>
@@ -1220,7 +1220,7 @@ export function QuickAddSheet({
                         </div>
                       </>
                     )}
-                    <div className="border-b border-white/10 pb-2">
+                    <div className="border-b border-[var(--border-10)] pb-2">
                       <label className="sr-only" htmlFor="quick-add-note">
                         Nota
                       </label>
@@ -1230,7 +1230,7 @@ export function QuickAddSheet({
                         value={note}
                         onChange={(event) => setNote(event.target.value.slice(0, 500))}
                         placeholder="Nota (opcional)"
-                        className="w-full bg-transparent text-sm text-white placeholder-white/30 focus:outline-none"
+                        className="w-full bg-transparent text-sm text-[var(--text)] placeholder-white/30 focus:outline-none"
                       />
                     </div>
                     {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
@@ -1250,7 +1250,7 @@ export function QuickAddSheet({
                     </button>
                   )
                 ) : (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+                  <div className="rounded-2xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-2">
                     <CustomKeypad
                       onInput={handleKeypadInput}
                       onAction={handleSmartSave}

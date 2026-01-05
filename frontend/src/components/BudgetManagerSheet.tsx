@@ -221,7 +221,7 @@ export function BudgetManagerSheet({
             <div className="flex items-center gap-2">
               <p className="truncate text-sm font-semibold text-[var(--text)]">{cat.label}</p>
               {isFallback ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
+                <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
                   Automatica
                 </span>
               ) : null}
@@ -359,7 +359,7 @@ export function BudgetManagerSheet({
                   type="button"
                   onClick={handleSave}
                   disabled={saving || visibleCategories.length === 0}
-                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow hover:opacity-90 disabled:opacity-60 sm:w-auto"
+                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60 sm:w-auto"
                 >
                   {saving ? 'Guardando...' : 'Guardar'}
                 </button>
