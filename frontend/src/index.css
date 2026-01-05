@@ -155,10 +155,4 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-sheet-up {
-    animation: none;
-  }
-}
 
