@@ -862,7 +862,7 @@ export function QuickAddSheet({
                     className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
                       type === 'expense'
                         ? 'bg-rose-500/20 text-rose-200 ring-1 ring-inset ring-rose-500/50'
-                        : 'text-white/40 hover:text-white/70'
+                        : 'text-[var(--glass-muted)] hover:text-[var(--glass-text)]'
                     }`}
                   >
                     Gasto
@@ -875,7 +875,7 @@ export function QuickAddSheet({
                     className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
                       type === 'income'
                         ? 'bg-emerald-500/20 text-[var(--accent)] ring-1 ring-inset ring-emerald-500/50'
-                        : 'text-white/40 hover:text-white/70'
+                        : 'text-[var(--glass-muted)] hover:text-[var(--glass-text)]'
                     }`}
                   >
                     Ingreso
@@ -900,7 +900,7 @@ export function QuickAddSheet({
               <>
                 {editingTemplate && (
                   <span className="text-xs text-[var(--muted)]">
-                    Editando plantilla: <span className="font-semibold text-white/80">{editingTemplate.name}</span>
+                    Editando plantilla: <span className="font-semibold text-[var(--glass-text)]">{editingTemplate.name}</span>
                   </span>
                 )}
                 <div className="flex h-24 w-full shrink-0 items-center justify-center px-4">
@@ -965,15 +965,15 @@ export function QuickAddSheet({
                 {interpretError && <p className="text-sm text-[var(--error-text)]">{interpretError}</p>}
                 {showAiHints && (
                   <div className="mb-2 mt-4 flex flex-wrap justify-center gap-2">
-                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-[var(--overlay-5)] px-3 py-1 text-[10px] font-medium text-white/50">
+                    <span className="flex items-center gap-1.5 pill-surface px-3 py-1 text-[10px] font-medium text-[var(--glass-muted)]">
                       <DollarSign className="h-3 w-3" />
                       Monto y categoria
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-[var(--overlay-5)] px-3 py-1 text-[10px] font-medium text-white/50">
+                    <span className="flex items-center gap-1.5 pill-surface px-3 py-1 text-[10px] font-medium text-[var(--glass-muted)]">
                       <Calendar className="h-3 w-3" />
                       Fecha rapida
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-white/5 bg-[var(--overlay-5)] px-3 py-1 text-[10px] font-medium text-white/50">
+                    <span className="flex items-center gap-1.5 pill-surface px-3 py-1 text-[10px] font-medium text-[var(--glass-muted)]">
                       <CreditCard className="h-3 w-3" />
                       Metodo de pago
                     </span>
@@ -992,7 +992,7 @@ export function QuickAddSheet({
                               {suggestedCategoryDisplay}
                             </p>
                             {suggestionNote && (
-                              <p className="truncate text-xs text-white/60" title={suggestionNote}>
+                              <p className="truncate text-xs text-[var(--glass-muted)]" title={suggestionNote}>
                                 {suggestionNote}
                               </p>
                             )}
@@ -1002,7 +1002,7 @@ export function QuickAddSheet({
                           ${parsedSuggestion.amount.toLocaleString()}
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--glass-muted)]">
                         <span className="pill-strong px-2 py-1">
                           {parsedSuggestion.date}
                         </span>
@@ -1059,7 +1059,7 @@ export function QuickAddSheet({
                                 >
                                   <span className="min-w-0 truncate text-sm font-semibold">{tpl.name}</span>
                                   {tpl.recurring && (
-                                    <span className="ml-2 rounded-full bg-[var(--overlay-10)] px-2 py-1 text-[10px] text-white/80">
+                                    <span className="ml-2 rounded-full bg-[var(--overlay-10)] px-2 py-1 text-[10px] text-[var(--glass-muted)]">
                                       {tpl.frequency ?? 'recurr.'}
                                     </span>
                                   )}
@@ -1121,7 +1121,7 @@ export function QuickAddSheet({
                     {showTemplateCard && (
                       <div className="rounded-2xl surface-soft p-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-white/60">
+                          <span className="text-xs font-semibold text-[var(--glass-muted)]">
                             {editingTemplate ? 'Actualizar plantilla' : 'Guardar como plantilla'}
                           </span>
                           {editingTemplate && (
@@ -1132,7 +1132,7 @@ export function QuickAddSheet({
                         </div>
                         <div className="mt-3 space-y-3">
                           <div className="flex items-center justify-between gap-3">
-                            <label className="flex items-center gap-2 text-sm text-white/70">
+                            <label className="flex items-center gap-2 text-sm text-[var(--glass-muted)]">
                               <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
                               Recurrente
                             </label>
@@ -1200,7 +1200,7 @@ export function QuickAddSheet({
                                   className={`btn-glass min-w-[86px] shrink-0 flex-col px-3 py-2 text-[11px] ${
                                     active
                                       ? 'border-emerald-500/50 bg-emerald-500/10 text-[var(--text)]'
-                                      : 'text-white/70'
+                                      : 'text-[var(--glass-muted)]'
                                   }`}
                                 >
                                   <CategoryIcon name={cat.icon} size={18} />
@@ -1211,7 +1211,7 @@ export function QuickAddSheet({
                             <button
                               type="button"
                               onClick={() => onOpenSettings?.(type)}
-                              className="btn-glass min-w-[86px] shrink-0 flex-col border-dashed border-[var(--border-20)] px-3 py-2 text-[11px] text-white/60 hover:text-[var(--text)]"
+                              className="btn-glass min-w-[86px] shrink-0 flex-col border-dashed border-[var(--border-20)] px-3 py-2 text-[11px] text-[var(--glass-muted)] hover:text-[var(--glass-text)]"
                             >
                               <Settings size={18} />
                               <span className="mt-1">Configurar</span>

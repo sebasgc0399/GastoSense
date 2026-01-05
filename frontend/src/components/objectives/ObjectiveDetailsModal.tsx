@@ -68,13 +68,14 @@ export function ObjectiveDetailsModal({
 
   if (!open || !objective) return null;
 
-  const heroTint = objective.color || (isGoal ? 'rgba(16, 185, 129, 0.35)' : 'rgba(56, 189, 248, 0.35)');
-  const ringColor = objective.color || (isGoal ? '#34d399' : '#38bdf8');
+  const heroBase = objective.color || (isGoal ? 'var(--hero-grad-1)' : 'var(--hero-grad-2)');
+  const heroTint = objective.color ? heroBase : `color-mix(in srgb, ${heroBase} 35%, transparent)`;
+  const ringColor = heroBase;
   const progressPct = Math.round(progress * 100);
   const progressStyle = { '--pct': `${Math.min(progress * 100, 100)}%` } as CSSProperties;
-  const heroBackground = `linear-gradient(135deg, ${heroTint}, rgba(15, 23, 42, 0.95))`;
+  const heroBackground = `linear-gradient(135deg, ${heroTint}, var(--modal-surface))`;
   const ringStyle = {
-    background: `conic-gradient(${ringColor} ${progressPct}%, rgba(255,255,255,0.18) 0)`,
+    background: `conic-gradient(${ringColor} ${progressPct}%, var(--border-20) 0)`,
   };
   const iconName = objective.icon || (isGoal ? 'PiggyBank' : 'CreditCard');
 
@@ -175,7 +176,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={() => onEdit(objective)}
-                className="pill-surface p-2 text-white/80 hover:text-[var(--text)]"
+                className="pill-surface p-2 text-[var(--text)] hover:text-[var(--text)]"
                 aria-label="Editar"
               >
                 <Pencil className="h-4 w-4" />
@@ -183,7 +184,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="pill-surface p-2 text-white/80 hover:text-[var(--text)]"
+                className="pill-surface p-2 text-[var(--text)] hover:text-[var(--text)]"
                 aria-label="Cerrar"
               >
                 <X className="h-4 w-4" />
@@ -210,10 +211,10 @@ export function ObjectiveDetailsModal({
                   <p className="text-3xl font-semibold text-[var(--text)] md:text-4xl">
                     {formatPesos(objective.currentAmount)}
                   </p>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-[var(--text-muted)]">
                     de {formatPesos(objective.targetAmount)} {isGoal ? 'ahorrado' : 'pagado'}
                   </p>
-                  <p className="mt-2 text-xs text-white/70">{remainingLabel}</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">{remainingLabel}</p>
                 </div>
               </div>
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
