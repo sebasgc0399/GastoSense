@@ -71,6 +71,44 @@
     --blob-1: #f8fafc;
     --blob-2: #0ea5e9;
     --blob-3: #0b1120;
+
+    /* Charts */
+    --chart-1: #22c55e;
+    --chart-2: #0ea5e9;
+    --chart-3: #a78bfa;
+    --chart-4: #f59e0b;
+    --chart-5: #f97316;
+    --chart-6: #14b8a6;
+    --chart-7: #ef4444;
+    --chart-8: #94a3b8;
+    --chart-income-bar: rgba(34, 197, 94, 0.8);
+    --chart-expense-bar: rgba(248, 113, 113, 0.8);
+    --chart-income-line: rgba(16, 185, 129, 0.85);
+    --chart-expense-line: rgba(249, 115, 22, 0.85);
+    --chart-income-area: rgba(16, 185, 129, 0.12);
+    --chart-expense-area: rgba(249, 115, 22, 0.12);
+    --chart-income-label: #34d399;
+    --chart-expense-label: #f87171;
+    --chart-delta-muted: #94a3b8;
+    --chart-delta-positive: #22c55e;
+    --chart-delta-negative: #f87171;
+    --chart-track: rgba(255, 255, 255, 0.05);
+    --chart-label: rgba(255, 255, 255, 0.75);
+    --chart-axis: rgba(255, 255, 255, 0.55);
+    --chart-axis-strong: rgba(255, 255, 255, 0.82);
+    --chart-grid: rgba(255, 255, 255, 0.08);
+    --chart-markline: rgba(255, 255, 255, 0.22);
+    --chart-markline-strong: rgba(255, 255, 255, 0.35);
+    --chart-markline-label: rgba(255, 255, 255, 0.7);
+    --chart-tooltip-bg: rgba(0, 0, 0, 0.55);
+    --chart-tooltip-border: rgba(255, 255, 255, 0.12);
+    --chart-tooltip-text: #f8fafc;
+    --chart-tooltip-muted: #94a3b8;
+    --chart-budget-remaining: rgba(148, 163, 184, 0.18);
+    --chart-budget-over: #ef4444;
+    --chart-budget-ok: #14b8a6;
+    --chart-budget-warn: #f59e0b;
+    --chart-budget-no-budget: #0ea5e9;
   }
 
   :root[data-theme='light'] {
@@ -145,5 +183,43 @@
     --blob-1: #ffffff;
     --blob-2: #38bdf8;
     --blob-3: #e0f2fe;
+
+    /* Charts */
+    --chart-1: #22c55e;
+    --chart-2: #0ea5e9;
+    --chart-3: #a78bfa;
+    --chart-4: #f59e0b;
+    --chart-5: #f97316;
+    --chart-6: #14b8a6;
+    --chart-7: #ef4444;
+    --chart-8: #64748b;
+    --chart-income-bar: rgba(34, 197, 94, 0.8);
+    --chart-expense-bar: rgba(248, 113, 113, 0.8);
+    --chart-income-line: rgba(16, 185, 129, 0.85);
+    --chart-expense-line: rgba(249, 115, 22, 0.85);
+    --chart-income-area: rgba(16, 185, 129, 0.12);
+    --chart-expense-area: rgba(249, 115, 22, 0.12);
+    --chart-income-label: #34d399;
+    --chart-expense-label: #f87171;
+    --chart-delta-muted: #94a3b8;
+    --chart-delta-positive: #22c55e;
+    --chart-delta-negative: #f87171;
+    --chart-track: rgba(15, 23, 42, 0.05);
+    --chart-label: rgba(15, 23, 42, 0.75);
+    --chart-axis: rgba(15, 23, 42, 0.55);
+    --chart-axis-strong: rgba(15, 23, 42, 0.82);
+    --chart-grid: rgba(15, 23, 42, 0.08);
+    --chart-markline: rgba(15, 23, 42, 0.22);
+    --chart-markline-strong: rgba(15, 23, 42, 0.35);
+    --chart-markline-label: rgba(15, 23, 42, 0.7);
+    --chart-tooltip-bg: rgba(15, 23, 42, 0.9);
+    --chart-tooltip-border: rgba(255, 255, 255, 0.15);
+    --chart-tooltip-text: #f8fafc;
+    --chart-tooltip-muted: #cbd5e1;
+    --chart-budget-remaining: rgba(148, 163, 184, 0.18);
+    --chart-budget-over: #ef4444;
+    --chart-budget-ok: #14b8a6;
+    --chart-budget-warn: #f59e0b;
+    --chart-budget-no-budget: #0ea5e9;
   }
 }

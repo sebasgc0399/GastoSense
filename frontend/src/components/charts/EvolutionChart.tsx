@@ -1,6 +1,7 @@
 import ReactECharts from 'echarts-for-react';
 import type { BarSeriesOption, EChartsOption, LineSeriesOption } from 'echarts';
 import { todayIso } from '../../utils/dates';
+import { createCssVarReader } from '../../utils/cssVars';
 
 export type EvolutionChartPoint = { date: string; day: number; amount: number };
 
@@ -29,6 +30,55 @@ const formatTooltipDate = (iso: string) => {
   return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' }).format(date);
 };
 
+type EvolutionChartTokens = {
+  incomeBar: string;
+  expenseBar: string;
+  incomeLine: string;
+  expenseLine: string;
+  incomeArea: string;
+  expenseArea: string;
+  incomeLabel: string;
+  expenseLabel: string;
+  deltaMuted: string;
+  deltaPositive: string;
+  deltaNegative: string;
+  markLine: string;
+  markLineLabel: string;
+  markLineStrong: string;
+  axisLabel: string;
+  gridLine: string;
+  tooltipBg: string;
+  tooltipBorder: string;
+  tooltipText: string;
+  tooltipMuted: string;
+};
+
+const getEvolutionChartTokens = (): EvolutionChartTokens => {
+  const readVar = createCssVarReader();
+  return {
+    incomeBar: readVar('--chart-income-bar', 'rgba(34,197,94,0.8)'),
+    expenseBar: readVar('--chart-expense-bar', 'rgba(248,113,113,0.8)'),
+    incomeLine: readVar('--chart-income-line', 'rgba(16,185,129,0.85)'),
+    expenseLine: readVar('--chart-expense-line', 'rgba(249,115,22,0.85)'),
+    incomeArea: readVar('--chart-income-area', 'rgba(16,185,129,0.12)'),
+    expenseArea: readVar('--chart-expense-area', 'rgba(249,115,22,0.12)'),
+    incomeLabel: readVar('--chart-income-label', '#34d399'),
+    expenseLabel: readVar('--chart-expense-label', '#F87171'),
+    deltaMuted: readVar('--chart-delta-muted', '#94A3B8'),
+    deltaPositive: readVar('--chart-delta-positive', '#22C55E'),
+    deltaNegative: readVar('--chart-delta-negative', '#F87171'),
+    markLine: readVar('--chart-markline', 'rgba(255,255,255,0.22)'),
+    markLineLabel: readVar('--chart-markline-label', 'rgba(255,255,255,0.7)'),
+    markLineStrong: readVar('--chart-markline-strong', 'rgba(255,255,255,0.35)'),
+    axisLabel: readVar('--chart-axis', 'rgba(255,255,255,0.55)'),
+    gridLine: readVar('--chart-grid', 'rgba(255,255,255,0.08)'),
+    tooltipBg: readVar('--chart-tooltip-bg', 'rgba(0,0,0,0.55)'),
+    tooltipBorder: readVar('--chart-tooltip-border', 'rgba(255,255,255,0.12)'),
+    tooltipText: readVar('--chart-tooltip-text', '#fff'),
+    tooltipMuted: readVar('--chart-tooltip-muted', '#94A3B8'),
+  };
+};
+
 export function EvolutionChart({
   view,
   isCurrentMonth,
@@ -47,10 +97,11 @@ export function EvolutionChart({
   const todayPoint = isCurrentMonth ? daily.find((d) => d.date === today) : undefined;
   const todayLabel = todayPoint ? String(todayPoint.day).padStart(2, '0') : null;
   const isIncome = tone === 'income';
-  const dailyBarColor = isIncome ? 'rgba(34,197,94,0.8)' : 'rgba(248,113,113,0.8)';
-  const cumulativeLineColor = isIncome ? 'rgba(16,185,129,0.85)' : 'rgba(249,115,22,0.85)';
-  const cumulativeAreaColor = isIncome ? 'rgba(16,185,129,0.12)' : 'rgba(249,115,22,0.12)';
-  const todayLabelColor = isIncome ? '#34d399' : '#F87171';
+  const chartTokens = getEvolutionChartTokens();
+  const dailyBarColor = isIncome ? chartTokens.incomeBar : chartTokens.expenseBar;
+  const cumulativeLineColor = isIncome ? chartTokens.incomeLine : chartTokens.expenseLine;
+  const cumulativeAreaColor = isIncome ? chartTokens.incomeArea : chartTokens.expenseArea;
+  const todayLabelColor = isIncome ? chartTokens.incomeLabel : chartTokens.expenseLabel;
 
   const tickSet = new Set<string>(['01', '15', lastDayLabel]);
   if (todayLabel) tickSet.add(todayLabel);
@@ -68,14 +119,24 @@ export function EvolutionChart({
     const delta = hasAvg ? amount - avgDailyAmount : null;
     const deltaLabel = delta !== null ? `${delta >= 0 ? '+' : '-'}${fmtCOP(Math.abs(delta))}` : null;
     const deltaColor =
-      delta === null ? '#94A3B8' : delta > 0 ? (isIncome ? '#22C55E' : '#F87171') : delta < 0 ? (isIncome ? '#F87171' : '#22C55E') : '#94A3B8';
+      delta === null
+        ? chartTokens.deltaMuted
+        : delta > 0
+          ? isIncome
+            ? chartTokens.deltaPositive
+            : chartTokens.deltaNegative
+          : delta < 0
+            ? isIncome
+              ? chartTokens.deltaNegative
+              : chartTokens.deltaPositive
+            : chartTokens.deltaMuted;
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <div style="font-weight:600;color:#F8FAFC;">${dateLabel}</div>
+        <div style="font-weight:600;color:${chartTokens.tooltipText};">${dateLabel}</div>
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
-          <span style="color:#94A3B8;">${metricLabel} del dia</span>
-          <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(amount)}</span>
+          <span style="color:${chartTokens.tooltipMuted};">${metricLabel} del dia</span>
+          <span style="font-weight:800;color:${chartTokens.tooltipText};">${fmtCOP(amount)}</span>
         </div>
         ${
           deltaLabel !== null && delta !== 0
@@ -100,15 +161,25 @@ export function EvolutionChart({
     const delta = hasPace ? acc - paceIdeal[idx].amount : null;
     const deltaLabel = delta !== null ? `${delta >= 0 ? '+' : '-'}${fmtCOP(Math.abs(delta))}` : null;
     const deltaColor =
-      delta === null ? '#94A3B8' : delta > 0 ? (isIncome ? '#22C55E' : '#F87171') : delta < 0 ? (isIncome ? '#F87171' : '#22C55E') : '#94A3B8';
+      delta === null
+        ? chartTokens.deltaMuted
+        : delta > 0
+          ? isIncome
+            ? chartTokens.deltaPositive
+            : chartTokens.deltaNegative
+          : delta < 0
+            ? isIncome
+              ? chartTokens.deltaNegative
+              : chartTokens.deltaPositive
+            : chartTokens.deltaMuted;
 
     return `
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <div style="font-weight:600;color:#F8FAFC;">${dateLabel}</div>
+        <div style="font-weight:600;color:${chartTokens.tooltipText};">${dateLabel}</div>
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
-          <span style="color:#94A3B8;">Acumulado</span>
-          <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(acc)}</span>
-          ${pct !== null ? `<span style="color:#94A3B8;">~ ${pct}%</span>` : ``}
+          <span style="color:${chartTokens.tooltipMuted};">Acumulado</span>
+          <span style="font-weight:800;color:${chartTokens.tooltipText};">${fmtCOP(acc)}</span>
+          ${pct !== null ? `<span style="color:${chartTokens.tooltipMuted};">~ ${pct}%</span>` : ``}
         </div>
         ${
           deltaLabel !== null
@@ -126,8 +197,8 @@ export function EvolutionChart({
     itemStyle: { color: dailyBarColor },
     markLine: {
       symbol: 'none',
-      lineStyle: { type: 'dashed', color: 'rgba(255,255,255,0.22)' },
-      label: { color: 'rgba(255,255,255,0.7)', fontSize: 10 },
+      lineStyle: { type: 'dashed', color: chartTokens.markLine },
+      label: { color: chartTokens.markLineLabel, fontSize: 10 },
       data: [
         ...(avgDailyAmount > 0 ? [{ yAxis: avgDailyAmount, name: 'Promedio', label: { formatter: 'Promedio' } }] : []),
         ...(todayLabel ? [{ xAxis: todayLabel, name: 'hoy', label: { formatter: 'hoy' } }] : []),
@@ -145,8 +216,8 @@ export function EvolutionChart({
     areaStyle: { color: cumulativeAreaColor },
     markLine: {
       symbol: 'none',
-      lineStyle: { type: 'dashed', color: 'rgba(255,255,255,0.22)' },
-      label: { color: 'rgba(255,255,255,0.7)', fontSize: 10 },
+      lineStyle: { type: 'dashed', color: chartTokens.markLine },
+      label: { color: chartTokens.markLineLabel, fontSize: 10 },
       data: [
         ...(budgetTotal && budgetTotal > 0 ? [{ yAxis: budgetTotal, name: 'Presupuesto', label: { formatter: 'Presupuesto' } }] : []),
         ...(todayLabel ? [{ xAxis: todayLabel, name: 'hoy', label: { formatter: 'hoy' } }] : []),
@@ -160,7 +231,7 @@ export function EvolutionChart({
     smooth: true,
     showSymbol: false,
     data: paceIdeal?.map((d) => d.amount) ?? [],
-    lineStyle: { width: 1.5, type: 'dashed', color: 'rgba(255,255,255,0.35)' },
+    lineStyle: { width: 1.5, type: 'dashed', color: chartTokens.markLineStrong },
   };
 
   const option: EChartsOption = {
@@ -170,9 +241,9 @@ export function EvolutionChart({
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: view === 'daily' ? 'shadow' : 'line' },
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      borderColor: 'rgba(255,255,255,0.12)',
-      textStyle: { color: '#fff', fontSize: 12 },
+      backgroundColor: chartTokens.tooltipBg,
+      borderColor: chartTokens.tooltipBorder,
+      textStyle: { color: chartTokens.tooltipText, fontSize: 12 },
       confine: true,
       appendToBody: false,
       extraCssText: 'max-width:220px; white-space:normal; border-radius:12px; padding:10px;',
@@ -187,7 +258,7 @@ export function EvolutionChart({
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: {
-        color: 'rgba(255,255,255,0.55)',
+        color: chartTokens.axisLabel,
         fontSize: 10,
         margin: 10,
         formatter: (value: string) => {
@@ -206,7 +277,7 @@ export function EvolutionChart({
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: { show: false },
-      splitLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      splitLine: { show: true, lineStyle: { color: chartTokens.gridLine } },
     },
     series:
       view === 'daily'

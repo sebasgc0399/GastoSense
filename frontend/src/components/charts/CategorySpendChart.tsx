@@ -1,6 +1,7 @@
 ﻿import { useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { BarSeriesOption, EChartsOption } from 'echarts';
+import { createCssVarReader } from '../../utils/cssVars';
 
 export type CategorySpendMode = 'spent' | 'budget';
 
@@ -30,17 +31,6 @@ const fmtCOP = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}
 const BAR_RADIUS = 10;
 const BAR_HEIGHT = 14;
 
-const RANK_PALETTE = [
-  '#22C55E',
-  '#0EA5E9',
-  '#A78BFA',
-  '#F59E0B',
-  '#F97316',
-  '#14B8A6',
-  '#EF4444',
-  '#94A3B8',
-] as const;
-
 const hashCategoryId = (value: string) => {
   let hash = 0;
   for (let i = 0; i < value.length; i += 1) {
@@ -48,8 +38,8 @@ const hashCategoryId = (value: string) => {
   }
   return hash;
 };
-const stableCategoryColor = (categoryId: string) =>
-  RANK_PALETTE[hashCategoryId(categoryId) % RANK_PALETTE.length];
+const stableCategoryColor = (categoryId: string, palette: readonly string[]) =>
+  palette[hashCategoryId(categoryId) % palette.length];
 
 const formatCategoryLabel = (value: string) => {
   const trimmed = value.trim();
@@ -58,17 +48,55 @@ const formatCategoryLabel = (value: string) => {
   return lower.charAt(0).toLocaleUpperCase('es-CO') + lower.slice(1);
 };
 
-const pctColor = (pct: number) => {
-  if (pct > 100) return '#EF4444';
-  if (pct >= 80) return '#F59E0B';
-  return '#14B8A6';
+type CategoryChartTokens = {
+  palette: string[];
+  budgetRemaining: string;
+  budgetOver: string;
+  budgetOk: string;
+  budgetWarn: string;
+  budgetNoBudget: string;
+  tooltipBg: string;
+  tooltipBorder: string;
+  tooltipText: string;
+  tooltipMuted: string;
+  axisLabel: string;
+  barTrack: string;
+  barLabel: string;
 };
 
-const BUDGET_REMAINING_COLOR = 'rgba(148,163,184,0.18)';
-const BUDGET_OVER_COLOR = '#EF4444';
-const BUDGET_SPENT_OK = '#14B8A6';
-const BUDGET_SPENT_WARN = '#F59E0B';
-const BUDGET_SPENT_NO_BUDGET = '#0EA5E9';
+const getCategoryChartTokens = (): CategoryChartTokens => {
+  const readVar = createCssVarReader();
+  return {
+    palette: [
+      readVar('--chart-1', '#22C55E'),
+      readVar('--chart-2', '#0EA5E9'),
+      readVar('--chart-3', '#A78BFA'),
+      readVar('--chart-4', '#F59E0B'),
+      readVar('--chart-5', '#F97316'),
+      readVar('--chart-6', '#14B8A6'),
+      readVar('--chart-7', '#EF4444'),
+      readVar('--chart-8', '#94A3B8'),
+    ],
+    budgetRemaining: readVar('--chart-budget-remaining', 'rgba(148,163,184,0.18)'),
+    budgetOver: readVar('--chart-budget-over', '#EF4444'),
+    budgetOk: readVar('--chart-budget-ok', '#14B8A6'),
+    budgetWarn: readVar('--chart-budget-warn', '#F59E0B'),
+    budgetNoBudget: readVar('--chart-budget-no-budget', '#0EA5E9'),
+    tooltipBg: readVar('--chart-tooltip-bg', 'rgba(0,0,0,0.55)'),
+    tooltipBorder: readVar('--chart-tooltip-border', 'rgba(255,255,255,0.12)'),
+    tooltipText: readVar('--chart-tooltip-text', '#fff'),
+    tooltipMuted: readVar('--chart-tooltip-muted', '#94A3B8'),
+    axisLabel: readVar('--chart-axis-strong', 'rgba(255,255,255,0.82)'),
+    barTrack: readVar('--chart-track', 'rgba(255,255,255,0.05)'),
+    barLabel: readVar('--chart-label', 'rgba(255,255,255,0.75)'),
+  };
+};
+
+const pctColor = (pct: number, tokens: CategoryChartTokens) => {
+  if (pct > 100) return tokens.budgetOver;
+  if (pct >= 80) return tokens.budgetWarn;
+  return tokens.budgetOk;
+};
 
 const tooltipShell = (inner: string) => `
   <div style="display:flex;flex-direction:column;gap:4px;">
@@ -106,6 +134,7 @@ export function CategorySpendChart({
   const canNavigate = Boolean(enableCategoryNavigate && onCategoryNavigate);
   const visibleItems = limit ? items.slice(0, limit) : items;
   const showValueLabels = Boolean(limit);
+  const chartTokens = getCategoryChartTokens();
 
   if (!visibleItems.length) {
     return <p className="text-sm text-[var(--muted)]">Aún no hay categorías para mostrar.</p>;
@@ -126,16 +155,16 @@ export function CategorySpendChart({
     type: 'bar',
     data: visibleItems.map((item) => ({
       value: item.spent,
-      itemStyle: { color: stableCategoryColor(item.categoryId), borderRadius: BAR_RADIUS },
+      itemStyle: { color: stableCategoryColor(item.categoryId, chartTokens.palette), borderRadius: BAR_RADIUS },
     })) as unknown as BarSeriesOption['data'],
     barWidth: BAR_HEIGHT,
     showBackground: true,
-    backgroundStyle: { color: 'rgba(255,255,255,0.05)', borderRadius: BAR_RADIUS },
+    backgroundStyle: { color: chartTokens.barTrack, borderRadius: BAR_RADIUS },
     label: showValueLabels
       ? ({
           show: true,
           position: 'right',
-          color: 'rgba(255,255,255,0.75)',
+          color: chartTokens.barLabel,
           fontSize: 11,
           fontWeight: 600,
           formatter: (p: { value?: unknown }) => fmtCOP(Number(p.value ?? 0)),
@@ -155,13 +184,14 @@ export function CategorySpendChart({
       const borderRadius = isLast ? BAR_RADIUS : [BAR_RADIUS, 0, 0, BAR_RADIUS];
 
       const pct = meta.hasBudget ? Math.round((item.spent / meta.budgetValue) * 100) : null;
-      const spentColor = !meta.hasBudget ? BUDGET_SPENT_NO_BUDGET : (pct ?? 0) < 80 ? BUDGET_SPENT_OK : BUDGET_SPENT_WARN;
+      const spentColor =
+        !meta.hasBudget ? chartTokens.budgetNoBudget : (pct ?? 0) < 80 ? chartTokens.budgetOk : chartTokens.budgetWarn;
       const label =
         showValueLabels && meta.hasBudget && isLast
           ? ({
               show: true,
               position: 'right',
-              color: pctColor(pct ?? 0),
+              color: pctColor(pct ?? 0, chartTokens),
               fontSize: 11,
               fontWeight: 700,
               formatter: () => `${pct ?? 0}%`,
@@ -194,7 +224,7 @@ export function CategorySpendChart({
           ? ({
               show: true,
               position: 'right',
-              color: pctColor(pct ?? 0),
+              color: pctColor(pct ?? 0, chartTokens),
               fontSize: 11,
               fontWeight: 700,
               formatter: () => `${pct ?? 0}%`,
@@ -204,7 +234,7 @@ export function CategorySpendChart({
       return showValueLabels ? { value: remaining, itemStyle: { borderRadius }, label } : { value: remaining, itemStyle: { borderRadius } };
     }) as unknown as BarSeriesOption['data'],
     barWidth: BAR_HEIGHT,
-    itemStyle: { color: BUDGET_REMAINING_COLOR },
+    itemStyle: { color: chartTokens.budgetRemaining },
     z: 2,
   };
 
@@ -222,7 +252,7 @@ export function CategorySpendChart({
           ? ({
               show: true,
               position: 'right',
-              color: pctColor(pct ?? 0),
+              color: pctColor(pct ?? 0, chartTokens),
               fontSize: 11,
               fontWeight: 700,
               formatter: () => `${pct ?? 0}%`,
@@ -232,7 +262,7 @@ export function CategorySpendChart({
       return showValueLabels ? { value: meta.over, itemStyle: { borderRadius }, label } : { value: meta.over, itemStyle: { borderRadius } };
     }) as unknown as BarSeriesOption['data'],
     barWidth: BAR_HEIGHT,
-    itemStyle: { color: BUDGET_OVER_COLOR },
+    itemStyle: { color: chartTokens.budgetOver },
     emphasis: { focus: 'series' },
     z: 4,
   };
@@ -244,16 +274,18 @@ export function CategorySpendChart({
     const item = visibleItems[idx];
     if (!item) return '';
 
-    const headerLabel = `<div style="font-weight:700;color:#F8FAFC;">${formatCategoryLabel(item.label)}</div>`;
+    const headerLabel = `<div style="font-weight:700;color:${chartTokens.tooltipText};">${formatCategoryLabel(item.label)}</div>`;
     const fallbackLine =
-      showFallbackId && item.fallbackId ? `<div style="color:#94A3B8;font-size:11px;">${item.fallbackId}</div>` : '';
+      showFallbackId && item.fallbackId
+        ? `<div style="color:${chartTokens.tooltipMuted};font-size:11px;">${item.fallbackId}</div>`
+        : '';
     const header = `${headerLabel}${fallbackLine}`;
 
     if (mode === 'spent') {
       return tooltipShell(`
         ${header}
-        <div style="color:#94A3B8;">
-          ${valueLabel}: <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(item.spent)}</span>
+        <div style="color:${chartTokens.tooltipMuted};">
+          ${valueLabel}: <span style="font-weight:800;color:${chartTokens.tooltipText};">${fmtCOP(item.spent)}</span>
         </div>
       `);
     }
@@ -264,16 +296,19 @@ export function CategorySpendChart({
 
     return tooltipShell(`
       ${header}
-      <div style="color:#94A3B8;">
-        ${valueLabel}: <span style="font-weight:800;color:#F8FAFC;">${fmtCOP(item.spent)}</span>
+      <div style="color:${chartTokens.tooltipMuted};">
+        ${valueLabel}: <span style="font-weight:800;color:${chartTokens.tooltipText};">${fmtCOP(item.spent)}</span>
       </div>
-      <div style="color:#94A3B8;">Presupuesto: ${meta.hasBudget ? fmtCOP(meta.budgetValue) : '\u2014'}</div>
+      <div style="color:${chartTokens.tooltipMuted};">Presupuesto: ${meta.hasBudget ? fmtCOP(meta.budgetValue) : '\u2014'}</div>
       ${
         pct !== null
-          ? `<div style="color:#94A3B8;">% usado: <span style="font-weight:700;color:${pctColor(pct)};">${pct}%</span></div>`
+          ? `<div style="color:${chartTokens.tooltipMuted};">% usado: <span style="font-weight:700;color:${pctColor(
+              pct,
+              chartTokens,
+            )};">${pct}%</span></div>`
           : ``
       }
-      ${excess !== null ? `<div style="color:${BUDGET_OVER_COLOR};font-weight:700;">Exceso: ${fmtCOP(excess)}</div>` : ``}
+      ${excess !== null ? `<div style="color:${chartTokens.budgetOver};font-weight:700;">Exceso: ${fmtCOP(excess)}</div>` : ``}
     `);
   };
 
@@ -306,9 +341,9 @@ export function CategorySpendChart({
       confine: true,
       appendToBody: false,
       extraCssText: 'max-width:240px; white-space:normal; border-radius:12px; padding:10px;',
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      borderColor: 'rgba(255,255,255,0.12)',
-      textStyle: { color: '#fff', fontSize: 12 },
+      backgroundColor: chartTokens.tooltipBg,
+      borderColor: chartTokens.tooltipBorder,
+      textStyle: { color: chartTokens.tooltipText, fontSize: 12 },
       formatter: tooltipFormatter as unknown as (params: unknown) => string,
     },
     xAxis: {
@@ -326,7 +361,7 @@ export function CategorySpendChart({
       data: categories,
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: 'rgba(255,255,255,0.82)', fontSize: 11 },
+      axisLabel: { color: chartTokens.axisLabel, fontSize: 11 },
     },
     series:
       mode === 'spent'
