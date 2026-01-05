@@ -121,13 +121,13 @@ export function SettingsPage({
           <p className="text-xs text-[var(--text-muted)]">ID para soporte o auditoría.</p>
         </div>
         <div className="flex w-full items-center gap-2">
-          <div className="max-w-full grow overflow-x-auto rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-[11px] font-mono text-[var(--text)]">
+          <div className="max-w-full grow overflow-x-auto rounded-lg surface-soft px-3 py-2 text-[11px] font-mono text-[var(--text)]">
             {userUid}
           </div>
           <button
             onClick={handleCopyUid}
             aria-label="Copiar ID de usuario"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)] hover:border-primary"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg surface-soft text-[var(--text)] hover:border-primary"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -170,7 +170,7 @@ export function SettingsPage({
             <p className="text-xs text-[var(--text-muted)]">BYOK se guarda en backend (Secret Manager). El cliente nunca ve la clave.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[var(--text)]">Rol: {roleLabel}</span>
+            <span className="pill-surface px-3 py-1 text-[var(--text)]">Rol: {roleLabel}</span>
             <span
               className={`rounded-full border px-3 py-1 ${
                 userProfile?.subscription?.status === 'active'
@@ -184,13 +184,13 @@ export function SettingsPage({
               className={`rounded-full border px-3 py-1 ${
                 userProfile?.openaiKeyStored
                   ? 'border-emerald-400/40 bg-emerald-500/10 text-[var(--accent)]'
-                  : 'border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
+                  : 'surface-soft text-[var(--text)]'
               }`}
             >
               {userProfile?.openaiKeyStored ? 'Key BYOK guardada' : 'Sin key BYOK'}
             </span>
             {userProfile?.subscription?.expiresAt ? (
-              <span className="rounded-full border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-1 text-[var(--text)]">
+              <span className="pill-surface px-3 py-1 text-[var(--text)]">
                 Expira: {formatDate(userProfile.subscription.expiresAt) || '--'}
               </span>
             ) : null}
@@ -204,7 +204,7 @@ export function SettingsPage({
         )}
 
         {iaQuota && (
-          <div className="space-y-3 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4">
+          <div className="space-y-3 rounded-xl surface-soft p-4">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-[var(--text)]">Uso semanal de IA</p>
@@ -235,7 +235,7 @@ export function SettingsPage({
 
         {showKeySettings && (
           <>
-            <div className="space-y-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4">
+            <div className="space-y-2 rounded-xl surface-soft p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-[var(--text)]">Tu API key de OpenAI (BYOK)</p>
@@ -276,7 +276,7 @@ export function SettingsPage({
               </p>
             </div>
 
-            <div className="space-y-2 rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4">
+            <div className="space-y-2 rounded-xl surface-soft p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-[var(--text)]">Preferencia de clave</p>
                 {userProfile?.preferredKey && (
@@ -292,7 +292,7 @@ export function SettingsPage({
                   className={`rounded-lg px-4 py-2 text-xs font-semibold ${
                     userProfile?.preferredKey === 'byok'
                       ? 'bg-primary text-[var(--text)]'
-                      : 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
+                      : 'surface-soft text-[var(--text)]'
                   } disabled:opacity-50`}
                 >
                   Usar mi key (BYOK)
@@ -303,7 +303,7 @@ export function SettingsPage({
                   className={`rounded-lg px-4 py-2 text-xs font-semibold ${
                     userProfile?.preferredKey === 'managed'
                       ? 'bg-primary text-[var(--text)]'
-                      : 'border border-[var(--border-10)] bg-[var(--overlay-5)] text-[var(--text)]'
+                      : 'surface-soft text-[var(--text)]'
                   } disabled:opacity-50`}
                 >
                   Usar key de GastoSense
@@ -333,7 +333,7 @@ export function SettingsPage({
               const switchingPlan = hasActiveSubscription && currentPaidPlan && currentPaidPlan !== (plan.id as PlanId);
               const sameActivePlan = hasActiveSubscription && currentPaidPlan === (plan.id as PlanId);
               return (
-                <div key={plan.id} className="rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4 shadow-sm flex flex-col gap-2">
+                <div key={plan.id} className="rounded-xl surface-soft p-4 shadow-sm flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-base font-semibold text-[var(--text)]">{plan.label}</h4>
                     <span className="rounded-full bg-[var(--overlay-10)] px-2 py-1 text-[11px] text-[var(--text)]">
@@ -396,7 +396,7 @@ export function SettingsPage({
               );
             })}
             {plans.length === 0 && (
-              <div className="rounded-xl border border-[var(--border-10)] bg-[var(--overlay-5)] p-4 text-sm text-[var(--text-muted)]">
+              <div className="rounded-xl surface-soft p-4 text-sm text-[var(--text-muted)]">
                 No pudimos cargar los planes. Intenta más tarde.
               </div>
             )}
@@ -416,7 +416,7 @@ export function SettingsPage({
                   value={adminSearch}
                   onChange={(e) => setAdminSearch(e.target.value)}
                   placeholder="Buscar UID..."
-                  className="rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-3 py-2 text-[11px] text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+                  className="rounded-lg surface-soft px-3 py-2 text-[11px] text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
                 />
                 <button
                   onClick={handleAdminReload}
@@ -507,7 +507,7 @@ export function SettingsPage({
                                 ),
                               )
                             }
-                            className="w-full rounded-lg border border-[var(--border-10)] bg-[var(--overlay-5)] px-2 py-1 text-[11px] text-[var(--text)]"
+                            className="w-full rounded-lg surface-soft px-2 py-1 text-[11px] text-[var(--text)]"
                             disabled={adminLoading}
                           />
                         </td>
