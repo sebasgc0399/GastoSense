@@ -175,7 +175,7 @@ export function ObjectivesPage({
           className="w-full rounded-3xl surface-dashed border-[var(--border-15)] px-6 py-8 text-left transition hover:border-primary/60 hover:bg-[var(--overlay-10)]"
         >
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-14 w-14 items-center justify-center pill-surface text-white/70">
+            <div className="flex h-14 w-14 items-center justify-center pill-surface text-[var(--text-muted)]">
               <Target className="h-7 w-7" />
             </div>
             <div className="space-y-1">

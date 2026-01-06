@@ -43,6 +43,10 @@
     --warn-text: #fef9c3;
     --error-text: #fecaca;
 
+    /* Objectives */
+    --objective-goal-tint: rgba(34, 197, 94, 0.18);
+    --objective-debt-tint: rgba(59, 130, 246, 0.18);
+
     /* Modal / glass */
     --modal-overlay: rgba(2, 6, 23, 0.6);
     --modal-surface: rgba(15, 23, 42, 0.92);
@@ -73,6 +77,9 @@
     --blob-3: #0b1120;
     --hero-grad-1: #34d399;
     --hero-grad-2: #38bdf8;
+    --glow-1: rgba(16, 185, 129, 0.14);
+    --glow-2: rgba(59, 130, 246, 0.12);
+    --glow-3: rgba(14, 165, 233, 0.08);
 
     /* Charts */
     --chart-1: #22c55e;
@@ -157,6 +164,10 @@
     --warn-text: #92400e;
     --error-text: #dc2626;
 
+    /* Objectives */
+    --objective-goal-tint: rgba(34, 197, 94, 0.18);
+    --objective-debt-tint: rgba(59, 130, 246, 0.18);
+
     /* Modal / glass */
     --modal-overlay: rgba(15, 23, 42, 0.35);
     --modal-surface: #ffffff;
@@ -187,6 +198,9 @@
     --blob-3: #e0f2fe;
     --hero-grad-1: #34d399;
     --hero-grad-2: #38bdf8;
+    --glow-1: rgba(16, 185, 129, 0.14);
+    --glow-2: rgba(59, 130, 246, 0.12);
+    --glow-3: rgba(14, 165, 233, 0.08);
 
     /* Charts */
     --chart-1: #22c55e;

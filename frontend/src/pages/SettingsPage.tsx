@@ -442,7 +442,7 @@ export function SettingsPage({
                   {adminUsers
                     .filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase()))
                     .map((u) => (
-                      <tr key={u.uid} className="border-t border-white/5">
+                      <tr key={u.uid} className="border-t border-[var(--surface-border-1)]">
                         <td className="px-3 py-2 font-mono text-[11px] text-[var(--text)]">{u.uid}</td>
                         <td className="px-3 py-2">
                           <ResponsiveSelect

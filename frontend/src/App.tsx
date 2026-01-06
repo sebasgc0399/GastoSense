@@ -733,7 +733,7 @@ function App() {
         className="relative flex min-h-screen items-center justify-center overflow-hidden text-[var(--text)]"
         style={{ backgroundColor: 'var(--bg)' }}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.14),transparent_35%),radial-gradient(circle_at_80%_25%,rgba(59,130,246,0.12),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.08),transparent_40%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,var(--glow-1),transparent_35%),radial-gradient(circle_at_80%_25%,var(--glow-2),transparent_35%),radial-gradient(circle_at_50%_80%,var(--glow-3),transparent_40%)]" />
         <div className="relative flex flex-col items-center gap-4 rounded-2xl border border-[var(--card-border)] bg-[var(--card)] px-8 py-6 shadow-2xl backdrop-blur-md">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full border-4 border-[color-mix(in_srgb,var(--accent)_55%,transparent)] border-t-transparent animate-spin" />

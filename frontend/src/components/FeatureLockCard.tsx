@@ -14,7 +14,10 @@ export function FeatureLockCard({ title, description, badgeLabel, onUpgradeClick
       onClick={onUpgradeClick}
       className="flex w-full items-start gap-3 rounded-xl border border-dashed border-[var(--border-20)] bg-[var(--overlay-5)] p-3 text-left opacity-80 transition hover:opacity-100"
     >
-      <span aria-hidden className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/30">
+      <span
+        aria-hidden
+        className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--surface-border-1)]"
+      >
         <Lock className="h-3.5 w-3.5 text-[var(--text)]" />
       </span>
       <div className="flex-1 space-y-1">

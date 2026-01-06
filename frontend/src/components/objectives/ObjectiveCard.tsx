@@ -11,7 +11,7 @@ interface ObjectiveCardProps {
 
 const defaultIconForType = (type: Objective['type']) => (type === 'debt' ? 'CreditCard' : 'PiggyBank');
 const defaultColorForType = (type: Objective['type']) =>
-  type === 'debt' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(34, 197, 94, 0.18)';
+  type === 'debt' ? 'var(--objective-debt-tint)' : 'var(--objective-goal-tint)';
 
 export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: ObjectiveCardProps) {
   const target = objective.targetAmount;
@@ -110,7 +110,7 @@ export function ObjectiveCard({ objective, onOpenDetails, onQuickAction }: Objec
         <button
           type="button"
           onClick={handleQuickAction(isGoal ? 'deposit' : 'payment')}
-          className="inline-flex items-center gap-2 pill-surface px-3 py-1.5 text-xs font-semibold text-white/90 hover:border-primary"
+          className="inline-flex items-center gap-2 pill-surface px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:border-primary"
         >
           <span className="text-base leading-none">+</span>
           {isGoal ? 'Abonar' : 'Pagar'}
