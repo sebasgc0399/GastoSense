@@ -312,10 +312,14 @@ export function SettingsPage({
           </>
         )}
 
-        <div ref={plansRef} id="plans" className="space-y-3 rounded-xl border border-indigo-400/30 bg-indigo-500/5 p-4">
+        <div
+          ref={plansRef}
+          id="plans"
+          className="space-y-3 rounded-xl border border-[var(--accent-strong)] bg-[var(--accent-weak)] p-4"
+        >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase text-indigo-200">Planes</p>
+              <p className="text-xs uppercase text-[var(--accent-strong)]">Planes</p>
               <h3 className="text-lg font-semibold text-[var(--text)]">Elige tu plan</h3>
               <p className="text-xs text-[var(--text-muted)]">Precios muestran promo y descuentos por periodo.</p>
             </div>

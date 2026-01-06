@@ -22,7 +22,7 @@ export function DateField({ id, value, onChange, placeholder = 'Seleccionar fech
 
   return (
     <div className="relative">
-      <div className="input flex min-h-[44px] items-center justify-between gap-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-sky-400/40">
+      <div className="input flex min-h-[44px] items-center justify-between gap-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
         <span className={value ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}>{label}</span>
         <Calendar className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
       </div>

@@ -137,7 +137,9 @@ export function ObjectiveFormModal({
                   disabled={isEdit}
                   onClick={() => setType('debt')}
                   className={`flex-1 rounded-md px-3 py-2 font-semibold ${
-                    type === 'debt' ? 'bg-sky-500 text-[var(--text)]' : 'text-[var(--text)]'
+                    type === 'debt'
+                      ? 'bg-[var(--accent-weak)] text-[var(--text)] ring-1 ring-[var(--accent-strong)]'
+                      : 'text-[var(--text)]'
                   } ${isEdit ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
                   Deuda

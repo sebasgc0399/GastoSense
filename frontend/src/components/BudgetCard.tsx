@@ -103,7 +103,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         <button
           onClick={handleSave}
           disabled={loading || !canSave}
-          className="h-11 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--text)] hover:bg-sky-600 disabled:opacity-60 sm:w-auto"
+          className="h-11 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--text)] hover:bg-[var(--interactive-hover)] disabled:opacity-60 sm:w-auto"
         >
           {loading ? 'Guardando...' : 'Guardar'}
         </button>

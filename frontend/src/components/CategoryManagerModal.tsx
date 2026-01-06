@@ -630,7 +630,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                     }`}
                                   >
                                     <span
-                                      className={`inline-block h-3 w-3 transform rounded-full bg-white ${
+                                      className={`inline-block h-3 w-3 transform rounded-full bg-[var(--text-on-primary)] ${
                                         cat.isArchived ? 'translate-x-1' : 'translate-x-3'
                                       }`}
                                     />
@@ -693,7 +693,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                               >
                                 <span className="sr-only sm:not-sr-only">Inactiva</span>
                                 <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-[var(--overlay-10)]">
-                                  <span className="inline-block h-3 w-3 translate-x-1 transform rounded-full bg-white" />
+                                  <span className="inline-block h-3 w-3 translate-x-1 transform rounded-full bg-[var(--text-on-primary)]" />
                                 </span>
                               </button>
                               <button

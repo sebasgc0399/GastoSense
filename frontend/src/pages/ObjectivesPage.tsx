@@ -140,7 +140,9 @@ export function ObjectivesPage({
             aria-pressed={activeType === 'debt'}
             onClick={() => setActiveType('debt')}
             className={`flex-1 rounded-xl px-3 py-2 transition ${
-              activeType === 'debt' ? 'bg-sky-500 text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+              activeType === 'debt'
+                ? 'bg-[var(--accent-weak)] text-[var(--text)] shadow-sm ring-1 ring-[var(--accent-strong)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text)]'
             }`}
           >
             Deudas

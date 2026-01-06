@@ -604,7 +604,7 @@ export function ExportTransactionsModal({
                       name="export-period"
                       checked={periodPreset === 'month'}
                       onChange={() => handlePresetSelect('month')}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>{presetRanges?.month.label ?? 'Mes actual'}</span>
                   </label>
@@ -614,7 +614,7 @@ export function ExportTransactionsModal({
                       name="export-period"
                       checked={periodPreset === 'last30'}
                       onChange={() => handlePresetSelect('last30')}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>{presetRanges?.last30.label ?? 'Ultimos 30 dias'}</span>
                   </label>
@@ -624,7 +624,7 @@ export function ExportTransactionsModal({
                       name="export-period"
                       checked={periodPreset === 'last90'}
                       onChange={() => handlePresetSelect('last90')}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>{presetRanges?.last90.label ?? 'Ultimos 90 dias'}</span>
                   </label>
@@ -634,7 +634,7 @@ export function ExportTransactionsModal({
                       name="export-period"
                       checked={periodPreset === 'last365'}
                       onChange={() => handlePresetSelect('last365')}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>{presetRanges?.last365.label ?? 'Ultimos 365 dias'}</span>
                   </label>
@@ -644,7 +644,7 @@ export function ExportTransactionsModal({
                       name="export-period"
                       checked={periodPreset === 'custom'}
                       onChange={() => handlePresetSelect('custom')}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>Personalizado</span>
                   </label>
@@ -682,7 +682,7 @@ export function ExportTransactionsModal({
                       name="export-format"
                       checked={format === 'csv'}
                       onChange={() => setFormat('csv')}
-                      className="mt-1 accent-emerald-400"
+                      className="mt-1 accent-[var(--success-border)]"
                     />
                     <span>
                       <span className="font-semibold text-[var(--text)]">CSV (recomendado)</span>{' '}
@@ -695,7 +695,7 @@ export function ExportTransactionsModal({
                       name="export-format"
                       checked={format === 'xlsx'}
                       onChange={() => setFormat('xlsx')}
-                      className="mt-1 accent-emerald-400"
+                      className="mt-1 accent-[var(--success-border)]"
                     />
                     <span>
                       <span className="font-semibold text-[var(--text)]">Excel (.xlsx)</span>{' '}
@@ -708,7 +708,7 @@ export function ExportTransactionsModal({
                       name="export-format"
                       checked={format === 'json'}
                       onChange={() => setFormat('json')}
-                      className="mt-1 accent-emerald-400"
+                      className="mt-1 accent-[var(--success-border)]"
                     />
                     <span>
                       <span className="font-semibold text-[var(--text)]">JSON</span>{' '}
@@ -726,7 +726,7 @@ export function ExportTransactionsModal({
                       type="checkbox"
                       checked={includeNote}
                       onChange={(event) => setIncludeNote(event.target.checked)}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>Incluir nota</span>
                   </label>
@@ -735,7 +735,7 @@ export function ExportTransactionsModal({
                       type="checkbox"
                       checked={includePaymentMethod}
                       onChange={(event) => setIncludePaymentMethod(event.target.checked)}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>Incluir m&eacute;todo de pago</span>
                   </label>
@@ -744,7 +744,7 @@ export function ExportTransactionsModal({
                       type="checkbox"
                       checked={includeCategory}
                       onChange={(event) => setIncludeCategory(event.target.checked)}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>Incluir categor&iacute;a</span>
                   </label>
@@ -753,7 +753,7 @@ export function ExportTransactionsModal({
                       type="checkbox"
                       checked={signedAmounts}
                       onChange={(event) => setSignedAmounts(event.target.checked)}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>Montos con signo</span>
                   </label>
@@ -762,7 +762,7 @@ export function ExportTransactionsModal({
                       type="checkbox"
                       checked={includeBudgetStats}
                       onChange={(event) => setIncludeBudgetStats(event.target.checked)}
-                      className="accent-emerald-400"
+                      className="accent-[var(--success-border)]"
                     />
                     <span>Incluir presupuesto y % usado (seg&uacute;n este rango)</span>
                   </label>
@@ -919,7 +919,7 @@ export function ExportTransactionsModal({
                         checked={importMode === 'replace_range'}
                         onChange={(event) => setImportMode(event.target.checked ? 'replace_range' : 'append')}
                         disabled={!canEnableReplaceRange}
-                        className="mt-1 accent-emerald-400"
+                        className="mt-1 accent-[var(--success-border)]"
                       />
                       <span>
                         <span className="font-semibold text-[var(--text)]">Evitar duplicados</span>
@@ -989,3 +989,4 @@ export function ExportTransactionsModal({
     </div>
   );
 }
+

@@ -31,6 +31,9 @@
     --primary: #0ea5e9;
     --primary-rgb: 14 165 233;
     --accent: #22c55e;
+    --interactive-hover: rgb(var(--primary-rgb) / 0.16);
+    --accent-weak: rgb(var(--primary-rgb) / 0.22);
+    --accent-strong: var(--primary);
     --focus-ring: rgb(var(--primary-rgb) / 0.2);
 
     /* States */
@@ -154,6 +157,9 @@
     --primary: #0ea5e9;
     --primary-rgb: 14 165 233;
     --accent: #0f766e;
+    --interactive-hover: rgb(var(--primary-rgb) / 0.10);
+    --accent-weak: rgb(var(--primary-rgb) / 0.14);
+    --accent-strong: var(--primary);
     --focus-ring: rgb(var(--primary-rgb) / 0.2);
 
     /* States */

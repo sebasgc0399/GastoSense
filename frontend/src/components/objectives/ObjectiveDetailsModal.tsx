@@ -249,7 +249,7 @@ export function ObjectiveDetailsModal({
                             {displayDate}
                           </div>
                           <div className="relative flex-1 rounded-2xl surface-soft px-4 py-3">
-                            <span className="absolute -left-5 top-4 h-2.5 w-2.5 rounded-full bg-white/40 ring-4 ring-[var(--modal-surface)]" />
+                            <span className="absolute -left-5 top-4 h-2.5 w-2.5 rounded-full bg-[var(--text)] ring-4 ring-[var(--modal-surface)]" />
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-sm font-semibold text-[var(--text)]">{entryKindLabel(entry.kind)}</p>
