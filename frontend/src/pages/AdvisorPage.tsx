@@ -312,7 +312,7 @@ export function AdvisorPage({
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-[var(--text)]">{item.label}</p>
                       {badge && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text)]">
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase badge-paint">
                           {locked && (
                             <Lock aria-hidden="true" className="h-3 w-3" />
                           )}
@@ -439,13 +439,13 @@ export function AdvisorPage({
                               <div className="max-w-[70%] rounded-2xl bg-[var(--overlay-10)] px-3 py-2 text-sm text-[var(--text)] shadow-sm">
                                 <span className="sr-only">IA escribiendo</span>
                                 <span className="flex items-center gap-1">
-                                  <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
+                                  <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text)]" />
                                   <span
-                                    className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                    className="h-2 w-2 animate-bounce rounded-full bg-[var(--text)]"
                                     style={{ animationDelay: '0.15s' }}
                                   />
                                   <span
-                                    className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                    className="h-2 w-2 animate-bounce rounded-full bg-[var(--text)]"
                                     style={{ animationDelay: '0.3s' }}
                                   />
                                 </span>
@@ -498,7 +498,7 @@ export function AdvisorPage({
                     type="date"
                     value={freeChatFrom}
                     onChange={(event) => setFreeChatFrom(event.target.value)}
-                    className="w-full rounded-lg surface-soft px-3 py-2 text-sm text-[var(--text)]"
+                    className="w-full rounded-lg field-soft px-3 py-2 text-sm"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
@@ -507,7 +507,7 @@ export function AdvisorPage({
                     type="date"
                     value={freeChatTo}
                     onChange={(event) => setFreeChatTo(event.target.value)}
-                    className="w-full rounded-lg surface-soft px-3 py-2 text-sm text-[var(--text)]"
+                    className="w-full rounded-lg field-soft px-3 py-2 text-sm"
                   />
                 </label>
               </div>
@@ -606,13 +606,13 @@ export function AdvisorPage({
                             <div className="max-w-[70%] rounded-2xl bg-[var(--overlay-10)] px-3 py-2 text-sm text-[var(--text)] shadow-sm">
                               <span className="sr-only">IA escribiendo</span>
                               <span className="flex items-center gap-1">
-                                <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
+                                <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text)]" />
                                 <span
-                                  className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                  className="h-2 w-2 animate-bounce rounded-full bg-[var(--text)]"
                                   style={{ animationDelay: '0.15s' }}
                                 />
                                 <span
-                                  className="h-2 w-2 animate-bounce rounded-full bg-white"
+                                  className="h-2 w-2 animate-bounce rounded-full bg-[var(--text)]"
                                   style={{ animationDelay: '0.3s' }}
                                 />
                               </span>
@@ -665,7 +665,7 @@ export function AdvisorPage({
                   }}
                   rows={1}
                   placeholder="Escribe tu mensaje para la IA..."
-                  className="min-h-[44px] max-h-[120px] w-full resize-none rounded-2xl surface-soft px-3 py-2 text-sm text-[var(--text)]"
+                  className="min-h-[44px] max-h-[120px] w-full resize-none rounded-2xl field-soft px-3 py-2 text-sm"
                 />
                 <button
                   type="button"

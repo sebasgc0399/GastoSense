@@ -203,7 +203,7 @@ export function ObjectiveDetailsModal({
                       <CategoryIcon name={iconName} size={26} className="text-[var(--text)]" />
                     </div>
                   </div>
-                  <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-[var(--overlay-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text)]">
+                  <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[10px] font-semibold badge-paint">
                     {progressPct}%
                   </span>
                 </div>

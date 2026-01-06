@@ -23,6 +23,28 @@
     box-shadow: 0 0 0 3px var(--focus-ring);
   }
 
+  .field-soft {
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    color: var(--text);
+  }
+
+  .field-soft::placeholder {
+    color: var(--text-muted);
+  }
+
+  .field-soft:focus,
+  .field-soft:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .badge-paint {
+    background: var(--overlay-10);
+    color: var(--text);
+  }
+
   .btn-glass {
     @apply flex items-center justify-center gap-2 rounded-2xl;
     @apply border text-sm font-medium;

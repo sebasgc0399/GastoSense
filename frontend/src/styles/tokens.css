@@ -8,7 +8,6 @@
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
     --text: var(--text-primary);
-    --muted: var(--text-muted); /* deprecated */
     --text-on-primary: #ffffff;
 
     /* Surface */
@@ -132,7 +131,6 @@
     --text-secondary: #475569;
     --text-muted: #64748b;
     --text: var(--text-primary);
-    --muted: var(--text-muted); /* deprecated */
     --text-on-primary: #ffffff;
 
     /* Surface */

@@ -509,7 +509,9 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                     type="button"
                     onClick={() => setSelectedKind('expense')}
                     disabled={saving}
-                    className={`rounded-full px-3 py-1 ${selectedKind === 'expense' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
+                    className={`rounded-full px-3 py-1 ${
+                      selectedKind === 'expense' ? 'pill-strong text-[var(--text)]' : 'text-[var(--text-muted)]'
+                    }`}
                   >
                     Gastos
                   </button>
@@ -517,7 +519,9 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                     type="button"
                     onClick={() => setSelectedKind('income')}
                     disabled={saving}
-                    className={`rounded-full px-3 py-1 ${selectedKind === 'income' ? 'bg-white text-black' : 'text-[var(--text-muted)]'}`}
+                    className={`rounded-full px-3 py-1 ${
+                      selectedKind === 'income' ? 'pill-strong text-[var(--text)]' : 'text-[var(--text-muted)]'
+                    }`}
                   >
                     Ingresos
                   </button>

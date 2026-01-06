@@ -155,7 +155,7 @@ export function TransactionItemCard({
 
   return (
     <div
-      className="flex cursor-pointer flex-col gap-2 rounded-xl surface-soft px-3 py-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+      className="flex cursor-pointer flex-col gap-2 rounded-xl surface-soft px-3 py-3 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--success-border)]"
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}

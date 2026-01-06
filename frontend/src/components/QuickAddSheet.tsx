@@ -1112,7 +1112,7 @@ export function QuickAddSheet({
                           type="date"
                           value={date}
                           onChange={(e) => setDate(e.target.value)}
-                          className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--success-border)] focus:outline-none"
+                          className="w-full rounded-xl field-soft px-3 py-2 text-sm"
                         />
                         {editingTemplate?.createdAt && (
                           <p className="mt-1 text-[11px] text-[var(--text-muted)]">
@@ -1163,7 +1163,7 @@ export function QuickAddSheet({
                               value={templateName}
                               onChange={(e) => setTemplateName(e.target.value)}
                               placeholder="Ej. Renta, Netflix"
-                              className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--success-border)] focus:outline-none"
+                              className="w-full rounded-xl field-soft px-3 py-2 text-sm"
                             />
                             <button
                               type="button"
@@ -1275,4 +1275,3 @@ export function QuickAddSheet({
     </div>
   );
 }
-

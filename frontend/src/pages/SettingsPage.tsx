@@ -332,7 +332,7 @@ export function SettingsPage({
                 <div key={plan.id} className="rounded-xl surface-soft p-4 shadow-sm flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-base font-semibold text-[var(--text)]">{plan.label}</h4>
-                    <span className="rounded-full bg-[var(--overlay-10)] px-2 py-1 text-[11px] text-[var(--text)]">
+                    <span className="rounded-full px-2 py-1 text-[11px] badge-paint">
                       {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}
                     </span>
                   </div>
@@ -412,7 +412,7 @@ export function SettingsPage({
                   value={adminSearch}
                   onChange={(e) => setAdminSearch(e.target.value)}
                   placeholder="Buscar UID..."
-                  className="rounded-lg surface-soft px-3 py-2 text-[11px] text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+                  className="rounded-lg field-soft px-3 py-2 text-[11px] outline-none"
                 />
                 <button
                   onClick={handleAdminReload}
@@ -503,7 +503,7 @@ export function SettingsPage({
                                 ),
                               )
                             }
-                            className="w-full rounded-lg surface-soft px-2 py-1 text-[11px] text-[var(--text)]"
+                            className="w-full rounded-lg field-soft px-2 py-1 text-[11px]"
                             disabled={adminLoading}
                           />
                         </td>
