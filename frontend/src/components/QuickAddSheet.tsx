@@ -903,7 +903,7 @@ export function QuickAddSheet({
             {mode !== 'ai' && (
               <>
                 {editingTemplate && (
-                  <span className="text-xs text-[var(--muted)]">
+                  <span className="text-xs text-[var(--text-muted)]">
                     Editando plantilla: <span className="font-semibold text-[var(--glass-text)]">{editingTemplate.name}</span>
                   </span>
                 )}
@@ -1050,7 +1050,7 @@ export function QuickAddSheet({
                   <div className="space-y-3">
                     {templates.length > 0 && (
                       <div className="rounded-2xl surface-soft p-2">
-                        <div className="mb-2 px-1 text-sm font-medium text-[var(--muted)]">Plantillas</div>
+                        <div className="mb-2 px-1 text-sm font-medium text-[var(--text-muted)]">Plantillas</div>
                         <div className="max-h-44 overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]">
                           <div className="space-y-2">
                             {templates.map((tpl) => (
@@ -1098,7 +1098,7 @@ export function QuickAddSheet({
                     )}
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-[var(--muted)]">Metodo de pago</label>
+                        <label className="mb-1 block text-sm font-medium text-[var(--text-muted)]">Metodo de pago</label>
                         <ResponsiveSelect
                           value={paymentMethod}
                           onChange={(val) => setPaymentMethod(val as TransactionInput['paymentMethod'])}
@@ -1107,7 +1107,7 @@ export function QuickAddSheet({
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-[var(--muted)]">Fecha</label>
+                        <label className="mb-1 block text-sm font-medium text-[var(--text-muted)]">Fecha</label>
                         <input
                           type="date"
                           value={date}
@@ -1115,13 +1115,13 @@ export function QuickAddSheet({
                           className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--success-border)] focus:outline-none"
                         />
                         {editingTemplate?.createdAt && (
-                          <p className="mt-1 text-[11px] text-[var(--muted)]">
+                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                             Creada: {editingTemplate.createdAt.slice(0, 10)} (la fecha aqui es para el proximo registro).
                           </p>
                         )}
                       </div>
                     </div>
-                    {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
+                    {feedback && <p className="text-xs text-[var(--text-muted)]">{feedback}</p>}
                     {showTemplateCard && (
                       <div className="rounded-2xl surface-soft p-3">
                         <div className="flex items-center justify-between">
@@ -1241,7 +1241,7 @@ export function QuickAddSheet({
                         className="w-full bg-transparent text-sm text-[var(--text)] placeholder-white/30 focus:outline-none"
                       />
                     </div>
-                    {feedback && <p className="text-xs text-[var(--muted)]">{feedback}</p>}
+                    {feedback && <p className="text-xs text-[var(--text-muted)]">{feedback}</p>}
                   </div>
                 )}
               </div>

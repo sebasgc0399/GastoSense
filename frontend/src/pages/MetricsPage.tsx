@@ -404,18 +404,18 @@ export function MetricsPage({
                     <h3 className="text-lg font-semibold text-[var(--text)]">
                       {hasBudget ? 'Presupuesto total' : 'Define tu presupuesto'}
                     </h3>
-                    <span className="text-xs text-[var(--muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{hasBudget ? 'Progreso' : 'Sin definir'}</span>
                   </div>
 
                   {hasBudget ? (
                     <>
-                      <div className="flex items-center justify-between text-sm text-[var(--muted)]">
+                      <div className="flex items-center justify-between text-sm text-[var(--text-muted)]">
                         <span>Gastado</span>
                         <span className="text-[var(--text)]">
                           ${monthlyExpense.toLocaleString()} / ${budgetTotal.toLocaleString()}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs text-[var(--muted)]">
+                      <p className="mt-2 text-xs text-[var(--text-muted)]">
                         {budgetTotal - monthlyExpense >= 0
                           ? `Te quedan: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`
                           : `Exceso: $${Math.abs(budgetTotal - monthlyExpense).toLocaleString()}`}
@@ -467,18 +467,18 @@ export function MetricsPage({
                 <div className="card">
                   <div className="mb-3 flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-[var(--text)]">Ingresos del mes</h3>
-                    <span className="text-xs text-[var(--muted)]">Resumen</span>
+                    <span className="text-xs text-[var(--text-muted)]">Resumen</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-xl bg-[var(--overlay-5)] p-3">
-                      <p className="text-xs text-[var(--muted)]">Total</p>
+                      <p className="text-xs text-[var(--text-muted)]">Total</p>
                       <p className="mt-1 text-base font-extrabold text-[var(--accent)]">
                         ${monthlyIncome.toLocaleString('es-CO')}
                       </p>
                     </div>
                     <div className="rounded-xl bg-[var(--overlay-5)] p-3">
-                      <p className="text-xs text-[var(--muted)]">Promedio diario</p>
+                      <p className="text-xs text-[var(--text-muted)]">Promedio diario</p>
                       <p className="mt-1 text-base font-extrabold text-[var(--text)]">
                         ${avgDailyAmount.toLocaleString('es-CO')}
                       </p>
@@ -503,7 +503,7 @@ export function MetricsPage({
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--text)]">Evolución del mes</h3>
-                  {trendInsight && <p className="text-xs text-[var(--muted)]">{trendInsight}</p>}
+                  {trendInsight && <p className="text-xs text-[var(--text-muted)]">{trendInsight}</p>}
                 </div>
 
                 <div className="flex w-full rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] p-1 text-xs sm:w-auto">
@@ -533,11 +533,11 @@ export function MetricsPage({
               </div>
 
               <div>
-                <p className="text-xs uppercase text-[var(--muted)]">
+                <p className="text-xs uppercase text-[var(--text-muted)]">
                   {evolutionLabel}
                 </p>
                 {effectiveEvolutionView === 'cumulative' && isExpenseView && paceDiffCopy && (
-                  <p className="mt-1 text-xs text-[var(--muted)]">{paceDiffCopy}</p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">{paceDiffCopy}</p>
                 )}
                 <EvolutionChart
                   view={effectiveEvolutionView}
@@ -552,7 +552,7 @@ export function MetricsPage({
                   tone={isExpenseView ? 'expense' : 'income'}
                 />
                 {effectiveEvolutionView === 'cumulative' && isExpenseView && hasBudget && (
-                  <p className="mt-2 text-xs text-[var(--muted)]">Presupuesto: ${budgetTotal.toLocaleString('es-CO')}</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">Presupuesto: ${budgetTotal.toLocaleString('es-CO')}</p>
                 )}
               </div>
             </div>

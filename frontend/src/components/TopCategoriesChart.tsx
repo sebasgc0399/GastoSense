@@ -110,9 +110,9 @@ export function TopCategoriesChart({
                 </button>
               </div>
             ) : (
-              <span className="text-xs text-[var(--muted)]">Barras proporcionales</span>
+              <span className="text-xs text-[var(--text-muted)]">Barras proporcionales</span>
             )}
-            {guideText && <p className="mt-1 text-xs text-[var(--muted)]">{guideText}</p>}
+            {guideText && <p className="mt-1 text-xs text-[var(--text-muted)]">{guideText}</p>}
           </div>
         </div>
       </div>

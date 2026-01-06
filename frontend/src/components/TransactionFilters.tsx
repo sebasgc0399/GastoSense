@@ -110,7 +110,7 @@ export function TransactionFilters({
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <div>
-          <label htmlFor="tx-filter-start" className="mb-1 block text-xs font-semibold text-[var(--muted)]">
+          <label htmlFor="tx-filter-start" className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">
             Desde
           </label>
           <DateField
@@ -121,7 +121,7 @@ export function TransactionFilters({
           />
         </div>
         <div>
-          <label htmlFor="tx-filter-end" className="mb-1 block text-xs font-semibold text-[var(--muted)]">
+          <label htmlFor="tx-filter-end" className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">
             Hasta
           </label>
           <DateField
@@ -132,7 +132,7 @@ export function TransactionFilters({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-semibold text-[var(--muted)]">Categoria</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">Categoria</label>
           <ResponsiveSelect
             value={category}
             onChange={(val) => onChange({ startDate, endDate, category: val, search, type })}
@@ -143,7 +143,7 @@ export function TransactionFilters({
           />
         </div>
         <div>
-          <label htmlFor="tx-filter-search" className="mb-1 block text-xs font-semibold text-[var(--muted)]">
+          <label htmlFor="tx-filter-search" className="mb-1 block text-xs font-semibold text-[var(--text-muted)]">
             Buscar
           </label>
           <input
