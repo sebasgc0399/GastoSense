@@ -220,7 +220,9 @@ export function ObjectiveDetailsModal({
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
                 <div
                   className={`progress-fill h-full rounded-full ${
-                    isGoal ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-sky-500 to-indigo-400'
+                    isGoal
+                      ? 'bg-gradient-to-r from-[var(--progress-goal-from)] to-[var(--progress-goal-to)]'
+                      : 'bg-gradient-to-r from-[var(--progress-debt-from)] to-[var(--progress-debt-to)]'
                   }`}
                   style={progressStyle}
                 />
