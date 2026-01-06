@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (initError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-6 text-center text-[var(--text)]">
-        <div className="max-w-md rounded-xl bg-slate-800 p-6 shadow-xl">
+        <div className="max-w-md rounded-xl surface-strong p-6 shadow-xl">
           <p className="text-lg font-semibold">No se pudo inicializar Firebase Auth.</p>
           <p className="mt-2 text-sm text-[var(--text)]">
             Verifica que las variables <code className="font-mono">VITE_FIREBASE_*</code> estén configuradas en el entorno de

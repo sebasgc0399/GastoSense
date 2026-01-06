@@ -804,7 +804,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
         {view === 'icons' && (
           <div className="absolute inset-0 z-20 flex items-end justify-center sm:items-center">
             <div
-              className="absolute inset-0 bg-black/70"
+              className="absolute inset-0 modal-scrim"
               onClick={() => setView('form')}
               aria-hidden="true"
             />
@@ -842,7 +842,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
               </div>
               <div className="max-h-[60vh] overflow-y-auto px-4 py-4">
                 {iconSuggestNotice && (
-                  <p className="mb-3 text-xs text-white/70">{iconSuggestNotice}</p>
+                  <p className="mb-3 text-xs text-muted">{iconSuggestNotice}</p>
                 )}
                 {iconSuggestError && (
                   <p className="mb-3 text-xs text-[var(--error-text)]">{iconSuggestError}</p>

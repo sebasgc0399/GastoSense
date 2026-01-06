@@ -192,7 +192,7 @@ export function TransactionItemCard({
             >
               ⋯
             </summary>
-            <div className="absolute right-0 top-7 z-10 w-28 rounded-lg border border-[var(--border-10)] bg-slate-950/95 p-1 text-[11px] text-[var(--text)] shadow-lg backdrop-blur">
+            <div className="absolute right-0 top-7 z-10 w-28 rounded-lg surface-strong p-1 text-[11px] text-[var(--text)] shadow-lg backdrop-blur">
               <button
                 type="button"
                 className="flex w-full items-center rounded-md px-2 py-1.5 text-left hover:bg-[var(--overlay-10)]"

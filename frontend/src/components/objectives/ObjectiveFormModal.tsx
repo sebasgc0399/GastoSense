@@ -194,7 +194,7 @@ export function ObjectiveFormModal({
                 />
                 <div
                   className="h-10 w-10 rounded-xl border border-[var(--border-10)]"
-                  style={{ backgroundColor: color || 'rgba(255,255,255,0.08)' }}
+                  style={{ backgroundColor: color || 'var(--surface-2)' }}
                 />
               </div>
             </div>

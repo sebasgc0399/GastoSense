@@ -88,7 +88,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
                 {kindLabelMap[kind]}
               </p>
-              <p className="text-sm text-white/80">{objective.name}</p>
+              <p className="text-sm text-[var(--text)]">{objective.name}</p>
             </div>
             <button
               className="pill-surface px-3 py-1 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"

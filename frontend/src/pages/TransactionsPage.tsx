@@ -138,7 +138,7 @@ export function TransactionsPage({
           className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
             canExport
               ? 'surface-soft text-[var(--text)] hover:border-[var(--border-20)] hover:bg-[var(--overlay-10)]'
-              : 'surface-soft cursor-not-allowed border-white/5 text-white/60 hover:border-[var(--border-10)]'
+              : 'surface-soft cursor-not-allowed text-[var(--text-muted)] hover:border-[var(--border-10)]'
           }`}
         >
           {canExport ? <ArrowUpDown aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}
