@@ -98,7 +98,7 @@ export function AllCategoriesModal({
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              className="h-9 w-9 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-sm font-semibold text-[var(--text)] hover:border-[var(--primary)]"
+              className="btn btn-ghost btn-icon h-9 w-9 rounded-full"
             >
               <span aria-hidden="true">X</span>
             </button>
@@ -119,7 +119,7 @@ export function AllCategoriesModal({
         {onViewMovements && (
           <div className="mt-4 flex justify-end">
             <button
-              className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+              className="btn btn-secondary btn-compact"
               onClick={() => {
                 onClose();
                 onViewMovements();

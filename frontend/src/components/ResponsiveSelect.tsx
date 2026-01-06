@@ -138,7 +138,7 @@ export function ResponsiveSelect<T extends string>({
                 style={isMobile ? undefined : desktopStyle}
               >
                 {isMobile && (
-                  <div className="flex shrink-0 items-center justify-between border-b border-[var(--modal-border)] bg-[var(--modal-header)] px-4 py-3">
+                  <div className="flex shrink-0 items-center justify-between border-b surface-divider bg-[var(--modal-header)] px-4 py-3">
                     <span className="text-sm font-bold text-[var(--text)]">{title}</span>
                     <button
                       type="button"

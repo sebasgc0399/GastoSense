@@ -15,7 +15,7 @@ const tabs: { key: TabKey; label: string; iconSrc: string }[] = [
 
 export function BottomNav({ value, onChange }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--card-border)] bg-[var(--card)]/95 backdrop-blur-md shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t surface-divider bg-[var(--card)]/95 backdrop-blur-md shadow-lg">
       <div className="mx-auto flex max-w-3xl items-stretch justify-around px-2 py-2">
         {tabs.map((tab) => {
           const active = tab.key === value;

@@ -226,7 +226,7 @@ export function LoginHero() {
               onClick={handleGoogleLogin}
               onMouseEnter={() => swapMessage('Presiona para comenzar!')}
               disabled={isLoading}
-              className="w-full rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--text)] shadow-lg shadow-[var(--primary)]/30 transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="btn btn-primary w-full gap-2 shadow-lg"
             >
               {isLoading ? (
                 <>

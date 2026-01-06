@@ -286,7 +286,7 @@ function RecurringTemplateItem({
 
         <button
           type="button"
-          className="mt-2 h-9 w-full rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--text-on-primary)] hover:opacity-90"
+          className="btn btn-primary btn-compact w-full mt-2 text-xs"
           onClick={() => onUseTemplate(template)}
           aria-label={`Registrar plantilla ${template.name}`}
         >

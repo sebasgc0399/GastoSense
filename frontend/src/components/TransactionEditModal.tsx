@@ -124,11 +124,11 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
         aria-label="Editar movimiento"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-[var(--modal-border)] px-4 py-3">
+        <div className="shrink-0 border-b surface-divider px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-[var(--text)]">Editar movimiento</h3>
             <button
-              className="text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="btn btn-ghost btn-compact text-xs"
               onClick={onClose}
             >
               Cerrar
@@ -205,7 +205,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-[var(--modal-border)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <div className="shrink-0 border-t surface-divider px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
           {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <button
             onClick={handleSave}

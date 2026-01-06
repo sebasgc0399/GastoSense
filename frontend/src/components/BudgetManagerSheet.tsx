@@ -248,7 +248,7 @@ export function BudgetManagerSheet({
             <button
               type="button"
               onClick={() => handleValueChange(cat.id, '')}
-              className="btn-outline rounded-lg px-3 py-2 text-xs"
+              className="btn btn-secondary btn-compact text-xs"
             >
               Sin tope
             </button>
@@ -257,7 +257,7 @@ export function BudgetManagerSheet({
             <button
               type="button"
               onClick={() => onViewCategory(cat.id)}
-              className="flex items-center gap-1 rounded-lg border border-transparent px-2 py-2 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="btn btn-ghost btn-compact text-xs gap-1"
               aria-label={`Ver movimientos de ${cat.label}`}
             >
               Ver
@@ -288,7 +288,7 @@ export function BudgetManagerSheet({
             aria-label="Presupuestos por categoría"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="shrink-0 border-b border-[var(--modal-border)] px-4 py-3">
+            <div className="shrink-0 border-b surface-divider px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--text)]">Presupuestos por categoría</h3>
@@ -296,7 +296,7 @@ export function BudgetManagerSheet({
                 </div>
                 <button
                   onClick={onClose}
-                  className="icon-button h-9 w-9 rounded-full"
+                  className="btn btn-secondary btn-icon h-9 w-9 rounded-full"
                   aria-label="Cerrar"
                 >
                   <X className="h-4 w-4" />
@@ -344,13 +344,13 @@ export function BudgetManagerSheet({
               )}
             </div>
 
-            <div className="shrink-0 border-t border-[var(--modal-border)] bg-[var(--modal-surface)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+            <div className="shrink-0 border-t surface-divider bg-[var(--modal-surface)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
               {saveError && <p className="mb-2 text-xs text-[var(--error-text)]">{saveError}</p>}
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="btn-outline w-full px-4 py-3 text-sm sm:w-auto"
+                  className="btn btn-secondary w-full sm:w-auto"
                   disabled={saving}
                 >
                   Cancelar
@@ -359,7 +359,7 @@ export function BudgetManagerSheet({
                   type="button"
                   onClick={handleSave}
                   disabled={saving || visibleCategories.length === 0}
-                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60 sm:w-auto"
+                  className="btn btn-primary w-full shadow sm:w-auto"
                 >
                   {saving ? 'Guardando...' : 'Guardar'}
                 </button>

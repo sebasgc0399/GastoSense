@@ -321,13 +321,13 @@ export function MetricsPage({
           <p className="text-sm text-[var(--text-muted)]">Registra tu primer movimiento (gasto o ingreso) para empezar a ver métricas.</p>
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
+              className="btn btn-primary btn-compact"
               onClick={onOpenQuickAdd}
             >
               Registrar
             </button>
             <button
-              className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+              className="btn btn-secondary btn-compact"
               onClick={() => onViewMovements()}
             >
               Ver movimientos
@@ -382,14 +382,14 @@ export function MetricsPage({
               <div className="flex flex-wrap gap-2">
                 {canSwitchToOtherTab && (
                   <button
-                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
+                    className="btn btn-primary btn-compact"
                     onClick={() => handleMetricsTypeChange(isExpenseView ? 'income' : 'expense')}
                   >
                     {emptyTabSwitchLabel}
                   </button>
                 )}
                 <button
-                  className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                  className="btn btn-secondary btn-compact"
                   onClick={() => onViewMovements()}
                 >
                   Ver movimientos
@@ -448,14 +448,14 @@ export function MetricsPage({
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
-                      className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
+                      className="btn btn-primary btn-compact"
                       onClick={onAdjustBudget}
                     >
                       {hasBudget ? 'Editar presupuesto' : 'Definir presupuesto'}
                     </button>
                     {hasBudget && (
                       <button
-                        className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                        className="btn btn-secondary btn-compact"
                         onClick={() => onViewMovements()}
                       >
                         Ver movimientos
@@ -487,7 +487,7 @@ export function MetricsPage({
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
-                      className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                      className="btn btn-secondary btn-compact"
                       onClick={() => onViewMovements()}
                     >
                       Ver movimientos
@@ -599,12 +599,3 @@ export function MetricsPage({
     </section>
   );
 }
-
-
-
-
-
-
-
-
-

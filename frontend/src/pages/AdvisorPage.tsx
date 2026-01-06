@@ -346,7 +346,7 @@ export function AdvisorPage({
             )}
 
             <div className="relative flex h-[55vh] max-h-[60vh] flex-col overflow-hidden rounded-xl surface-soft">
-              <div className="shrink-0 border-b border-[var(--border-10)] px-3 py-2">
+              <div className="shrink-0 border-b surface-divider px-3 py-2">
                 <div className="flex items-center justify-between text-xs text-muted">
                   <span>Feed IA</span>
                   <span>Tono: {advisorMode === 'amable' ? 'Amable' : 'Rega\u00f1\u00f3n'}</span>
@@ -486,7 +486,7 @@ export function AdvisorPage({
           </>
         ) : (
           <div className="flex h-[70vh] max-h-[75vh] flex-col overflow-hidden rounded-xl surface-soft">
-            <div className="shrink-0 space-y-2 border-b border-[var(--border-10)] p-3">
+            <div className="shrink-0 space-y-2 border-b surface-divider p-3">
               <div className="flex items-center justify-between text-xs text-muted">
                 <span>Chat libre</span>
                 <span>{freeChatRangeLabel}</span>

@@ -233,16 +233,6 @@
     @apply text-[11px] uppercase tracking-wide text-[var(--text-muted)];
   }
 
-  .icon-button {
-    @apply flex items-center justify-center rounded-lg border border-[var(--surface-border-1)] bg-[var(--field-bg)];
-    @apply text-[var(--text)] transition hover:border-primary disabled:opacity-60;
-  }
-
-  .btn-outline {
-    @apply rounded-xl border border-[var(--surface-border-1)] bg-[var(--field-bg)];
-    @apply font-semibold text-[var(--text)] transition hover:border-primary disabled:opacity-60;
-  }
-
   .surface-input {
     @apply rounded-lg border border-[var(--surface-border-1)] bg-[var(--field-bg)] px-3 py-2;
   }

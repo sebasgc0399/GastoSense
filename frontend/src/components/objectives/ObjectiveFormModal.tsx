@@ -101,13 +101,13 @@ export function ObjectiveFormModal({
         aria-label={isEdit ? 'Editar objetivo' : 'Crear objetivo'}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-[var(--modal-border)] px-4 py-3">
+        <div className="shrink-0 border-b surface-divider px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-[var(--text)]">
               {isEdit ? 'Editar objetivo' : 'Nuevo objetivo'}
             </h3>
             <button
-              className="text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="btn btn-ghost btn-compact text-xs"
               onClick={onClose}
             >
               Cerrar
@@ -217,19 +217,19 @@ export function ObjectiveFormModal({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-[var(--modal-border)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <div className="shrink-0 border-t surface-divider px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
           {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <button
             onClick={handleSave}
             disabled={!canSave || saving}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
+            className="btn btn-primary w-full shadow"
           >
             {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear objetivo'}
           </button>
           <button
             onClick={onClose}
             disabled={saving}
-            className="mt-2 w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary disabled:opacity-60"
+            className="btn btn-secondary w-full mt-2"
           >
             Cancelar
           </button>

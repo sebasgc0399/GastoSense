@@ -135,7 +135,7 @@ export function HomePage({
                     <div className="flex gap-2">
                       <button
                         onClick={handlePrevInsight}
-                        className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
+                        className="btn btn-ghost btn-icon h-7 w-7 rounded-full"
                         aria-label="Anterior"
                       >
                         <span aria-hidden="true" className="inline-block rotate-180">
@@ -144,7 +144,7 @@ export function HomePage({
                       </button>
                       <button
                         onClick={handleNextInsight}
-                        className="h-7 w-7 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text)] hover:border-primary"
+                        className="btn btn-ghost btn-icon h-7 w-7 rounded-full"
                         aria-label="Siguiente"
                       >
                         <span aria-hidden="true">➜</span>
@@ -166,14 +166,14 @@ export function HomePage({
                           <p className="text-sm text-[var(--text-muted)]">{item.body}</p>
                           <div className="mt-2 flex gap-2">
                             <button
-                              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-[var(--text)]"
+                              className="btn btn-primary btn-compact text-xs"
                               onClick={item.primaryAction.onClick}
                             >
                               {item.primaryAction.label}
                             </button>
                             {item.secondaryAction && (
                               <button
-                                className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text)]"
+                                className="btn btn-secondary btn-compact text-xs"
                                 onClick={item.secondaryAction.onClick}
                               >
                                 {item.secondaryAction.label}
@@ -220,4 +220,5 @@ export function HomePage({
     </section>
   );
 }
+
 

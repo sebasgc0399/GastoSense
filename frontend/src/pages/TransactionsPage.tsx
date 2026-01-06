@@ -135,11 +135,7 @@ export function TransactionsPage({
           type="button"
           onClick={handleExportClick}
           aria-disabled={!canExport}
-          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
-            canExport
-              ? 'surface-soft text-[var(--text)] hover:border-[var(--border-20)] hover:bg-[var(--overlay-10)]'
-              : 'surface-soft cursor-not-allowed text-[var(--text-muted)] hover:border-[var(--border-10)]'
-          }`}
+          className={`btn btn-secondary btn-compact text-xs ${canExport ? '' : 'text-[var(--text-muted)]'}`}
         >
           {canExport ? <ArrowUpDown aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}
           <span>Datos</span>
@@ -227,7 +223,7 @@ export function TransactionsPage({
         {transactions.length > txPageSize && (
           <div className="flex items-center justify-between gap-3 rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)]">
             <button
-              className="rounded-lg surface-soft border-[var(--border-20)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+              className="btn btn-secondary btn-compact text-xs"
               onClick={() => setTxPage((p) => Math.max(1, p - 1))}
               disabled={txPage === 1}
             >
@@ -237,7 +233,7 @@ export function TransactionsPage({
               Página {txPage} de {totalTxPages}
             </span>
             <button
-              className="rounded-lg surface-soft border-[var(--border-20)] px-3 py-1 text-xs font-semibold text-[var(--text)] disabled:opacity-50"
+              className="btn btn-secondary btn-compact text-xs"
               onClick={() => setTxPage((p) => Math.min(totalTxPages, p + 1))}
               disabled={txPage >= totalTxPages}
             >

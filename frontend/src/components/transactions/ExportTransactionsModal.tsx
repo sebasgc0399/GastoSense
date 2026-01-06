@@ -541,7 +541,7 @@ export function ExportTransactionsModal({
             <button
               type="button"
               onClick={onClose}
-              className="text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="btn btn-ghost btn-compact text-xs"
             >
               Cerrar
             </button>
@@ -884,7 +884,7 @@ export function ExportTransactionsModal({
                         </thead>
                         <tbody>
                           {importReport.preview.map((row, index) => (
-                            <tr key={`${row.date}-${index}`} className="border-t border-[var(--card-border)]">
+                            <tr key={`${row.date}-${index}`} className="border-t surface-divider">
                               <td className="px-2 py-2">{row.date}</td>
                               <td className="px-2 py-2">{row.type}</td>
                               <td className="px-2 py-2">{row.category || '-'}</td>
@@ -954,7 +954,7 @@ export function ExportTransactionsModal({
           )}
         </div>
 
-        <div className="shrink-0 border-t border-[var(--border-10)] bg-[var(--modal-surface)] px-4 pb-4 pt-2">
+        <div className="shrink-0 border-t surface-divider bg-[var(--modal-surface)] px-4 pb-4 pt-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"

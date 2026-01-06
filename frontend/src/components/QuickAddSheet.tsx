@@ -1228,7 +1228,7 @@ export function QuickAddSheet({
                         </div>
                       </>
                     )}
-                    <div className="border-b border-[var(--border-10)] pb-2">
+                    <div className="border-b surface-divider pb-2">
                       <label className="sr-only" htmlFor="quick-add-note">
                         Nota
                       </label>

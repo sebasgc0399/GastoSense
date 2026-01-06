@@ -157,7 +157,7 @@ export function ObjectiveDetailsModal({
         aria-label="Detalle del objetivo"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-[var(--border-10)] px-5 py-4">
+        <div className="shrink-0 border-b surface-divider px-5 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={() => onEdit(objective)}
-                className="pill-surface p-2 text-[var(--text)] hover:text-[var(--text)]"
+                className="btn btn-ghost btn-icon rounded-full"
                 aria-label="Editar"
               >
                 <Pencil className="h-4 w-4" />
@@ -184,7 +184,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="pill-surface p-2 text-[var(--text)] hover:text-[var(--text)]"
+                className="btn btn-ghost btn-icon rounded-full"
                 aria-label="Cerrar"
               >
                 <X className="h-4 w-4" />
@@ -280,13 +280,13 @@ export function ObjectiveDetailsModal({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-[var(--border-10)] bg-[var(--modal-surface)]/95 px-5 py-4 backdrop-blur-xl">
+        <div className="shrink-0 border-t surface-divider bg-[var(--modal-surface)]/95 px-5 py-4 backdrop-blur-xl">
           {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => onQuickAction(isGoal ? 'deposit' : 'payment')}
-              className="flex-1 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] hover:opacity-90"
+              className="btn btn-primary flex-1 rounded-full"
             >
               {isGoal ? 'Abonar' : 'Pagar'}
             </button>
@@ -294,7 +294,7 @@ export function ObjectiveDetailsModal({
               <button
                 type="button"
                 onClick={() => onQuickAction('withdraw')}
-                className="flex-1 rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-3 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                className="btn btn-secondary flex-1 rounded-full"
               >
                 Retirar
               </button>
@@ -304,14 +304,14 @@ export function ObjectiveDetailsModal({
             <button
               onClick={handleArchive}
               disabled={busy}
-              className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-2 font-semibold text-[var(--text)] hover:border-primary disabled:opacity-60"
+              className="btn btn-secondary btn-compact rounded-full text-xs"
             >
               Archivar
             </button>
             <button
               onClick={handleDelete}
               disabled={busy}
-              className="rounded-full border state-danger px-3 py-2 font-semibold hover:opacity-90 disabled:opacity-60"
+              className="btn btn-danger rounded-full"
             >
               Eliminar
             </button>

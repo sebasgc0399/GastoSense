@@ -471,14 +471,14 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
         aria-label="Administrar categorías"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-[var(--modal-border)] px-4 py-3">
+        <div className="shrink-0 border-b surface-divider px-4 py-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               {view !== 'list' && (
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="icon-button mt-1 h-10 w-10 rounded-full"
+                  className="btn btn-ghost btn-icon mt-1 h-10 w-10 rounded-full"
                   aria-label="Volver"
                 >
                   <ArrowLeft className="h-5 w-5" />
@@ -491,7 +491,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
             </div>
             <button
               onClick={onClose}
-              className="btn-outline rounded-full px-3 py-1 text-xs"
+              className="btn btn-secondary btn-compact rounded-full text-xs"
             >
               Cerrar
             </button>
@@ -572,7 +572,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                   draggable={!saving && !isFallback}
                                   onDragStart={handleDragStart(cat.id)}
                                   onDragEnd={handleDragEnd}
-                                  className="icon-button hidden h-10 w-10 text-[var(--text-muted)] cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50 md:flex"
+                                  className="btn btn-ghost btn-icon hidden h-10 w-10 text-[var(--text-muted)] cursor-grab active:cursor-grabbing disabled:cursor-not-allowed md:flex"
                                   aria-label="Reordenar categoria"
                                   disabled={saving || isFallback}
                                 >
@@ -581,7 +581,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                 <button
                                   type="button"
                                   onClick={() => moveCategory(index, index - 1)}
-                                  className="icon-button h-10 w-10 text-[var(--text-muted)] disabled:opacity-50 md:hidden"
+                                  className="btn btn-ghost btn-icon h-10 w-10 text-[var(--text-muted)] md:hidden"
                                   aria-label="Mover categoria arriba"
                                   disabled={saving || isFirst || isFallback}
                                 >
@@ -590,7 +590,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                 <button
                                   type="button"
                                   onClick={() => moveCategory(index, index + 1)}
-                                  className="icon-button h-10 w-10 text-[var(--text-muted)] disabled:opacity-50 md:hidden"
+                                  className="btn btn-ghost btn-icon h-10 w-10 text-[var(--text-muted)] md:hidden"
                                   aria-label="Mover categoria abajo"
                                   disabled={saving || isLast || isFallback}
                                 >
@@ -639,7 +639,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                 <button
                                   type="button"
                                   onClick={() => handleEdit(cat)}
-                                  className="icon-button h-11 w-11"
+                                  className="btn btn-ghost btn-icon h-11 w-11"
                                   title="Editar categoría"
                                   disabled={saving}
                                 >
@@ -649,7 +649,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                                   <button
                                     type="button"
                                     onClick={() => handleArchive(cat)}
-                                    className="icon-button h-11 w-11 text-[var(--error-text)] hover:border-[var(--danger-border)]"
+                                    className="btn btn-danger btn-icon h-11 w-11"
                                     title="Eliminar categoría"
                                     disabled={saving}
                                   >
@@ -699,7 +699,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                               <button
                                 type="button"
                                 onClick={() => handleEdit(cat)}
-                                className="icon-button h-11 w-11"
+                                className="btn btn-ghost btn-icon h-11 w-11"
                                 title="Editar categoría"
                                 disabled={saving}
                               >
@@ -745,7 +745,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                     setIconSuggestNotice(null);
                     setView('icons');
                   }}
-                  className="flex w-full items-center justify-between rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--text)] hover:border-primary"
+                  className="btn btn-secondary w-full justify-between text-sm"
                 >
                   <span className="flex items-center gap-2">
                     <CategoryIcon name={formState.icon} size={18} />
@@ -761,7 +761,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                   type="button"
                   onClick={handleReactivateDuplicate}
                   disabled={saving}
-                  className="btn-outline w-full px-3 py-2 text-xs"
+                  className="btn btn-secondary btn-compact w-full text-xs"
                 >
                   Reactivar categoria
                 </button>
@@ -771,11 +771,11 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
         </div>
 
         {view === 'list' && (
-          <div className="shrink-0 border-t border-[var(--modal-border)] px-4 py-3">
+          <div className="shrink-0 border-t surface-divider px-4 py-3">
             <button
               type="button"
               onClick={handleNew}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90"
+              className="btn btn-primary w-full shadow gap-2"
             >
               <Plus className="h-4 w-4" />
               Nueva categoría
@@ -784,12 +784,12 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
         )}
 
         {view === 'form' && (
-          <div className="shrink-0 border-t border-[var(--modal-border)] px-4 py-3">
+          <div className="shrink-0 border-t surface-divider px-4 py-3">
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={handleBack}
-                className="w-full rounded-xl border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-3 text-sm font-semibold text-[var(--text)] hover:border-primary"
+                className="btn btn-secondary w-full"
               >
                 Cancelar
               </button>
@@ -797,7 +797,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                 type="button"
                 onClick={handleSave}
                 disabled={saving || !userId}
-                className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
+                className="btn btn-primary w-full shadow"
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
@@ -813,7 +813,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
               aria-hidden="true"
             />
             <div className="relative w-full max-w-none rounded-t-2xl border border-[var(--card-border)] bg-[var(--modal-surface)] shadow-2xl sm:max-w-md sm:rounded-2xl">
-              <div className="flex items-center justify-between border-b border-[var(--card-border)] px-4 py-3">
+              <div className="flex items-center justify-between border-b surface-divider px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-[var(--text)]">Selecciona un ícono</p>
                   <p className="text-xs text-[var(--text-muted)]">Toca un ícono para elegirlo.</p>
@@ -825,7 +825,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                       onClick={handleSuggestIcon}
                       disabled={iconSuggesting}
                       title="Sugerir con IA"
-                      className="icon-button h-9 w-9 rounded-full disabled:cursor-not-allowed disabled:opacity-50"
+                      className="btn btn-ghost btn-icon h-9 w-9 rounded-full disabled:cursor-not-allowed"
                       aria-label="Sugerir con IA"
                     >
                       {iconSuggesting ? (
@@ -838,7 +838,7 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
                   <button
                     type="button"
                     onClick={() => setView('form')}
-                    className="btn-outline rounded-full px-3 py-1 text-xs"
+                    className="btn btn-secondary btn-compact rounded-full text-xs"
                   >
                     Cerrar
                   </button>
@@ -868,6 +868,8 @@ export function CategoryManagerModal({ open, onClose, userId, onSuggestIcon, ini
     </div>
   , document.body);
 }
+
+
 
 
 

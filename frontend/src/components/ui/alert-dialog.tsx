@@ -68,10 +68,7 @@ const AlertDialogAction = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={clsx(
-      'inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-      className,
-    )}
+    className={clsx('btn', className)}
     {...props}
   />
 ));
@@ -83,10 +80,7 @@ const AlertDialogCancel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
-    className={clsx(
-      'inline-flex h-10 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-4 text-sm font-semibold text-[var(--text)] transition hover:border-primary',
-      className,
-    )}
+    className={clsx('btn btn-secondary', className)}
     {...props}
   />
 ));

@@ -45,7 +45,7 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text)] hover:border-[var(--primary)]"
+            className="btn btn-secondary btn-compact rounded-full text-xs"
           >
             Cerrar
           </button>
@@ -83,7 +83,7 @@ export function UpgradeModal({ open, onClose, context, role, plans, onGoToPlans 
                     onClose();
                     onGoToPlans();
                   }}
-                  className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90"
+                  className="btn btn-primary w-full mt-3"
                 >
                   Ver planes y pagar
                 </button>

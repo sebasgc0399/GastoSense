@@ -757,7 +757,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] pb-24 text-[var(--text)]">
-      <header className="sticky top-0 z-20 border-b border-[var(--border-10)] bg-[var(--bg)]/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b surface-divider bg-[var(--bg)]/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Gastos personales</p>
@@ -765,14 +765,14 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="flex items-center gap-2 pill-surface px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
+              className="btn btn-secondary btn-compact rounded-full text-xs shadow-sm"
               onClick={() => openSettings('header')}
             >
               <img src="/icons/Gear_64.svg" alt="" aria-hidden="true" className="h-4 w-4 opacity-90" />
               <span>Config</span>
             </button>
             <button
-              className="pill-surface px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
+              className="btn btn-secondary btn-compact rounded-full text-xs shadow-sm"
               onClick={logout}
             >
               Salir
@@ -937,7 +937,7 @@ function App() {
       {!(activeTab === 'metrics' && monthTransactions.length === 0) && (
         <button
           onClick={() => setShowQuickAdd(true)}
-          className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow-[0_12px_32px_var(--success-border)] hover:bg-[var(--interactive-hover)] sm:bottom-24"
+          className="btn btn-primary fixed bottom-20 right-4 z-30 rounded-full shadow-[0_12px_32px_var(--success-border)] gap-2 sm:bottom-24"
         >
           <span className="text-lg">+</span> Registrar
         </button>

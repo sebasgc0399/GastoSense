@@ -32,7 +32,7 @@ export function LimitsHelpModal({ open, onClose }: LimitsHelpModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text)] hover:border-[var(--primary)]"
+            className="btn btn-secondary btn-compact rounded-full text-xs"
           >
             Cerrar
           </button>
@@ -53,7 +53,7 @@ export function LimitsHelpModal({ open, onClose }: LimitsHelpModalProps) {
               {rows.map((r, idx) => (
                 <tr
                   key={r.role}
-                  className={`border-t border-[var(--card-border)] ${idx % 2 === 1 ? 'bg-[var(--input-bg)]' : ''}`}
+                  className={`border-t surface-divider ${idx % 2 === 1 ? 'bg-[var(--input-bg)]' : ''}`}
                 >
                   <td className="px-3 py-2 font-semibold">{r.role}</td>
                   <td className="px-3 py-2">{r.parse}</td>

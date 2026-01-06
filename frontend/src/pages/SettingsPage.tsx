@@ -127,7 +127,7 @@ export function SettingsPage({
           <button
             onClick={handleCopyUid}
             aria-label="Copiar ID de usuario"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg surface-soft text-[var(--text)] hover:border-primary"
+            className="btn btn-secondary btn-icon h-9 w-9 shrink-0 rounded-lg"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -154,7 +154,7 @@ export function SettingsPage({
             <p className="text-xs text-[var(--text-muted)]">Alterna entre modo claro y oscuro.</p>
           </div>
           <button
-            className="pill-strong px-3 py-1 text-xs font-semibold text-[var(--text)] shadow-sm hover:border-[var(--border-20)]"
+            className="btn btn-secondary btn-compact rounded-full text-xs shadow-sm"
             onClick={toggleTheme}
           >
             {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
@@ -285,22 +285,18 @@ export function SettingsPage({
                 <button
                   onClick={() => handlePreferredKeyChange('byok')}
                   disabled={!userProfile?.openaiKeyStored || preferenceSaving}
-                  className={`rounded-lg px-4 py-2 text-xs font-semibold ${
-                    userProfile?.preferredKey === 'byok'
-                      ? 'bg-primary text-[var(--text)]'
-                      : 'surface-soft text-[var(--text)]'
-                  } disabled:opacity-50`}
+                  className={`btn btn-compact text-xs ${
+                    userProfile?.preferredKey === 'byok' ? 'btn-primary' : 'btn-secondary'
+                  }`}
                 >
                   Usar mi key (BYOK)
                 </button>
                 <button
                   onClick={() => handlePreferredKeyChange('managed')}
                   disabled={!canUseManaged || preferenceSaving}
-                  className={`rounded-lg px-4 py-2 text-xs font-semibold ${
-                    userProfile?.preferredKey === 'managed'
-                      ? 'bg-primary text-[var(--text)]'
-                      : 'surface-soft text-[var(--text)]'
-                  } disabled:opacity-50`}
+                  className={`btn btn-compact text-xs ${
+                    userProfile?.preferredKey === 'managed' ? 'btn-primary' : 'btn-secondary'
+                  }`}
                 >
                   Usar key de GastoSense
                 </button>
@@ -421,7 +417,7 @@ export function SettingsPage({
                 <button
                   onClick={handleAdminReload}
                   disabled={adminLoading}
-                  className="rounded-lg border border-primary/50 bg-primary/20 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/30 disabled:opacity-50"
+                  className="btn btn-ghost btn-compact text-xs text-primary"
                 >
                   {adminLoading ? 'Cargando...' : 'Recargar'}
                 </button>
@@ -442,7 +438,7 @@ export function SettingsPage({
                   {adminUsers
                     .filter((u) => u.uid.toLowerCase().includes(adminSearch.toLowerCase()))
                     .map((u) => (
-                      <tr key={u.uid} className="border-t border-[var(--surface-border-1)]">
+                      <tr key={u.uid} className="border-t surface-divider">
                         <td className="px-3 py-2 font-mono text-[11px] text-[var(--text)]">{u.uid}</td>
                         <td className="px-3 py-2">
                           <ResponsiveSelect
@@ -527,7 +523,7 @@ export function SettingsPage({
                           <button
                             onClick={() => handleAdminSaveUser(u.uid)}
                             disabled={adminLoading}
-                            className="w-full rounded-lg border border-primary/40 bg-primary/20 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/30 disabled:opacity-50"
+                            className="btn btn-ghost btn-compact w-full text-[11px] text-primary"
                           >
                             Guardar
                           </button>

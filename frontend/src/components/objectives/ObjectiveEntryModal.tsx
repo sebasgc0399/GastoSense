@@ -157,19 +157,19 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-[var(--border-10)] bg-[var(--modal-surface)]/95 px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-xl">
+        <div className="shrink-0 border-t surface-divider bg-[var(--modal-surface)]/95 px-6 py-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-xl">
           {error && <p className="mb-2 text-sm text-[var(--error-text)]">{error}</p>}
           <button
             onClick={handleSave}
             disabled={disableSave}
-            className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
+            className="btn btn-primary w-full shadow rounded-full"
           >
             {saving ? 'Guardando...' : 'Guardar movimiento'}
           </button>
           <button
             onClick={onClose}
             disabled={saving}
-            className="mt-2 w-full rounded-full border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-2 text-sm font-semibold text-[var(--text)] hover:border-primary disabled:opacity-60"
+            className="btn btn-secondary w-full mt-2 rounded-full"
           >
             Cancelar
           </button>
