@@ -309,7 +309,7 @@ export function ObjectiveDetailsModal({
             <button
               onClick={handleDelete}
               disabled={busy}
-              className="rounded-full border border-red-500/40 bg-red-500/10 px-3 py-2 font-semibold text-[var(--error-text)] hover:border-red-400 disabled:opacity-60"
+              className="rounded-full border state-danger px-3 py-2 font-semibold hover:opacity-90 disabled:opacity-60"
             >
               Eliminar
             </button>

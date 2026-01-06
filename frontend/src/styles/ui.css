@@ -61,6 +61,24 @@
     @apply text-[var(--text-muted)];
   }
 
+  .state-danger {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+    color: var(--danger-text);
+  }
+
+  .state-warn {
+    background: var(--warn-bg);
+    border-color: var(--warn-border);
+    color: var(--warn-text);
+  }
+
+  .state-success {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+    color: var(--success-text);
+  }
+
   .surface-soft {
     @apply border border-[var(--surface-border-1)] bg-[var(--surface-1)];
   }

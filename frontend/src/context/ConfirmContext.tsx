@@ -79,7 +79,7 @@ export function ConfirmProvider({ children }: ConfirmProviderProps) {
               onClick={() => closeDialog(true)}
               className={
                 variant === 'destructive'
-                  ? 'bg-rose-600 text-[var(--text)] hover:bg-rose-700'
+                  ? 'state-danger hover:opacity-90'
                   : 'bg-primary text-[var(--text)] hover:opacity-90'
               }
             >

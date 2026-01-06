@@ -130,7 +130,7 @@ export function ObjectivesPage({
             aria-pressed={activeType === 'goal'}
             onClick={() => setActiveType('goal')}
             className={`flex-1 rounded-xl px-3 py-2 transition ${
-              activeType === 'goal' ? 'bg-emerald-500 text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+              activeType === 'goal' ? 'state-success text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
             }`}
           >
             Ahorros

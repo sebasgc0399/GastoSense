@@ -122,7 +122,7 @@ export function ObjectiveEntryModal({ open, objective, kind, onClose, onSave }: 
               <p className="mt-2 text-xs text-[var(--error-text)]">No puedes retirar mas de lo ahorrado.</p>
             )}
             {exceedsTarget && (
-              <p className="mt-2 text-xs text-amber-200">
+              <p className="mt-2 text-xs text-[var(--warn-text)]">
                 Este movimiento supera el objetivo ({formatPesos(objective.targetAmount)}).
               </p>
             )}

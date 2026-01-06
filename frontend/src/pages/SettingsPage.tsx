@@ -173,18 +173,14 @@ export function SettingsPage({
             <span className="pill-surface px-3 py-1 text-[var(--text)]">Rol: {roleLabel}</span>
             <span
               className={`rounded-full border px-3 py-1 ${
-                userProfile?.subscription?.status === 'active'
-                  ? 'border-emerald-400/40 bg-emerald-500/10 text-[var(--accent)]'
-                  : styles.badgeWarn
+                userProfile?.subscription?.status === 'active' ? 'state-success' : styles.badgeWarn
               }`}
             >
               {userProfile?.subscription?.status === 'active' ? 'Membresía activa' : 'Membresía inactiva'}
             </span>
             <span
               className={`rounded-full border px-3 py-1 ${
-                userProfile?.openaiKeyStored
-                  ? 'border-emerald-400/40 bg-emerald-500/10 text-[var(--accent)]'
-                  : 'surface-soft text-[var(--text)]'
+                userProfile?.openaiKeyStored ? 'state-success' : 'surface-soft text-[var(--text)]'
               }`}
             >
               {userProfile?.openaiKeyStored ? 'Key BYOK guardada' : 'Sin key BYOK'}
@@ -198,7 +194,7 @@ export function SettingsPage({
         </div>
 
         {settingsMessage && (
-          <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+          <div className="rounded-lg border state-success px-3 py-2 text-xs">
             {settingsMessage}
           </div>
         )}
@@ -357,7 +353,7 @@ export function SettingsPage({
                     Total {formatCurrency(price)} {formatUsdApprox(price)} {plan.currency}
                   </div>
                   {switchingPlan && (
-                    <p className="text-[11px] text-amber-200">
+                    <p className="text-[11px] text-[var(--warn-text)]">
                       Al comprar este plan, tu plan actual se reemplaza desde hoy ({currentPaidPlan === 'plan_byok' ? 'BYOK' : 'PRO'} → {plan.id === 'plan_byok' ? 'BYOK' : 'PRO'}).
                     </p>
                   )}
@@ -515,7 +511,7 @@ export function SettingsPage({
                           <span
                             className={`rounded-full px-2 py-1 ${
                               u.openaiKeyStored
-                                ? 'bg-emerald-500/10 text-[var(--accent)]'
+                                ? 'state-success'
                                 : 'bg-[var(--overlay-5)] text-[var(--text-muted)]'
                             }`}
                           >

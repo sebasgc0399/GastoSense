@@ -256,8 +256,10 @@ export function QuickAddSheet({
   const suggestedCategory = suggestedCategoryId ? categoryResolver.categoriesById[suggestedCategoryId] : null;
   const suggestedCategoryIcon = suggestedCategory?.icon ?? 'Tag';
   const suggestionNote = parsedSuggestion?.note ?? parsedSuggestion?.rawText ?? '';
-  const suggestionAmountClass = parsedSuggestion?.type === 'income' ? 'text-emerald-400' : 'text-rose-400';
-  const suggestionBorderClass = parsedSuggestion?.type === 'income' ? 'border-emerald-500/30' : 'border-rose-500/30';
+  const suggestionAmountClass =
+    parsedSuggestion?.type === 'income' ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]';
+  const suggestionBorderClass =
+    parsedSuggestion?.type === 'income' ? 'border-[var(--success-border)]' : 'border-[var(--danger-border)]';
   const showAiHints = !rawText.trim() && !parsedSuggestion;
   const showInterpretButton = !!rawText.trim();
   const shouldHighlightCategorySelector =
@@ -861,7 +863,7 @@ export function QuickAddSheet({
                     }}
                     className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
                       type === 'expense'
-                        ? 'bg-rose-500/20 text-rose-200 ring-1 ring-inset ring-rose-500/50'
+                        ? 'state-danger text-[var(--text)] ring-1 ring-inset ring-[var(--danger-border)]'
                         : 'text-[var(--glass-muted)] hover:text-[var(--glass-text)]'
                     }`}
                   >
@@ -874,7 +876,7 @@ export function QuickAddSheet({
                     }}
                     className={`flex h-full items-center rounded-full px-4 text-xs font-medium transition-all ${
                       type === 'income'
-                        ? 'bg-emerald-500/20 text-[var(--accent)] ring-1 ring-inset ring-emerald-500/50'
+                        ? 'state-success text-[var(--text)] ring-1 ring-inset ring-[var(--success-border)]'
                         : 'text-[var(--glass-muted)] hover:text-[var(--glass-text)]'
                     }`}
                   >
@@ -886,7 +888,9 @@ export function QuickAddSheet({
                 <button
                   type="button"
                   onClick={handleAiToggle}
-                  className={`${styles.btnIconGlass} h-10 w-10 ${mode === 'ai' ? 'border-emerald-500/50 text-[var(--accent)]' : ''}`}
+                  className={`${styles.btnIconGlass} h-10 w-10 ${
+                    mode === 'ai' ? 'border-[var(--success-border)] text-[var(--success-text)]' : ''
+                  }`}
                   aria-label={mode === 'ai' ? 'Salir de modo frase' : 'Modo frase'}
                 >
                   <Sparkles className="h-4 w-4" />
@@ -906,7 +910,7 @@ export function QuickAddSheet({
                 <div className="flex h-24 w-full shrink-0 items-center justify-center px-4">
                   <div
                     className={`text-center font-bold transition-colors duration-200 ${
-                      type === 'income' ? 'text-emerald-400' : 'text-rose-400'
+                      type === 'income' ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'
                     } ${heroSizeClass} leading-none tabular-nums whitespace-nowrap overflow-hidden text-ellipsis`}
                     aria-label={`Monto ${heroAmount}`}
                   >
@@ -944,7 +948,7 @@ export function QuickAddSheet({
                     disabled={transcribingAudio || parseLocked}
                     className={`${styles.btnIconGlass} h-12 w-12 sm:h-14 sm:w-14 ${
                       recording
-                        ? 'bg-rose-500 text-[var(--text)] shadow-lg shadow-rose-500/40 animate-pulse ring-4 ring-rose-500/20 border-rose-500/40'
+                        ? 'state-danger text-[var(--text)] shadow-lg animate-pulse ring-4 ring-[var(--danger-border)] border-[var(--danger-border)]'
                         : ''
                     }`}
                     aria-label={recording ? 'Detener grabacion' : 'Grabar audio'}
@@ -1011,7 +1015,7 @@ export function QuickAddSheet({
                         </span>
                       </div>
                     </div>
-                    {fallbackCategory && <p className="text-xs text-amber-200">{fallbackMessage}</p>}
+                    {fallbackCategory && <p className="text-xs text-[var(--warn-text)]">{fallbackMessage}</p>}
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => {
@@ -1108,7 +1112,7 @@ export function QuickAddSheet({
                           type="date"
                           value={date}
                           onChange={(e) => setDate(e.target.value)}
-                          className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-emerald-500/40 focus:outline-none"
+                          className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--success-border)] focus:outline-none"
                         />
                         {editingTemplate?.createdAt && (
                           <p className="mt-1 text-[11px] text-[var(--muted)]">
@@ -1159,7 +1163,7 @@ export function QuickAddSheet({
                               value={templateName}
                               onChange={(e) => setTemplateName(e.target.value)}
                               placeholder="Ej. Renta, Netflix"
-                              className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-emerald-500/40 focus:outline-none"
+                              className="w-full rounded-xl surface-soft px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--success-border)] focus:outline-none"
                             />
                             <button
                               type="button"
@@ -1187,8 +1191,12 @@ export function QuickAddSheet({
                       </div>
                     ) : (
                       <>
-                        {showFallbackNotice && <p className="text-xs text-amber-200">{fallbackMessage}</p>}
-                        <div className={shouldHighlightCategorySelector ? 'rounded-2xl p-2 ring-2 ring-amber-400/60' : ''}>
+                        {showFallbackNotice && <p className="text-xs text-[var(--warn-text)]">{fallbackMessage}</p>}
+                        <div
+                          className={
+                            shouldHighlightCategorySelector ? 'rounded-2xl p-2 ring-2 ring-[var(--warn-border)]' : ''
+                          }
+                        >
                           <div className="flex gap-2 overflow-x-auto pb-2 pr-1 [-webkit-overflow-scrolling:touch]">
                             {visibleCategories.map((cat) => {
                               const active = cat.id === category;
@@ -1199,7 +1207,7 @@ export function QuickAddSheet({
                                   onClick={() => setCategory(cat.id)}
                                   className={`btn-glass min-w-[86px] shrink-0 flex-col px-3 py-2 text-[11px] ${
                                     active
-                                      ? 'border-emerald-500/50 bg-emerald-500/10 text-[var(--text)]'
+                                      ? 'state-success text-[var(--text)]'
                                       : 'text-[var(--glass-muted)]'
                                   }`}
                                 >

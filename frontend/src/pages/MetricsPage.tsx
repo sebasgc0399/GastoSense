@@ -358,7 +358,7 @@ export function MetricsPage({
                 aria-pressed={isExpenseView}
                 onClick={() => handleMetricsTypeChange('expense')}
                 className={`flex-1 rounded-xl px-3 py-2 transition ${
-                  isExpenseView ? 'bg-rose-500 text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                  isExpenseView ? 'state-danger text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
                 }`}
               >
                 Gastos
@@ -368,7 +368,7 @@ export function MetricsPage({
                 aria-pressed={!isExpenseView}
                 onClick={() => handleMetricsTypeChange('income')}
                 className={`flex-1 rounded-xl px-3 py-2 transition ${
-                  isExpenseView ? 'text-[var(--text-muted)] hover:text-[var(--text)]' : 'bg-emerald-500 text-[var(--text)] shadow-sm'
+                  isExpenseView ? 'text-[var(--text-muted)] hover:text-[var(--text)]' : 'state-success text-[var(--text)] shadow-sm'
                 }`}
               >
                 Ingresos
@@ -424,10 +424,10 @@ export function MetricsPage({
                         <div
                           className={`progress-fill h-full rounded-full ${
                             budgetAlert === 'ok'
-                              ? 'bg-emerald-500'
+                              ? 'state-success'
                               : budgetAlert === 'warn'
-                                ? 'bg-amber-500'
-                                : 'bg-red-500'
+                                ? 'state-warn'
+                                : 'state-danger'
                           }`}
                           style={budgetProgressStyle}
                         />

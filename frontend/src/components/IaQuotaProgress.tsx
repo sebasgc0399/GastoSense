@@ -27,9 +27,9 @@ export function IaQuotaProgress({ label, used, limit, ratio, onUpgradeClick }: I
         <div
           className={clsx(
             'progress-fill h-2 rounded-full transition-all',
-            state === 'ok' && 'bg-emerald-500',
-            state === 'warn' && 'bg-amber-500',
-            state === 'danger' && 'bg-rose-500',
+            state === 'ok' && 'state-success',
+            state === 'warn' && 'state-warn',
+            state === 'danger' && 'state-danger',
           )}
           style={progressStyle}
         />

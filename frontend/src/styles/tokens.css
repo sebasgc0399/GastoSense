@@ -41,6 +41,9 @@
     --warn-bg: rgba(251, 191, 36, 0.16);
     --warn-border: rgba(251, 191, 36, 0.4);
     --warn-text: #fef9c3;
+    --success-bg: rgba(16, 185, 129, 0.16);
+    --success-border: rgba(16, 185, 129, 0.4);
+    --success-text: #bbf7d0;
     --error-text: #fecaca;
 
     /* Objectives */
@@ -162,6 +165,9 @@
     --warn-bg: #fef3c7;
     --warn-border: #fcd34d;
     --warn-text: #92400e;
+    --success-bg: #ecfdf5;
+    --success-border: #a7f3d0;
+    --success-text: #047857;
     --error-text: #dc2626;
 
     /* Objectives */

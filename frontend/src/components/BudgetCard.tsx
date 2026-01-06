@@ -68,7 +68,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--overlay-10)]">
           <div
             className={`progress-fill h-full rounded-full ${
-              alertLevel === 'ok' ? 'bg-emerald-500' : alertLevel === 'warn' ? 'bg-amber-500' : 'bg-red-500'
+              alertLevel === 'ok' ? 'state-success' : alertLevel === 'warn' ? 'state-warn' : 'state-danger'
             }`}
             style={progressStyle}
           />
@@ -76,7 +76,7 @@ export function BudgetCard({ month, totalExpense, budget, onSave, loading }: Pro
         {alertLevel !== 'ok' && (
           <p
             className={`mt-2 text-xs font-semibold ${
-              alertLevel === 'warn' ? 'text-amber-200' : 'text-[var(--error-text)]'
+              alertLevel === 'warn' ? 'text-[var(--warn-text)]' : 'text-[var(--error-text)]'
             }`}
           >
             {alertLevel === 'warn' ? `Vas en ${percentUsed}% del presupuesto` : 'Excediste el presupuesto'}

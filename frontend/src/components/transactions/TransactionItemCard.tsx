@@ -61,12 +61,12 @@ export function TransactionItemCard({
   const spentRatio = showPercent ? spentInCategory / safeBudgetValue : 0;
   const toneClass =
     spentRatio >= 1
-      ? 'bg-red-500/10 text-[var(--error-text)]'
+      ? 'state-danger'
       : spentRatio >= 0.8
-        ? 'bg-amber-500/10 text-amber-200'
-        : 'bg-emerald-500/10 text-[var(--accent)]';
+        ? 'state-warn'
+        : 'state-success';
   const barClass =
-    spentRatio >= 1 ? 'bg-red-400/80' : spentRatio >= 0.8 ? 'bg-amber-400/80' : 'bg-emerald-400/80';
+    spentRatio >= 1 ? 'state-danger' : spentRatio >= 0.8 ? 'state-warn' : 'state-success';
   const progressValue = showPercent && typeof percentUsed === 'number' ? Math.min(percentUsed, 100) : 0;
   const progressStyle = { '--pct': `${progressValue}%` } as React.CSSProperties;
 

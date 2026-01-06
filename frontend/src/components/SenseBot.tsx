@@ -9,9 +9,9 @@ interface SenseBotProps {
 
 const moodColors: Record<BotMood, string> = {
   idle: 'text-[var(--text-muted)]',
-  happy: 'text-emerald-400',
+  happy: 'text-[var(--success-text)]',
   thinking: 'text-sky-300',
-  waving: 'text-amber-300',
+  waving: 'text-[var(--warn-text)]',
   excited: 'text-orange-300',
   curious: 'text-indigo-300',
   success: 'text-[var(--accent)]',

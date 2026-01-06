@@ -909,7 +909,7 @@ export function ExportTransactionsModal({
                   <span className="text-[var(--text-muted)]">{showAdvanced ? 'Ocultar' : 'Mostrar'}</span>
                 </button>
                 {!showAdvanced && importMode === 'replace_range' && (
-                  <p className="mt-2 text-xs text-amber-200">Reemplazar rango detectado activo.</p>
+                  <p className="mt-2 text-xs text-[var(--warn-text)]">Reemplazar rango detectado activo.</p>
                 )}
                 {showAdvanced && (
                   <div className="mt-3 space-y-2 text-sm">
@@ -930,8 +930,8 @@ export function ExportTransactionsModal({
                       <p className="text-xs text-[var(--text-muted)]">{replaceRangeDisableReason}</p>
                     )}
                     {importMode === 'replace_range' && (
-                      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                        <p className="font-semibold text-amber-100">Reemplazar rango detectado</p>
+                      <div className="rounded-lg border state-warn px-3 py-2 text-xs">
+                        <p className="font-semibold">Reemplazar rango detectado</p>
                         <p>
                           Se borraran TODOS los movimientos dentro del rango antes de importar. Usa esto solo si tu
                           archivo contiene todo lo que quieres conservar en ese rango.
@@ -969,7 +969,7 @@ export function ExportTransactionsModal({
                 type="button"
                 onClick={handleDownload}
                 disabled={downloading}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[var(--text)] shadow hover:bg-emerald-700 disabled:opacity-60"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
               >
                 {downloading ? 'Generando...' : 'Descargar'}
               </button>
@@ -978,7 +978,7 @@ export function ExportTransactionsModal({
                 type="button"
                 onClick={handleImport}
                 disabled={!canImport}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[var(--text)] shadow hover:bg-emerald-700 disabled:opacity-60"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
               >
                 {importing ? 'Importando...' : 'Importar'}
               </button>
