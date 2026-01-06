@@ -137,7 +137,7 @@ export function CategorySpendChart({
   const chartTokens = getCategoryChartTokens();
 
   if (!visibleItems.length) {
-    return <p className="text-sm text-[var(--muted)]">Aún no hay categorías para mostrar.</p>;
+    return <p className="text-sm text-[var(--text-muted)]">Aún no hay categorías para mostrar.</p>;
   }
 
   const categories = visibleItems.map((i) => formatCategoryLabel(i.label));
@@ -340,9 +340,11 @@ export function CategorySpendChart({
       axisPointer: { type: 'shadow' },
       confine: true,
       appendToBody: false,
-      extraCssText: 'max-width:240px; white-space:normal; border-radius:12px; padding:10px;',
+      extraCssText:
+        'max-width:240px; white-space:normal; border-radius:12px; padding:10px; box-shadow: var(--shadow-glass); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));',
       backgroundColor: chartTokens.tooltipBg,
       borderColor: chartTokens.tooltipBorder,
+      borderWidth: 1,
       textStyle: { color: chartTokens.tooltipText, fontSize: 12 },
       formatter: tooltipFormatter as unknown as (params: unknown) => string,
     },

@@ -243,10 +243,12 @@ export function EvolutionChart({
       axisPointer: { type: view === 'daily' ? 'shadow' : 'line' },
       backgroundColor: chartTokens.tooltipBg,
       borderColor: chartTokens.tooltipBorder,
+      borderWidth: 1,
       textStyle: { color: chartTokens.tooltipText, fontSize: 12 },
       confine: true,
       appendToBody: false,
-      extraCssText: 'max-width:220px; white-space:normal; border-radius:12px; padding:10px;',
+      extraCssText:
+        'max-width:220px; white-space:normal; border-radius:12px; padding:10px; box-shadow: var(--shadow-glass); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));',
       formatter:
         view === 'daily'
           ? (dailyTooltipFormatter as unknown as (params: unknown) => string)
