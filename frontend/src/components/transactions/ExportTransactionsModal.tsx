@@ -787,7 +787,7 @@ export function ExportTransactionsModal({
                   <button
                     type="button"
                     onClick={handleDownloadTemplate}
-                    className="btn-outline rounded-lg px-3 py-2 text-xs"
+                    className="btn btn-secondary btn-compact"
                   >
                     Descargar plantilla (Excel)
                   </button>
@@ -960,7 +960,7 @@ export function ExportTransactionsModal({
               type="button"
               onClick={onClose}
               disabled={isBusy}
-              className="btn-outline px-4 py-2 text-sm"
+              className="btn btn-secondary"
             >
               Cancelar
             </button>
@@ -969,7 +969,7 @@ export function ExportTransactionsModal({
                 type="button"
                 onClick={handleDownload}
                 disabled={downloading}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
+                className="btn btn-primary"
               >
                 {downloading ? 'Generando...' : 'Descargar'}
               </button>
@@ -978,7 +978,7 @@ export function ExportTransactionsModal({
                 type="button"
                 onClick={handleImport}
                 disabled={!canImport}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
+                className="btn btn-primary"
               >
                 {importing ? 'Importando...' : 'Importar'}
               </button>

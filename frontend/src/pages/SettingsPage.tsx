@@ -251,7 +251,7 @@ export function SettingsPage({
                 <button
                   onClick={handleSaveApiKey}
                   disabled={keySaving || !apiKeyInput.trim()}
-                  className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-[var(--text)] hover:opacity-90 disabled:opacity-50"
+                  className="btn btn-primary btn-compact"
                 >
                   {keySaving ? 'Guardando...' : 'Guardar key'}
                 </button>
@@ -259,7 +259,7 @@ export function SettingsPage({
                   <button
                     onClick={handleClearApiKey}
                     disabled={keySaving}
-                    className="rounded-lg border border-[var(--border-20)] bg-[var(--overlay-5)] px-4 py-2 text-xs font-semibold text-[var(--text)] hover:border-primary disabled:opacity-50"
+                    className="btn btn-secondary btn-compact"
                   >
                     {keySaving ? 'Procesando...' : 'Eliminar key'}
                   </button>
@@ -388,7 +388,7 @@ export function SettingsPage({
                   <button
                     onClick={() => handleCheckout(plan.id as 'plan_byok' | 'plan_pro')}
                     disabled={checkoutLoading === plan.id}
-                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-[var(--text)] hover:opacity-90 disabled:opacity-50"
+                    className="btn btn-primary"
                   >
                     {checkoutLoading === plan.id ? 'Generando...' : 'Pagar con Wompi'}
                   </button>

@@ -4,20 +4,28 @@
 
     /* Base / text */
     --bg: #0b1120;
+    --bg-app: var(--bg);
     --text-primary: #e2e8f0;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
+    --muted: var(--text-muted);
     --text: var(--text-primary);
+    --text-main: var(--text);
     --text-on-primary: #ffffff;
 
     /* Surface */
     --surface-1: rgb(var(--overlay-rgb) / 0.05);
     --surface-2: rgb(var(--overlay-rgb) / 0.10);
     --surface-3: rgb(var(--overlay-rgb) / 0.15);
+    --surface: var(--surface-1);
     --surface-border-1: rgb(var(--border-rgb) / 0.10);
     --surface-border-2: rgb(var(--border-rgb) / 0.15);
     --surface-border-3: rgb(var(--border-rgb) / 0.20);
+    --surface-border: var(--surface-border-1);
+    --surface-divider: rgb(var(--border-rgb) / 0.08);
+    --surface-highlight: rgba(255, 255, 255, 0.06);
     --shadow-glass: 0 12px 32px rgba(2, 6, 23, 0.45);
+    --surface-shadow: var(--shadow-glass);
     --card: var(--surface-1);
     --card-border: var(--surface-border-1);
     --card-shadow: none;
@@ -35,6 +43,20 @@
     --accent-weak: rgb(var(--primary-rgb) / 0.22);
     --accent-strong: var(--primary);
     --focus-ring: rgb(var(--primary-rgb) / 0.2);
+
+    /* Buttons */
+    --btn-pri-bg: var(--primary);
+    --btn-pri-fg: var(--text-on-primary);
+    --btn-pri-shadow: rgb(var(--primary-rgb) / 0.28);
+    --btn-sec-bg: var(--surface-1);
+    --btn-sec-border: var(--surface-border-1);
+    --btn-sec-fg: var(--text);
+    --btn-ghost-fg: var(--primary);
+    --btn-ghost-border: rgb(var(--primary-rgb) / 0.28);
+    --btn-ghost-hover: rgb(var(--primary-rgb) / 0.12);
+    --btn-danger-bg: var(--danger-bg);
+    --btn-danger-border: var(--danger-border);
+    --btn-danger-fg: var(--danger-text);
 
     /* States */
     --danger-bg: rgba(248, 113, 113, 0.12);
@@ -136,20 +158,28 @@
 
     /* Base / text */
     --bg: #f0f4f8;
+    --bg-app: var(--bg);
     --text-primary: #1e293b;
     --text-secondary: #475569;
     --text-muted: #64748b;
+    --muted: var(--text-muted);
     --text: var(--text-primary);
+    --text-main: var(--text);
     --text-on-primary: #ffffff;
 
     /* Surface */
     --surface-1: rgb(var(--overlay-rgb) / 0.04);
     --surface-2: rgb(var(--overlay-rgb) / 0.07);
     --surface-3: rgb(var(--overlay-rgb) / 0.10);
+    --surface: var(--surface-1);
     --surface-border-1: rgb(var(--border-rgb) / 0.10);
     --surface-border-2: rgb(var(--border-rgb) / 0.14);
     --surface-border-3: rgb(var(--border-rgb) / 0.18);
+    --surface-border: var(--surface-border-1);
+    --surface-divider: rgb(var(--border-rgb) / 0.16);
+    --surface-highlight: rgba(255, 255, 255, 0.85);
     --shadow-glass: 0 12px 28px rgba(15, 23, 42, 0.18);
+    --surface-shadow: var(--shadow-glass);
     --card: var(--surface-1);
     --card-border: var(--surface-border-1);
     --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -167,6 +197,20 @@
     --accent-weak: rgb(var(--primary-rgb) / 0.14);
     --accent-strong: var(--primary);
     --focus-ring: rgb(var(--primary-rgb) / 0.2);
+
+    /* Buttons */
+    --btn-pri-bg: var(--primary);
+    --btn-pri-fg: var(--text-on-primary);
+    --btn-pri-shadow: rgb(var(--primary-rgb) / 0.22);
+    --btn-sec-bg: var(--surface-1);
+    --btn-sec-border: var(--surface-border-1);
+    --btn-sec-fg: var(--text);
+    --btn-ghost-fg: var(--primary);
+    --btn-ghost-border: rgb(var(--primary-rgb) / 0.22);
+    --btn-ghost-hover: rgb(var(--primary-rgb) / 0.08);
+    --btn-danger-bg: var(--danger-bg);
+    --btn-danger-border: var(--danger-border);
+    --btn-danger-fg: var(--danger-text);
 
     /* States */
     --danger-bg: #fef2f2;

@@ -3,7 +3,7 @@
     background: var(--surface-1);
     border: 1px solid var(--surface-border-1);
     border-radius: 1.25rem;
-    box-shadow: var(--card-shadow);
+    box-shadow: var(--surface-shadow), inset 0 1px 0 var(--surface-highlight);
     padding: 1.5rem;
     color: var(--text);
   }
@@ -45,6 +45,101 @@
     color: var(--text);
   }
 
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition:
+      transform 140ms ease,
+      box-shadow 140ms ease,
+      background-color 140ms ease,
+      border-color 140ms ease,
+      color 140ms ease,
+      opacity 140ms ease;
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-primary {
+    background: var(--btn-pri-bg);
+    color: var(--btn-pri-fg);
+  }
+
+  .btn-secondary {
+    background: var(--btn-sec-bg);
+    border-color: var(--btn-sec-border);
+    color: var(--btn-sec-fg);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--btn-ghost-border);
+    color: var(--btn-ghost-fg);
+  }
+
+  .btn-danger {
+    background: var(--btn-danger-bg);
+    border-color: var(--btn-danger-border);
+    color: var(--btn-danger-fg);
+  }
+
+  .btn-icon {
+    width: 48px;
+    padding: 0;
+  }
+
+  .btn-compact {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+      filter: brightness(1.05);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-2);
+      border-color: var(--surface-border-2);
+    }
+
+    .btn-ghost:hover {
+      background: var(--btn-ghost-hover);
+    }
+
+    .btn-danger:hover {
+      filter: brightness(1.03);
+    }
+  }
+
   .btn-glass {
     @apply flex items-center justify-center gap-2 rounded-2xl;
     @apply border text-sm font-medium;
@@ -62,6 +157,7 @@
   .modal-surface {
     @apply border border-[var(--modal-border)] bg-[var(--modal-surface)];
     @apply text-[var(--text)] shadow-2xl backdrop-blur;
+    box-shadow: var(--surface-shadow), inset 0 1px 0 var(--surface-highlight);
   }
 
   .modal-scrim {
@@ -71,12 +167,14 @@
 
   .panel-card {
     @apply rounded-xl border border-[var(--surface-border-1)] bg-[var(--surface-1)] p-3;
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
   }
 
   .panel-muted {
     @apply rounded-xl border border-[var(--surface-border-1)] p-3;
     @apply text-sm text-[var(--text-muted)];
     background-color: color-mix(in srgb, var(--surface-1) 40%, transparent);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
   }
 
   .text-muted {
@@ -103,6 +201,7 @@
 
   .surface-soft {
     @apply border border-[var(--surface-border-1)] bg-[var(--surface-1)];
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
   }
 
   .surface-top {
@@ -123,6 +222,11 @@
 
   .surface-strong {
     @apply border border-[var(--surface-border-2)] bg-[var(--surface-2)];
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
+  }
+
+  .surface-divider {
+    border-color: var(--surface-divider);
   }
 
   .section-label {

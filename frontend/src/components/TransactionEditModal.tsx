@@ -210,7 +210,7 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-[var(--text)] shadow hover:opacity-90 disabled:opacity-60"
+            className="btn btn-primary w-full"
           >
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
@@ -218,14 +218,14 @@ export function TransactionEditModal({ open, transaction, onClose, onSave, onDel
             <button
               onClick={onClose}
               disabled={saving}
-              className="btn-outline px-4 py-2 text-sm"
+              className="btn btn-secondary"
             >
               Cancelar
             </button>
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="text-sm font-semibold text-[var(--error-text)] hover:text-[var(--error-text)] disabled:opacity-60"
+              className="btn btn-danger"
             >
               Eliminar
             </button>
